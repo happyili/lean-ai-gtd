@@ -10,20 +10,76 @@ class Record(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(20), default='general')  # idea/task/note/general
+    parent_id = db.Column(db.Integer, db.ForeignKey('records.id'), nullable=True)  # 父任务ID，支持子任务
+    priority = db.Column(db.String(20), default='medium')  # low/medium/high/urgent
+    progress = db.Column(db.Integer, default=0)  # 进度百分比 0-100
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    status = db.Column(db.String(20), default='active')  # active/archived/deleted
+    status = db.Column(db.String(20), default='active')  # active/completed/paused/cancelled/archived/deleted
     
-    def to_dict(self):
+    # 关系定义
+    parent = db.relationship('Record', remote_side=[id], backref=db.backref('subtasks', lazy='dynamic'))
+    
+    def to_dict(self, include_subtasks=False):
         """转换为字典格式"""
-        return {
+        result = {
             'id': self.id,
             'content': self.content,
             'category': self.category,
+            'parent_id': self.parent_id,
+            'priority': self.priority,
+            'progress': self.progress,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'status': self.status
         }
+        
+        if include_subtasks:
+            # 获取活跃的子任务
+            active_subtasks = self.subtasks.filter_by(status='active').all()
+            result['subtasks'] = [subtask.to_dict() for subtask in active_subtasks]
+            result['subtask_count'] = len(active_subtasks)
+        else:
+            result['subtask_count'] = self.subtasks.filter_by(status='active').count()
+            
+        return result
+    
+    def is_task(self):
+        """判断是否为任务"""
+        return self.category == 'task'
+    
+    def is_subtask(self):
+        """判断是否为子任务"""
+        return self.parent_id is not None
+    
+    def get_parent(self):
+        """获取父任务"""
+        if self.parent_id:
+            return Record.query.get(self.parent_id)
+        return None
+    
+    def get_subtasks(self, include_inactive=False):
+        """获取子任务列表"""
+        query = self.subtasks
+        if not include_inactive:
+            query = query.filter_by(status='active')
+        return query.all()
+    
+    def can_have_subtasks(self):
+        """判断是否可以拥有子任务（只有任务类型可以）"""
+        return self.is_task()
+    
+    def add_subtask(self, content, category='task'):
+        """添加子任务"""
+        if not self.can_have_subtasks():
+            raise ValueError("只有任务类型才能添加子任务")
+        
+        subtask = Record(
+            content=content,
+            category=category,
+            parent_id=self.id
+        )
+        return subtask
     
     def __repr__(self):
         return f'<Record {self.id}: {self.content[:50]}...>' 

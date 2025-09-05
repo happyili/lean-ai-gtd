@@ -4,9 +4,14 @@ interface Record {
   id: number;
   content: string;
   category: string;
+  parent_id?: number;
+  priority?: string;
+  progress?: number;
   created_at: string;
   updated_at: string;
   status: string;
+  subtask_count?: number;
+  subtasks?: Record[];
 }
 
 interface RecordHistoryProps {
@@ -15,6 +20,7 @@ interface RecordHistoryProps {
   onSearch: (query: string) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  onViewDetail?: (record: Record) => void;
 }
 
 const categoryMap = {
@@ -29,7 +35,8 @@ export default function RecordHistory({
   onDelete, 
   onSearch, 
   isCollapsed, 
-  onToggleCollapse 
+  onToggleCollapse,
+  onViewDetail
 }: RecordHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -122,6 +129,11 @@ export default function RecordHistory({
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded-none text-xs font-medium ${categoryInfo.color}`}>
                           <span className="mr-1">{categoryInfo.icon}</span>
                           {categoryInfo.label}
+                          {record.category === 'task' && record.subtask_count && record.subtask_count > 0 && (
+                            <span className="ml-1 text-xs text-gray-500">
+                              ({record.subtask_count})
+                            </span>
+                          )}
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">
@@ -145,10 +157,24 @@ export default function RecordHistory({
                         </div>
                       </div>
                       
-                      {/* 内容 */}
-                      <p className="text-sm text-gray-700 mt-1 leading-tight">
+                      {/* 内容 - 可点击查看详情 */}
+                      <div 
+                        className={`text-sm text-gray-700 mt-1 leading-tight ${
+                          record.category === 'task' && onViewDetail 
+                            ? 'cursor-pointer hover:text-blue-600' 
+                            : ''
+                        }`}
+                        onClick={() => {
+                          if (record.category === 'task' && onViewDetail) {
+                            onViewDetail(record);
+                          }
+                        }}
+                      >
                         {truncateContent(record.content, 80)}
-                      </p>
+                        {record.category === 'task' && onViewDetail && (
+                          <span className="ml-2 text-xs text-blue-500">点击查看详情</span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
