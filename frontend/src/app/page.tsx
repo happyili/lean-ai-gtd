@@ -133,35 +133,42 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       {/* 通知栏 */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all ${
+        <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl transition-all backdrop-blur-sm ${
           notification.type === 'success' 
-            ? 'bg-green-500 text-white' 
-            : 'bg-red-500 text-white'
+            ? 'bg-emerald-500/90 text-white border border-emerald-400/50' 
+            : 'bg-red-500/90 text-white border border-red-400/50'
         }`}>
-          {notification.message}
+          <div className="font-medium">{notification.message}</div>
         </div>
       )}
 
       {/* 头部 */}
-      <header className="bg-white border-b border-gray-300">
-        <div className="max-w-7xl mx-auto px-6 py-6">
+      <header className="backdrop-blur-lg bg-white/80 border-b border-slate-200/60 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-8 py-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">AIGTD</h1>
-              <p className="text-gray-600 mt-1">任务管理系统 - 高效管理您的任务和想法</p>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-xl font-bold">AI</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                  AIGTD
+                </h1>
+                <p className="text-slate-500 mt-1 font-medium">智能任务管理系统</p>
+              </div>
             </div>
-            <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-sm">
-              任务管理平台
+            <div className="bg-gradient-to-r from-sky-50 to-blue-50 px-4 py-2 rounded-xl border border-sky-200/60">
+              <span className="text-sm font-medium text-sky-700">任务管理平台</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* 主要内容区域 */}
-      <div className="flex h-[calc(100vh-120px)]">
+      <div className="flex h-[calc(100vh-136px)]">
         {/* 左侧任务列表 */}
         <main className="flex-1">
           <TaskList

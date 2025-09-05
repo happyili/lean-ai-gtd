@@ -130,18 +130,18 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col" style={{ background: 'var(--card-background)' }}>
       {/* 头部 */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">任务管理</h2>
-          <div className="text-sm text-gray-500">
-            共 {tasks.length} 个任务
+      <div className="p-8 border-b border-slate-200/60">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-slate-800">任务管理</h2>
+          <div className="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+            <span className="text-sm font-medium text-slate-600">共 {tasks.length} 个任务</span>
           </div>
         </div>
 
         {/* 搜索和筛选 */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* 搜索框 */}
           <div className="relative">
             <input
@@ -149,19 +149,19 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索任务..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-slate-50/50 backdrop-blur-sm transition-all font-medium"
             />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">🔍</span>
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <span className="text-slate-400 text-lg">🔍</span>
             </div>
           </div>
 
           {/* 筛选器 */}
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-slate-50/50 backdrop-blur-sm transition-all font-medium"
             >
               <option value="all">所有状态</option>
               <option value="active">进行中</option>
@@ -173,7 +173,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-slate-50/50 backdrop-blur-sm transition-all font-medium"
             >
               <option value="all">所有优先级</option>
               <option value="urgent">紧急</option>
@@ -189,16 +189,16 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">加载中...</div>
+            <div className="text-slate-500 font-medium">加载中...</div>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-500">
-            <div className="text-4xl mb-2">📋</div>
-            <div>暂无任务</div>
-            <div className="text-sm">在右侧添加新任务开始工作</div>
+          <div className="flex flex-col items-center justify-center h-32 text-slate-500">
+            <div className="text-4xl mb-3">📋</div>
+            <div className="font-medium text-lg">暂无任务</div>
+            <div className="text-sm mt-1">在右侧添加新任务开始工作</div>
           </div>
         ) : (
-          <div className="p-4 space-y-3">
+          <div className="p-6 space-y-4">
             {tasks.map((task) => {
               const priorityInfo = priorityMap[task.priority as keyof typeof priorityMap] || priorityMap.medium;
               const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.active;
@@ -206,42 +206,45 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
               return (
                 <div
                   key={task.id}
-                  className="group p-4 border border-gray-200 rounded-lg hover:shadow-md transition-all cursor-pointer"
+                  className="group p-6 border border-slate-200/60 rounded-2xl hover:shadow-xl hover:shadow-sky-100/50 hover:border-sky-200/60 transition-all duration-300 cursor-pointer bg-white/60 backdrop-blur-sm"
                   onClick={() => onViewDetail(task)}
                 >
                   {/* 任务头部 */}
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">
+                      <h3 className="font-semibold text-slate-800 mb-2 leading-relaxed">
                         {truncateContent(task.content, 80)}
                       </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>{formatDate(task.created_at)}</span>
+                      <div className="flex items-center gap-3 text-sm text-slate-500">
+                        <span className="font-medium">{formatDate(task.created_at)}</span>
                         {task.subtask_count && task.subtask_count > 0 && (
-                          <span>• {task.subtask_count} 个子任务</span>
+                          <span className="flex items-center gap-1">
+                            <span>•</span>
+                            <span className="font-medium">{task.subtask_count} 个子任务</span>
+                          </span>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityInfo.color}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-2 rounded-xl text-xs font-semibold ${priorityInfo.color}`}>
                         {priorityInfo.label}
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                      <span className={`px-3 py-2 rounded-xl text-xs font-semibold ${statusInfo.color}`}>
                         {statusInfo.label}
                       </span>
                     </div>
                   </div>
 
                   {/* 进度条 */}
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
-                      <span>进度</span>
-                      <span>{task.progress || 0}%</span>
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
+                      <span className="font-medium">进度</span>
+                      <span className="font-semibold">{task.progress || 0}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-slate-200 rounded-full h-3">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-sky-500 to-blue-500 h-3 rounded-full transition-all duration-500 shadow-sm"
                         style={{ width: `${task.progress || 0}%` }}
                       ></div>
                     </div>
@@ -249,17 +252,17 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
 
                   {/* 操作按钮 */}
                   <div className="flex items-center justify-between">
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-slate-400 font-medium">
                       点击查看详情
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {deleteConfirm === task.id ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(task.id);
                           }}
-                          className="text-xs px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          className="text-xs px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold transition-all shadow-sm"
                         >
                           确认删除
                         </button>
@@ -269,7 +272,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                             e.stopPropagation();
                             setDeleteConfirm(task.id);
                           }}
-                          className="text-xs px-3 py-1 bg-gray-200 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded-lg"
+                          className="text-xs px-4 py-2 bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600 rounded-xl font-semibold transition-all"
                         >
                           删除
                         </button>
