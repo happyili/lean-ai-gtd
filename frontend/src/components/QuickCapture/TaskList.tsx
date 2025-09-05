@@ -42,6 +42,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
+  const [showAllLevels, setShowAllLevels] = useState(false); // 默认只显示顶级任务
 
   const handleTaskClick = (task: Record) => {
     if (expandedTask === task.id) {
@@ -62,6 +63,8 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
         setStatusFilter(e.detail.value);
       } else if (e.detail.type === 'priority') {
         setPriorityFilter(e.detail.value);
+      } else if (e.detail.type === 'showAllLevels') {
+        setShowAllLevels(e.detail.value);
       }
     };
 
@@ -85,6 +88,9 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       params.append('category', 'task');
       params.append('include_subtasks', 'true');
       params.append('subtask_detail', 'true'); // 获取子任务详细内容
+      if (!showAllLevels) {
+        params.append('top_level_only', 'false'); // 总是获取所有任务，在前端筛选
+      }
       
       const response = await fetch(`http://localhost:5050/api/records?${params}`);
       
@@ -114,7 +120,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, priorityFilter]);
+  }, [searchQuery, statusFilter, priorityFilter, showAllLevels]);
 
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {
@@ -168,8 +174,17 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       <div className="p-6" style={{ borderBottom: '1px solid var(--border-light)' }}>
         <div className="flex items-center justify-between">
           <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
-          <div className="px-4 py-2 rounded-xl" style={{ background: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}>
-            <span className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>共 {tasks.length} 个任务</span>
+          <div className="flex items-center space-x-3">
+            <div className="px-4 py-2 rounded-xl" style={{ background: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}>
+              <span className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                共 {showAllLevels ? tasks.length : tasks.filter(task => !task.parent_id).length} 个{showAllLevels ? '' : '主'}任务
+              </span>
+            </div>
+            {showAllLevels && (
+              <div className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
+                显示所有层级
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -188,17 +203,23 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
           </div>
         ) : (
           <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
-            {tasks.map((task) => {
+            {tasks
+              .filter(task => showAllLevels || !task.parent_id) // 根据筛选条件显示任务
+              .map((task) => {
               const priorityInfo = priorityMap[task.priority as keyof typeof priorityMap] || priorityMap.medium;
               const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.active;
               const isExpanded = expandedTask === task.id;
+              const isSubtask = !!task.parent_id; // 判断是否为子任务
               
               return (
                 <div key={task.id} className="group">
                   {/* 任务单行显示 */}
                   <div 
                     className="flex items-center justify-between p-4 hover:bg-opacity-50 cursor-pointer transition-all"
-                    style={{ backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent' }}
+                    style={{ 
+                      backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
+                      paddingLeft: isSubtask ? '2rem' : '1rem' // 子任务增加左侧缩进
+                    }}
                     onClick={() => handleTaskClick(task)}
                   >
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
@@ -207,9 +228,25 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                         {isExpanded ? '▼' : '▶'}
                       </button>
                       
+                      {/* 子任务标识 */}
+                      {isSubtask && (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
+                          <span 
+                            className="px-2 py-0.5 rounded text-xs font-medium"
+                            style={{ backgroundColor: 'var(--accent-amber)', color: 'white' }}
+                          >
+                            子任务
+                          </span>
+                        </div>
+                      )}
+                      
                       {/* 任务内容 */}
                       <div className="flex-1 min-w-0">
-                        <span className="text-body font-medium truncate block" style={{ color: 'var(--text-primary)' }}>
+                        <span 
+                          className="text-body font-medium truncate block" 
+                          style={{ color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)' }}
+                        >
                           {task.content}
                         </span>
                       </div>
@@ -264,8 +301,8 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                     </div>
                   </div>
 
-                  {/* 一级子任务内联显示 */}
-                  {task.subtasks && task.subtasks.length > 0 && (
+                  {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务时显示 */}
+                  {!showAllLevels && !isSubtask && task.subtasks && task.subtasks.length > 0 && (
                     <div className="pl-12 pr-4 pb-2">
                       {task.subtasks.slice(0, 3).map((subtask: Record, index: number) => (
                         <div 

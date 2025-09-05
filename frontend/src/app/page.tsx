@@ -232,6 +232,29 @@ export default function App() {
                             <option value="low">低</option>
                           </select>
                         </div>
+                        
+                        {/* 任务层级筛选 */}
+                        <div className="flex items-center space-x-3 pt-2" style={{ borderTop: '1px solid var(--border-light)' }}>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="rounded w-4 h-4"
+                              style={{ accentColor: 'var(--primary)' }}
+                              onChange={(e) => {
+                                const filterEvent = new CustomEvent('taskFilter', { 
+                                  detail: { type: 'showAllLevels', value: e.target.checked } 
+                                });
+                                window.dispatchEvent(filterEvent);
+                              }}
+                            />
+                            <span className="text-body-small font-medium" style={{ color: 'var(--text-secondary)' }}>
+                              显示所有层级任务
+                            </span>
+                          </label>
+                          <div className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
+                            默认只显示主任务
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
