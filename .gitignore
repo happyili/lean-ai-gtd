@@ -13,6 +13,7 @@ memory/agents/*
 coordination/memory_bank/*
 coordination/subtasks/*
 coordination/orchestration/*
+*.pyc
 *.db
 *.db-journal
 *.db-wal
