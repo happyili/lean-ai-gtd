@@ -84,6 +84,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       if (priority && priority !== 'all') params.append('priority', priority);
       params.append('category', 'task');
       params.append('include_subtasks', 'true');
+      params.append('subtask_detail', 'true'); // 获取子任务详细内容
       
       const response = await fetch(`http://localhost:5050/api/records?${params}`);
       
@@ -263,6 +264,55 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                     </div>
                   </div>
 
+                  {/* 一级子任务内联显示 */}
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="pl-12 pr-4 pb-2">
+                      {task.subtasks.slice(0, 3).map((subtask: Record, index: number) => (
+                        <div 
+                          key={subtask.id} 
+                          className="flex items-center justify-between py-1 text-body-small"
+                          style={{ 
+                            borderLeft: '2px solid var(--border-light)', 
+                            paddingLeft: '12px',
+                            marginLeft: '8px',
+                            color: 'var(--text-tertiary)'
+                          }}
+                        >
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
+                            <span className="truncate font-medium">
+                              {subtask.content}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            <span 
+                              className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}
+                            </span>
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              {subtask.progress || 0}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {task.subtasks.length > 3 && (
+                        <div 
+                          className="py-1 text-xs font-medium cursor-pointer hover:underline"
+                          style={{ 
+                            color: 'var(--primary)',
+                            paddingLeft: '20px'
+                          }}
+                          onClick={() => handleTaskClick(task)}
+                        >
+                          还有 {task.subtasks!.length - 3} 个子任务...
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* 展开的详情区域 */}
                   {isExpanded && (
                     <div className="px-8 pb-4 card" style={{ backgroundColor: 'var(--background-secondary)' }}>
@@ -283,11 +333,32 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                         </div>
                       </div>
 
-                      {/* 子任务信息 */}
-                      {task.subtask_count && task.subtask_count > 0 && (
-                        <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}>
-                          <div className="text-body-small font-medium" style={{ color: 'var(--text-secondary)' }}>
-                            📋 包含 {task.subtask_count} 个子任务
+                      {/* 所有子任务详情 */}
+                      {task.subtasks && task.subtasks.length > 0 && (
+                        <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}>
+                          <div className="text-body-small font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
+                            📋 所有子任务 ({task.subtasks.length})
+                          </div>
+                          <div className="space-y-2">
+                            {task.subtasks.map((subtask: Record) => (
+                              <div key={subtask.id} className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                                <span className="text-body-small font-medium flex-1" style={{ color: 'var(--text-primary)' }}>
+                                  {subtask.content}
+                                </span>
+                                <div className="flex items-center space-x-2">
+                                  <span 
+                                    className={`px-2 py-1 rounded text-xs font-medium ${
+                                      statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}
+                                  </span>
+                                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                    {subtask.progress || 0}%
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
