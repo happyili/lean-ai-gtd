@@ -147,28 +147,45 @@ export default function App() {
 
       {/* 头部 */}
       <header className="backdrop-blur-lg bg-white/80 border-b border-slate-200/60 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl font-bold">AI</span>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+        <div className="max-w-7xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between h-12">
+            {/* 左侧：Logo + 导航菜单 */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                  <span className="text-white text-sm font-bold">AI</span>
+                </div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
                   AIGTD
                 </h1>
-                <p className="text-slate-500 mt-1 font-medium">智能任务管理系统</p>
               </div>
+              
+              {/* 导航菜单 */}
+              <nav className="flex items-center space-x-1">
+                <button className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100/60 rounded-lg transition-all">
+                  Search
+                </button>
+                <button className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50/80 rounded-lg transition-all">
+                  Tasks
+                </button>
+              </nav>
             </div>
-            <div className="bg-gradient-to-r from-sky-50 to-blue-50 px-4 py-2 rounded-xl border border-sky-200/60">
-              <span className="text-sm font-medium text-sky-700">任务管理平台</span>
+
+            {/* 右侧：My Account */}
+            <div className="flex items-center">
+              <button className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100/60 rounded-lg transition-all">
+                <div className="w-6 h-6 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-medium">U</span>
+                </div>
+                <span>My Account</span>
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* 主要内容区域 */}
-      <div className="flex h-[calc(100vh-136px)]">
+      <div className="flex h-[calc(100vh-72px)]">
         {/* 左侧任务列表 */}
         <main className="flex-1">
           <TaskList
