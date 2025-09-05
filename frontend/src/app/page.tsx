@@ -23,6 +23,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedTask, setSelectedTask] = useState<Record | null>(null);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -138,34 +139,105 @@ export default function App() {
       {notification && (
         <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl transition-all backdrop-blur-sm ${
           notification.type === 'success' 
-            ? 'bg-emerald-500/90 text-white border border-emerald-400/50' 
-            : 'bg-red-500/90 text-white border border-red-400/50'
+            ? 'status-success'
+            : 'status-error'
         }`}>
-          <div className="font-medium">{notification.message}</div>
+          <div className="font-semibold text-sm">{notification.message}</div>
         </div>
       )}
 
       {/* 头部 */}
-      <header className="backdrop-blur-lg bg-white/80 border-b border-slate-200/60 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between h-12">
+      <header className="backdrop-blur-lg surface-elevated border-b sticky top-0 z-40" style={{ borderColor: 'var(--border-light)' }}>
+        <div className="max-w-7xl mx-auto px-6 py-2">
+          <div className="flex items-center justify-between h-8">
             {/* 左侧：Logo + 导航菜单 */}
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
-                  <span className="text-white text-sm font-bold">AI</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: 'var(--primary)' }}>
+                  <span className="text-white text-xs font-bold">AI</span>
                 </div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
                   AIGTD
                 </h1>
               </div>
               
               {/* 导航菜单 */}
-              <nav className="flex items-center space-x-1">
-                <button className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100/60 rounded-lg transition-all">
-                  Search
-                </button>
-                <button className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50/80 rounded-lg transition-all">
+              <nav className="flex items-center space-x-1 relative">
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setShowSearchDropdown(true)}
+                  onMouseLeave={() => setShowSearchDropdown(false)}
+                >
+                  <button className="px-3 py-1 text-xs font-medium transition-all rounded-md hover:btn-secondary" style={{ color: 'var(--text-tertiary)' }}>
+                    Search
+                  </button>
+                  
+                  {/* 搜索下拉框 */}
+                  {showSearchDropdown && (
+                    <div 
+                      className="absolute top-full left-0 mt-1 w-80 p-4 card shadow-lg z-50"
+                      style={{ backgroundColor: 'var(--card-background)' }}
+                    >
+                      <div className="space-y-3">
+                        {/* 搜索框 */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="搜索任务..."
+                            className="w-full pl-8 pr-4 py-2 rounded-lg form-input text-body-small"
+                            onChange={(e) => {
+                              // 直接传递搜索值给TaskList组件
+                              const searchEvent = new CustomEvent('taskSearch', { 
+                                detail: { query: e.target.value } 
+                              });
+                              window.dispatchEvent(searchEvent);
+                            }}
+                          />
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>🔍</span>
+                          </div>
+                        </div>
+                        
+                        {/* 筛选器 */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <select
+                            className="px-3 py-2 rounded-lg form-input text-body-small"
+                            onChange={(e) => {
+                              const filterEvent = new CustomEvent('taskFilter', { 
+                                detail: { type: 'status', value: e.target.value } 
+                              });
+                              window.dispatchEvent(filterEvent);
+                            }}
+                          >
+                            <option value="all">所有状态</option>
+                            <option value="active">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="paused">暂停</option>
+                            <option value="cancelled">已取消</option>
+                          </select>
+                          
+                          <select
+                            className="px-3 py-2 rounded-lg form-input text-body-small"
+                            onChange={(e) => {
+                              const filterEvent = new CustomEvent('taskFilter', { 
+                                detail: { type: 'priority', value: e.target.value } 
+                              });
+                              window.dispatchEvent(filterEvent);
+                            }}
+                          >
+                            <option value="all">所有优先级</option>
+                            <option value="urgent">紧急</option>
+                            <option value="high">高</option>
+                            <option value="medium">中</option>
+                            <option value="low">低</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <button className="px-3 py-1 text-xs font-medium rounded-md transition-all" style={{ color: 'var(--primary)', background: 'var(--primary-light)' }}>
                   Tasks
                 </button>
               </nav>
@@ -173,8 +245,8 @@ export default function App() {
 
             {/* 右侧：My Account */}
             <div className="flex items-center">
-              <button className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100/60 rounded-lg transition-all">
-                <div className="w-6 h-6 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center">
+              <button className="flex items-center space-x-2 px-3 py-1 text-xs font-medium transition-all rounded-md hover:btn-secondary" style={{ color: 'var(--text-secondary)' }}>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--border-default)' }}>
                   <span className="text-white text-xs font-medium">U</span>
                 </div>
                 <span>My Account</span>
@@ -185,7 +257,7 @@ export default function App() {
       </header>
 
       {/* 主要内容区域 */}
-      <div className="flex h-[calc(100vh-72px)]">
+      <div className="flex h-[calc(100vh-48px)]">
         {/* 左侧任务列表 */}
         <main className="flex-1">
           <TaskList
