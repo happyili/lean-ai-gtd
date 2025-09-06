@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+
 interface AIAnalysis {
   execution_strategy: {
     summary: string;
@@ -43,7 +45,7 @@ export default function AISuggestions({
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${taskId}/ai-analysis`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}/ai-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +83,7 @@ export default function AISuggestions({
     );
 
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${taskId}/create-subtasks-from-ai`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}/create-subtasks-from-ai`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

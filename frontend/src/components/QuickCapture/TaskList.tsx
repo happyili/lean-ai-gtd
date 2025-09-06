@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import AISuggestions from './AISuggestions';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+
 interface Record {
   id: number;
   content: string;
@@ -59,7 +61,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +89,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务状态
   const handleUpdateStatus = async (taskId: number, newStatus: string) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +117,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务进展记录
   const handleUpdateProgressNotes = async (taskId: number, progressNotes: string) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -240,7 +242,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!content) return;
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${parentId}/subtasks`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${parentId}/subtasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,7 +285,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 删除子任务
   const handleDeleteSubtask = async (subtaskId: number, parentId: number) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
         method: 'DELETE',
       });
 
@@ -375,7 +377,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!newContent) return;
 
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -422,7 +424,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新子任务状态
   const updateSubtaskStatus = async (subtaskId: number, parentId: number, newStatus: string) => {
     try {
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -527,7 +529,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         params.append('top_level_only', 'false'); // 总是获取所有任务，在前端筛选
       }
       
-      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records?${params}`);
+      const response = await fetch(`${API_BASE_URL}/api/records?${params}`);
       
       if (!response.ok) {
         throw new Error('获取任务失败');
@@ -560,7 +562,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {
       try {
-        const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/records/${id}`, {
           method: 'DELETE',
         });
 

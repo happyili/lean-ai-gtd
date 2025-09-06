@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+
 interface Record {
   id: number;
   content: string;
@@ -59,7 +61,7 @@ export default function TaskDetail({
 
   const fetchSubtasks = async () => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${task.id}/subtasks`);
+      const response = await fetch(`${API_BASE_URL}/api/records/${task.id}/subtasks`);
       if (response.ok) {
         const data = await response.json();
         setSubtasks(data.subtasks || []);
@@ -85,7 +87,7 @@ export default function TaskDetail({
     if (!newSubtaskContent.trim()) return;
     
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${task.id}/subtasks`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${task.id}/subtasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +111,7 @@ export default function TaskDetail({
 
   const handleDeleteSubtask = async (subtaskId: number) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
         method: 'DELETE',
       });
 
