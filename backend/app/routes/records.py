@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.models.record import Record, db
+from app.services.ai_intelligence import ai_intelligence_service
 from datetime import datetime
 
 records_bp = Blueprint('records', __name__)
@@ -56,15 +57,29 @@ def get_records():
         per_page = request.args.get('per_page', 20, type=int)
         search = request.args.get('search', '')
         category = request.args.get('category', '')
+        status = request.args.get('status', '')
+        priority = request.args.get('priority', '')
         
         # 构建查询
-        query = Record.query.filter_by(status='active')
+        query = Record.query
+        
+        # 默认只显示非删除状态的记录
+        if not status or status == 'all':
+            query = query.filter(Record.status != 'deleted')
+        elif status == 'pending':
+            # 待办：显示所有非完成且非取消的任务
+            query = query.filter(Record.status.notin_(['completed', 'cancelled', 'deleted']))
+        else:
+            query = query.filter_by(status=status)
         
         if search:
             query = query.filter(Record.content.contains(search))
         
         if category and category in ['idea', 'task', 'note', 'general']:
             query = query.filter_by(category=category)
+        
+        if priority and priority in ['low', 'medium', 'high', 'urgent']:
+            query = query.filter_by(priority=priority)
         
         # 检查是否只获取顶级任务（不包含子任务）
         include_subtasks = request.args.get('include_subtasks', 'false').lower() == 'true'
@@ -226,6 +241,12 @@ def update_record(record_id):
                 return jsonify({'error': '无效的优先级值'}), 400
             record.priority = priority
         
+        if 'progress_notes' in data:
+            progress_notes = data.get('progress_notes', '')
+            if len(progress_notes) > 10000:  # 限制进展记录长度
+                return jsonify({'error': '进展记录不能超过10000字符'}), 400
+            record.progress_notes = progress_notes
+        
         if 'progress' in data:
             progress = data.get('progress', 0)
             if not isinstance(progress, int) or progress < 0 or progress > 100:
@@ -242,4 +263,102 @@ def update_record(record_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'更新记录失败: {str(e)}'}), 500 
+        return jsonify({'error': f'更新记录失败: {str(e)}'}), 500
+
+@records_bp.route('/api/records/<int:record_id>/ai-analysis', methods=['POST'])
+def analyze_task_with_ai(record_id):
+    """使用AI分析任务进展并提供智能建议"""
+    try:
+        record = Record.query.get_or_404(record_id)
+        
+        # 只分析任务类型的记录
+        if not record.is_task():
+            return jsonify({'error': '只能对任务类型进行AI分析'}), 400
+        
+        # 获取子任务信息
+        subtasks = record.get_subtasks()
+        
+        # 构建任务数据
+        task_data = {
+            'content': record.content,
+            'progress_notes': getattr(record, 'progress_notes', ''),
+            'status': record.status,
+            'priority': record.priority,
+            'subtasks': [
+                {
+                    'content': subtask.content,
+                    'status': subtask.status,
+                    'priority': subtask.priority
+                } for subtask in subtasks
+            ]
+        }
+        
+        # 调用AI分析服务
+        analysis_result = ai_intelligence_service.analyze_task_progress(task_data)
+        
+        return jsonify({
+            'message': 'AI分析完成',
+            'task_id': record_id,
+            'analysis': analysis_result
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'AI分析失败: {str(e)}'}), 500
+
+@records_bp.route('/api/records/<int:record_id>/create-subtasks-from-ai', methods=['POST'])
+def create_subtasks_from_ai_suggestions(record_id):
+    """基于AI建议批量创建子任务"""
+    try:
+        record = Record.query.get_or_404(record_id)
+        
+        if not record.is_task():
+            return jsonify({'error': '只能为任务类型创建子任务'}), 400
+        
+        data = request.get_json()
+        if not data or 'subtask_suggestions' not in data:
+            return jsonify({'error': '缺少子任务建议数据'}), 400
+        
+        subtask_suggestions = data['subtask_suggestions']
+        created_subtasks = []
+        
+        # 批量创建子任务
+        for suggestion in subtask_suggestions:
+            if not suggestion.get('title'):
+                continue
+                
+            # 组合标题和描述作为内容
+            content = suggestion['title']
+            if suggestion.get('description'):
+                content += f" - {suggestion['description']}"
+            
+            # 映射优先级
+            priority_mapping = {
+                'high': 'high',
+                'medium': 'medium', 
+                'low': 'low'
+            }
+            priority = priority_mapping.get(suggestion.get('priority', 'medium'), 'medium')
+            
+            # 创建子任务
+            subtask = record.add_subtask(content, 'task')
+            subtask.priority = priority
+            db.session.add(subtask)
+            
+            created_subtasks.append({
+                'content': content,
+                'priority': priority,
+                'estimated_time': suggestion.get('estimated_time', ''),
+                'dependencies': suggestion.get('dependencies', [])
+            })
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'成功创建 {len(created_subtasks)} 个子任务',
+            'created_subtasks': created_subtasks,
+            'parent_task': record.to_dict(include_subtasks=True)
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'创建子任务失败: {str(e)}'}), 500 

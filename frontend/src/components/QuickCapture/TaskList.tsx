@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import AISuggestions from './AISuggestions';
 
 interface Record {
   id: number;
@@ -53,11 +54,12 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   const [editingSubtaskContent, setEditingSubtaskContent] = useState<{[key: number]: string}>({});
   const [editingTask, setEditingTask] = useState<number | null>(null);
   const [editingTaskContent, setEditingTaskContent] = useState<{[key: number]: string}>({});
+  const [showAISuggestions, setShowAISuggestions] = useState<number | null>(null);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -85,7 +87,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   // 更新任务状态
   const handleUpdateStatus = async (taskId: number, newStatus: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +115,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   // 更新任务进展记录
   const handleUpdateProgressNotes = async (taskId: number, progressNotes: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -238,7 +240,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
     if (!content) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${parentId}/subtasks`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${parentId}/subtasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +283,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   // 删除子任务
   const handleDeleteSubtask = async (subtaskId: number, parentId: number) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
         method: 'DELETE',
       });
 
@@ -373,7 +375,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
     if (!newContent) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -420,7 +422,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   // 更新子任务状态
   const updateSubtaskStatus = async (subtaskId: number, parentId: number, newStatus: string) => {
     try {
-      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${subtaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -525,7 +527,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
         params.append('top_level_only', 'false'); // 总是获取所有任务，在前端筛选
       }
       
-      const response = await fetch(`http://localhost:5050/api/records?${params}`);
+      const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records?${params}`);
       
       if (!response.ok) {
         throw new Error('获取任务失败');
@@ -558,7 +560,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {
       try {
-        const response = await fetch(`http://localhost:5050/api/records/${id}`, {
+        const response = await fetch(`import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050'/api/records/${id}`, {
           method: 'DELETE',
         });
 
@@ -1002,17 +1004,29 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                           <div className="space-y-3" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
                             <div className="flex items-center justify-between">
                               <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                                📋 子任务管理：
+                                📋 任务管理：
                               </label>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
-                                }}
-                                className="text-xs px-3 py-1 rounded btn-primary"
-                              >
-                                {isAddingSubtask === task.id ? '取消添加' : '+ 添加子任务'}
-                              </button>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAISuggestions(task.id);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-primary"
+                                  style={{ background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
+                                >
+                                  🤖 AI智能分析
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-primary"
+                                >
+                                  {isAddingSubtask === task.id ? '取消添加' : '+ 添加子任务'}
+                                </button>
+                              </div>
                             </div>
 
                             {/* 添加子任务输入框 */}
@@ -1182,6 +1196,17 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
           </div>
         )}
       </div>
+      
+      {/* AI智能分析弹窗 */}
+      <AISuggestions
+        taskId={showAISuggestions || 0}
+        isVisible={showAISuggestions !== null}
+        onClose={() => setShowAISuggestions(null)}
+        onCreateSubtasks={(suggestions) => {
+          // 重新获取任务列表以显示新创建的子任务
+          fetchTasks(searchQuery, statusFilter, priorityFilter);
+        }}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ class Record(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('records.id'), nullable=True)  # 父任务ID，支持子任务
     priority = db.Column(db.String(20), default='medium')  # low/medium/high/urgent
     progress = db.Column(db.Integer, default=0)  # 进度百分比 0-100
+    progress_notes = db.Column(db.Text, nullable=True)  # 进展记录和问题描述
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status = db.Column(db.String(20), default='active')  # active/completed/paused/cancelled/archived/deleted
@@ -29,6 +30,7 @@ class Record(db.Model):
             'parent_id': self.parent_id,
             'priority': self.priority,
             'progress': self.progress,
+            'progress_notes': self.progress_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'status': self.status

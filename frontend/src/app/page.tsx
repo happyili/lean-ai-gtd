@@ -17,7 +17,7 @@ interface Record {
   subtasks?: Record[];
 }
 
-const API_BASE_URL = 'http://localhost:5050';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -225,6 +225,7 @@ export default function App() {
                             onChange={(e) => handleFilter('status', e.target.value)}
                           >
                             <option value="all">所有状态</option>
+                            <option value="pending">待办</option>
                             <option value="active">进行中</option>
                             <option value="completed">已完成</option>
                             <option value="paused">暂停</option>
