@@ -786,7 +786,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                     className="flex items-center justify-between p-4 hover:bg-opacity-50 cursor-pointer transition-all"
                     style={{ 
                       backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
-                      paddingLeft: isSubtask ? '2rem' : '1rem' // 子任务增加左侧缩进
+                      paddingLeft: isSubtask ? '2rem' : '1rem', // 子任务增加左侧缩进
+                      paddingRight: 0
                     }}
                     onClick={() => handleTaskClick(task)}
                   >
@@ -955,7 +956,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       )}
                       
                       {/* 时间 */}
-                      <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                      <div className="text-caption" style={{ color: 'var(--text-muted)', marginRight: 4 }}>
                         {formatDate(task.created_at)}
                       </div>
                       
