@@ -28,6 +28,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
+  const [showRightPanel, setShowRightPanel] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -290,22 +291,38 @@ export default function App() {
       {/* 主要内容区域 */}
       <div className="flex h-[calc(100vh-48px)]">
         {/* 左侧任务列表 */}
-        <main className="flex-1">
+        <main className={`transition-all duration-300 ${showRightPanel ? 'flex-1' : 'w-full'}`}>
           <TaskList
             onViewDetail={handleViewDetail}
             onDelete={handleDelete}
             onSearch={handleSearch}
+            onSave={handleSave}
+            showNotification={showNotification}
           />
         </main>
 
         {/* 右侧操作面板 */}
-        <aside className="w-96">
-          <RightPanel
-            onSave={handleSave}
-            onClear={handleClear}
-            isLoading={isLoading}
-          />
-        </aside>
+        {showRightPanel && (
+          <aside className="w-96 transition-all duration-300">
+            <RightPanel
+              onSave={handleSave}
+              onClear={handleClear}
+              isLoading={isLoading}
+              onClose={() => setShowRightPanel(false)}
+            />
+          </aside>
+        )}
+
+        {/* 展开右侧面板的浮动按钮 */}
+        {!showRightPanel && (
+          <button
+            onClick={() => setShowRightPanel(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
+            title="打开添加面板"
+          >
+            <span className="text-xl font-bold">+</span>
+          </button>
+        )}
       </div>
 
       {/* 任务详情弹窗 */}

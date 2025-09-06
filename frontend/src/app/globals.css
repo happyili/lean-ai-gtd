@@ -301,3 +301,149 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 任务内容截断和hover效果 */
+.task-content-truncated {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.task-content-truncated:hover {
+  z-index: 50;
+}
+
+.task-content-truncated:hover::after {
+  content: attr(title);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--card-background, #ffffff);
+  color: var(--text-primary, #1a1a1a);
+  border: 1px solid var(--border-light, #e5e5e5);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 600px;
+  min-width: 320px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: fadeInUp 0.2s ease;
+  backdrop-filter: blur(8px);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+/* 响应式任务内容宽度 */
+.task-content-responsive {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 主任务内容响应式宽度 - 大幅增加最大宽度 */
+.main-task-width {
+  max-width: 300px;
+}
+
+@media (min-width: 640px) {
+  .main-task-width {
+    max-width: 400px;
+  }
+}
+
+@media (min-width: 768px) {
+  .main-task-width {
+    max-width: 500px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .main-task-width {
+    max-width: 650px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .main-task-width {
+    max-width: 800px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .main-task-width {
+    max-width: 1000px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .main-task-width {
+    max-width: 1200px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .main-task-width {
+    max-width: 1600px;
+  }
+}
+
+/* 子任务内容响应式宽度 - 大幅增加最大宽度 */
+.subtask-width {
+  max-width: 280px;
+}
+
+@media (min-width: 640px) {
+  .subtask-width {
+    max-width: 370px;
+  }
+}
+
+@media (min-width: 768px) {
+  .subtask-width {
+    max-width: 470px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .subtask-width {
+    max-width: 600px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .subtask-width {
+    max-width: 750px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .subtask-width {
+    max-width: 950px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .subtask-width {
+    max-width: 1150px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .subtask-width {
+    max-width: 1500px;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

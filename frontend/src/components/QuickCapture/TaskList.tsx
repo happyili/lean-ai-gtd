@@ -21,6 +21,8 @@ interface TaskListProps {
   onViewDetail: (record: Record) => void;
   onDelete: (id: number) => void;
   onSearch: (query: string) => void;
+  onSave: (content: string, category: string) => Promise<void>;
+  showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
 const priorityMap = {
@@ -37,16 +39,19 @@ const statusMap = {
   cancelled: { label: '已取消', color: 'bg-red-100 text-red-800' }
 };
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch }: TaskListProps) {
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, showNotification }: TaskListProps) {
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleteSubtaskConfirm, setDeleteSubtaskConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [showAllLevels, setShowAllLevels] = useState(false); // 默认只显示顶级任务
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskContent, setNewTaskContent] = useState('');
   const [progressNotesCache, setProgressNotesCache] = useState<{[key: number]: string}>({});
   const [progressNotesHistory, setProgressNotesHistory] = useState<{[key: number]: string[]}>({});
   const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: number}>({});
@@ -57,6 +62,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [editingTask, setEditingTask] = useState<number | null>(null);
   const [editingTaskContent, setEditingTaskContent] = useState<{[key: number]: string}>({});
   const [showAISuggestions, setShowAISuggestions] = useState<number | null>(null);
+  const [priorityDropdownOpen, setPriorityDropdownOpen] = useState<number | null>(null);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
@@ -83,6 +89,42 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       );
     } catch (error) {
       console.error('更新任务内容失败:', error);
+    }
+  };
+
+  // 更新任务优先级
+  const handleUpdatePriority = async (taskId: number, newPriority: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新任务优先级失败');
+      }
+
+      // 更新本地状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === taskId) {
+            return { ...task, priority: newPriority };
+          }
+          // 同时更新子任务中的对应项
+          if (task.subtasks) {
+            const updatedSubtasks = task.subtasks.map(subtask => 
+              subtask.id === taskId ? { ...subtask, priority: newPriority } : subtask
+            );
+            return { ...task, subtasks: updatedSubtasks };
+          }
+          return task;
+        })
+      );
+    } catch (error) {
+      console.error('更新任务优先级失败:', error);
     }
   };
 
@@ -284,31 +326,38 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
   // 删除子任务
   const handleDeleteSubtask = async (subtaskId: number, parentId: number) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
-        method: 'DELETE',
-      });
+    if (deleteSubtaskConfirm === subtaskId) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        throw new Error('删除子任务失败');
+        if (!response.ok) {
+          throw new Error('删除子任务失败');
+        }
+
+        // 更新任务列表，移除子任务
+        setTasks(prevTasks => 
+          prevTasks.map(task => {
+            if (task.id === parentId) {
+              return {
+                ...task,
+                subtasks: (task.subtasks || []).filter(subtask => subtask.id !== subtaskId),
+                subtask_count: Math.max(0, (task.subtask_count || 0) - 1)
+              };
+            }
+            return task;
+          })
+        );
+        
+        setDeleteSubtaskConfirm(null);
+      } catch (error) {
+        console.error('删除子任务失败:', error);
       }
-
-      // 更新任务列表，移除子任务
-      setTasks(prevTasks => 
-        prevTasks.map(task => {
-          if (task.id === parentId) {
-            return {
-              ...task,
-              subtasks: (task.subtasks || []).filter(subtask => subtask.id !== subtaskId),
-              subtask_count: Math.max(0, (task.subtask_count || 0) - 1)
-            };
-          }
-          return task;
-        })
-      );
-
-    } catch (error) {
-      console.error('删除子任务失败:', error);
+    } else {
+      setDeleteSubtaskConfirm(subtaskId);
+      // 3秒后自动取消确认状态
+      setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
     }
   };
 
@@ -488,6 +537,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
     const handleClickOutside = (_e: MouseEvent) => {
       setStatusDropdownOpen(null);
+      setPriorityDropdownOpen(null);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -525,9 +575,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       params.append('category', 'task');
       params.append('include_subtasks', 'true');
       params.append('subtask_detail', 'true'); // 获取子任务详细内容
-      if (!showAllLevels) {
-        params.append('top_level_only', 'false'); // 总是获取所有任务，在前端筛选
-      }
+      // 总是获取所有任务，在前端筛选显示哪些任务
+      params.append('top_level_only', 'false');
       
       const response = await fetch(`${API_BASE_URL}/api/records?${params}`);
       
@@ -600,6 +649,30 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     }
   };
 
+  // 添加新任务
+  const handleAddTask = async () => {
+    const content = newTaskContent.trim();
+    if (!content) return;
+
+    try {
+      await onSave(content, 'task');
+      setNewTaskContent('');
+      setIsAddingTask(false);
+      showNotification('任务创建成功！', 'success');
+      // 重新获取任务列表
+      await fetchTasks(searchQuery, statusFilter, priorityFilter);
+    } catch (error) {
+      console.error('创建任务失败:', error);
+      showNotification('创建任务失败', 'error');
+    }
+  };
+
+  // 取消添加任务
+  const handleCancelAddTask = () => {
+    setNewTaskContent('');
+    setIsAddingTask(false);
+  };
+
 
   return (
     <div className="h-full flex flex-col card">
@@ -613,6 +686,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                 共 {showAllLevels ? tasks.length : tasks.filter(task => !task.parent_id).length} 个{showAllLevels ? '' : '主'}任务
               </span>
             </div>
+            <button
+              onClick={() => setIsAddingTask(true)}
+              className="px-3 py-2 rounded-xl text-body-small font-semibold btn-primary transition-all"
+              style={{ 
+                background: 'var(--primary)', 
+                color: 'white',
+                border: '1px solid var(--primary)'
+              }}
+            >
+              + 任务
+            </button>
             {showAllLevels && (
               <div className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
                 显示所有层级
@@ -624,6 +708,57 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
       {/* 任务列表 */}
       <div className="flex-1 overflow-y-auto">
+        {/* inline添加任务 */}
+        {isAddingTask && (
+          <div className="p-4 border-b" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--background-secondary)' }}>
+            <div className="flex items-center space-x-3">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>▶</span>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={newTaskContent}
+                  onChange={(e) => setNewTaskContent(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddTask();
+                    } else if (e.key === 'Escape') {
+                      handleCancelAddTask();
+                    }
+                  }}
+                  placeholder="输入新任务内容..."
+                  className="w-full px-3 py-2 rounded-lg form-input text-body"
+                  style={{
+                    backgroundColor: 'var(--card-background)',
+                    border: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleAddTask}
+                  disabled={!newTaskContent.trim()}
+                  className="px-3 py-2 rounded-lg btn-primary text-xs font-medium"
+                  style={{ 
+                    background: newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)',
+                    color: 'white',
+                    border: `1px solid ${newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)'}`
+                  }}
+                >
+                  保存
+                </button>
+                <button
+                  onClick={handleCancelAddTask}
+                  className="px-3 py-2 rounded-lg btn-secondary text-xs font-medium"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
             <div className="text-body font-semibold" style={{ color: 'var(--text-muted)' }}>加载中...</div>
@@ -632,7 +767,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           <div className="flex flex-col items-center justify-center h-32" style={{ color: 'var(--text-muted)' }}>
             <div className="text-4xl mb-3">📋</div>
             <div className="text-body-large font-semibold">暂无任务</div>
-            <div className="text-body-small mt-1">在右侧添加新任务开始工作</div>
+            <div className="text-body-small mt-1">点击上方"+ 任务"开始工作</div>
           </div>
         ) : (
           <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
@@ -702,13 +837,15 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           />
                         ) : (
                           <span 
-                            className="text-body font-medium truncate block cursor-pointer hover:underline" 
-                            style={{ color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)' }}
+                            className="text-body font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive main-task-width block" 
+                            style={{ 
+                              color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)'
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
                               startEditingTask(task.id, task.content);
                             }}
-                            title="点击编辑任务标题"
+                            title={task.content}
                           >
                             {task.content}
                           </span>
@@ -717,9 +854,50 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       
                       {/* 状态和优先级标签 */}
                       <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${priorityInfo.color}`}>
-                          {priorityInfo.label}
-                        </span>
+                        {/* 可点击的优先级标签带下拉菜单 */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPriorityDropdownOpen(priorityDropdownOpen === task.id ? null : task.id);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${priorityInfo.color} flex items-center space-x-1`}
+                          >
+                            <span>{priorityInfo.label}</span>
+                            <span className="text-xs">▼</span>
+                          </button>
+                          
+                          {/* 优先级下拉菜单 */}
+                          {priorityDropdownOpen === task.id && (
+                            <div 
+                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                              style={{ 
+                                backgroundColor: 'var(--card-background)',
+                                border: '1px solid var(--border-light)'
+                              }}
+                            >
+                              {Object.entries(priorityMap).map(([key, info]) => (
+                                <button
+                                  key={key}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdatePriority(task.id, key);
+                                    setPriorityDropdownOpen(null);
+                                  }}
+                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                    task.priority === key ? 'font-bold' : ''
+                                  }`}
+                                  style={{ 
+                                    color: task.priority === key ? 'var(--primary)' : 'var(--text-primary)',
+                                    backgroundColor: task.priority === key ? 'var(--primary-light)' : 'transparent'
+                                  }}
+                                >
+                                  {info.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         
                         {/* 可点击的状态标签带下拉菜单 */}
                         <div className="relative">
@@ -789,9 +967,10 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               e.stopPropagation();
                               handleDelete(task.id);
                             }}
-                            className="text-xs px-3 py-1 rounded-lg font-medium transition-all status-error"
+                            className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                            style={{ color: 'var(--error)' }}
                           >
-                            确认删除
+                            确认
                           </button>
                         ) : (
                           <button
@@ -800,17 +979,19 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               setDeleteConfirm(task.id);
                               setTimeout(() => setDeleteConfirm(null), 3000);
                             }}
-                            className="text-xs px-3 py-1 rounded-lg font-medium transition-all btn-secondary"
+                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                            style={{ color: 'var(--text-muted)' }}
+                            title="删除任务"
                           >
-                            删除
+                            ✕
                           </button>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务时显示 */}
-                  {!showAllLevels && !isSubtask && task.subtasks && task.subtasks.length > 0 && (
+                  {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示 */}
+                  {!showAllLevels && !isSubtask && !isExpanded && task.subtasks && task.subtasks.length > 0 && (
                     <div className="pl-12 pr-4 pb-2">
                       {task.subtasks.slice(0, 3).map((subtask: Record, _index: number) => (
                         <div 
@@ -853,18 +1034,66 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               />
                             ) : (
                               <span 
-                                className="truncate font-medium cursor-pointer hover:underline"
+                                className="font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   startEditingSubtask(subtask.id, subtask.content);
                                 }}
-                                title="点击编辑内容"
+                                title={subtask.content}
                               >
                                 {subtask.content}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center space-x-2 flex-shrink-0">
+                            {/* 可点击编辑的子任务优先级标签 */}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
+                                }}
+                                className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
+                                  priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'bg-gray-100 text-gray-600'
+                                } flex items-center space-x-1`}
+                                title="点击修改优先级"
+                              >
+                                <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                <span className="text-xs">▼</span>
+                              </button>
+                              
+                              {/* 子任务优先级下拉菜单 */}
+                              {priorityDropdownOpen === subtask.id && (
+                                <div 
+                                  className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                                  style={{ 
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border-light)'
+                                  }}
+                                >
+                                  {Object.entries(priorityMap).map(([key, info]) => (
+                                    <button
+                                      key={key}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUpdatePriority(subtask.id, key);
+                                        setPriorityDropdownOpen(null);
+                                      }}
+                                      className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                        subtask.priority === key ? 'font-bold' : ''
+                                      }`}
+                                      style={{ 
+                                        color: subtask.priority === key ? 'var(--primary)' : 'var(--text-primary)',
+                                        backgroundColor: subtask.priority === key ? 'var(--primary-light)' : 'transparent'
+                                      }}
+                                    >
+                                      {info.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
                             {/* 可点击编辑的状态标签 */}
                             <div className="relative">
                               <button
@@ -913,18 +1142,37 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               )}
                             </div>
                             
+                            {/* 子任务时间 */}
+                            <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                              {formatDate(subtask.created_at)}
+                            </div>
+                            
                             {/* 删除子任务按钮 */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSubtask(subtask.id, task.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 text-xs px-1 py-0.5 rounded transition-all hover:bg-red-100 hover:text-red-600"
-                              style={{ color: 'var(--text-muted)' }}
-                              title="删除子任务"
-                            >
-                              ✕
-                            </button>
+                            {deleteSubtaskConfirm === subtask.id ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSubtask(subtask.id, task.id);
+                                }}
+                                className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                                style={{ color: 'var(--error)' }}
+                              >
+                                确认
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteSubtaskConfirm(subtask.id);
+                                  setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                                style={{ color: 'var(--text-muted)' }}
+                                title="删除子任务"
+                              >
+                                ✕
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -950,9 +1198,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                         {/* 进展记录编辑区域 */}
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                              📝 进展记录和遇到的问题：
-                            </label>
                             <div className="flex items-center space-x-2">
                               {progressNotesHistory[task.id] && progressNotesHistory[task.id].length > 0 && (
                                 <button
@@ -1002,7 +1247,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           <div className="space-y-3" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
                             <div className="flex items-center justify-between">
                               <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                                📋 任务管理：
+                                📋 子任务管理：
                               </label>
                               <div className="flex items-center space-x-2">
                                 <button
@@ -1100,19 +1345,69 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         />
                                       ) : (
                                         <span 
-                                          className="truncate text-body-small font-medium cursor-pointer hover:underline"
-                                          style={{ color: 'var(--text-primary)' }}
+                                          className="text-body-small font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
+                                          style={{ 
+                                            color: 'var(--text-primary)'
+                                          }}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             startEditingSubtask(subtask.id, subtask.content);
                                           }}
-                                          title="点击编辑内容"
+                                          title={subtask.content}
                                         >
                                           {subtask.content}
                                         </span>
                                       )}
                                     </div>
                                     <div className="flex items-center space-x-2">
+                                      {/* 可点击编辑的子任务优先级标签 */}
+                                      <div className="relative">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
+                                          }}
+                                          className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
+                                            priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'bg-gray-100 text-gray-600'
+                                          } flex items-center space-x-1`}
+                                          title="点击修改优先级"
+                                        >
+                                          <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                          <span className="text-xs">▼</span>
+                                        </button>
+                                        
+                                        {/* 子任务优先级下拉菜单 */}
+                                        {priorityDropdownOpen === subtask.id && (
+                                          <div 
+                                            className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                                            style={{ 
+                                              backgroundColor: 'var(--card-background)',
+                                              border: '1px solid var(--border-light)'
+                                            }}
+                                          >
+                                            {Object.entries(priorityMap).map(([key, info]) => (
+                                              <button
+                                                key={key}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleUpdatePriority(subtask.id, key);
+                                                  setPriorityDropdownOpen(null);
+                                                }}
+                                                className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                                  subtask.priority === key ? 'font-bold' : ''
+                                                }`}
+                                                style={{ 
+                                                  color: subtask.priority === key ? 'var(--primary)' : 'var(--text-primary)',
+                                                  backgroundColor: subtask.priority === key ? 'var(--primary-light)' : 'transparent'
+                                                }}
+                                              >
+                                                {info.label}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      
                                       {/* 可点击编辑的状态标签 */}
                                       <div className="relative">
                                         <button
@@ -1161,17 +1456,37 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         )}
                                       </div>
                                       
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteSubtask(subtask.id, task.id);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all hover:bg-red-100 hover:text-red-600"
-                                        style={{ color: 'var(--text-muted)' }}
-                                        title="删除子任务"
-                                      >
-                                        删除
-                                      </button>
+                                      {/* 删除子任务按钮 */}
+                                      {deleteSubtaskConfirm === subtask.id ? (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteSubtask(subtask.id, task.id);
+                                          }}
+                                          className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                                          style={{ color: 'var(--error)' }}
+                                        >
+                                          确认
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteSubtaskConfirm(subtask.id);
+                                            setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                                          style={{ color: 'var(--text-muted)' }}
+                                          title="删除子任务"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                      
+                                      {/* 子任务时间 */}
+                                      <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                        {formatDate(subtask.created_at)}
+                                      </div>
                                     </div>
                                   </div>
                                 ))}

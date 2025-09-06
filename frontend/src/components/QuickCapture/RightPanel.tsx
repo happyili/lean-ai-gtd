@@ -5,6 +5,7 @@ interface RightPanelProps {
   onSave: (content: string, category: string) => void;
   onClear: () => void;
   isLoading?: boolean;
+  onClose?: () => void;
 }
 
 const tabs = [
@@ -13,7 +14,7 @@ const tabs = [
   { id: 'notes', label: '笔记管理', icon: '📝' }
 ];
 
-export default function RightPanel({ onSave, onClear, isLoading = false }: RightPanelProps) {
+export default function RightPanel({ onSave, onClear, isLoading = false, onClose }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState('add');
 
   const renderTabContent = () => {
@@ -62,6 +63,20 @@ export default function RightPanel({ onSave, onClear, isLoading = false }: Right
 
   return (
     <div className="h-full flex flex-col card" style={{ borderLeft: '1px solid var(--border-light)', background: 'var(--card-background)' }}>
+      {/* 头部：关闭按钮 */}
+      {onClose && (
+        <div className="flex justify-end p-3 border-b" style={{ borderColor: 'var(--border-light)' }}>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-all hover:btn-secondary"
+            style={{ color: 'var(--text-muted)' }}
+            title="关闭面板"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Tab 导航 */}
       <div className="flex" style={{ borderBottom: '1px solid var(--border-light)', background: 'var(--background-secondary)' }}>
         {tabs.map((tab) => (
