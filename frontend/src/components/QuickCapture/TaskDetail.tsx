@@ -6,7 +6,7 @@ interface Record {
   category: string;
   parent_id?: number;
   priority?: string;
-  progress?: number;
+  progress_notes?: string;
   created_at: string;
   updated_at: string;
   status: string;
@@ -48,7 +48,7 @@ export default function TaskDetail({
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
   const [status, setStatus] = useState(task.status);
   const [priority, setPriority] = useState(task.priority || 'medium');
-  const [progress, setProgress] = useState(task.progress || 0);
+  const [progressNotes, setProgressNotes] = useState(task.progress_notes || '');
   const [subtasks, setSubtasks] = useState<Record[]>(task.subtasks || []);
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -75,7 +75,7 @@ export default function TaskDetail({
       content: editedContent,
       status,
       priority,
-      progress
+      progress_notes: progressNotes
     };
     onUpdate(updatedTask);
     setIsEditing(false);
@@ -182,7 +182,7 @@ export default function TaskDetail({
             </div>
 
             {/* 状态和优先级 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <span className="text-sm font-semibold text-slate-600">状态</span>
                 {isEditing ? (
@@ -230,33 +230,21 @@ export default function TaskDetail({
               </div>
 
               <div className="space-y-2">
-                <span className="text-sm font-semibold text-slate-600">进度</span>
+                <span className="text-sm font-semibold text-slate-600">进展记录</span>
                 {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={progress}
-                      onChange={(e) => setProgress(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer"
-                    />
-                    <div className="text-center">
-                      <span className="text-sm font-semibold text-sky-600">{progress}%</span>
-                    </div>
+                  <textarea
+                    value={progressNotes}
+                    onChange={(e) => setProgressNotes(e.target.value)}
+                    placeholder="记录当前进展情况、遇到的问题和难点..."
+                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-slate-50/50 backdrop-blur-sm transition-all font-medium resize-none"
+                    rows={3}
+                  />
+                ) : progressNotes ? (
+                  <div className="px-4 py-3 bg-slate-50/60 rounded-2xl border border-slate-200/60">
+                    <span className="text-sm font-medium text-slate-700 whitespace-pre-wrap">{progressNotes}</span>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="w-full bg-slate-200 rounded-full h-3">
-                      <div 
-                        className="bg-gradient-to-r from-sky-500 to-blue-500 h-3 rounded-full transition-all duration-500 shadow-sm"
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-sm font-semibold text-slate-600">{progress}%</span>
-                    </div>
-                  </div>
+                  <span className="text-sm text-slate-400 italic">暂无进展记录</span>
                 )}
               </div>
             </div>

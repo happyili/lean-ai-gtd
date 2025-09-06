@@ -7,14 +7,14 @@ interface CaptureInputProps {
 }
 
 const categories = [
-  { id: 'idea', label: '想法', icon: '💡' },
   { id: 'task', label: '任务', icon: '📋' },
+  { id: 'idea', label: '想法', icon: '💡' },
   { id: 'note', label: '笔记', icon: '📝' },
 ];
 
 export default function CaptureInput({ onSave, onClear, isLoading = false }: CaptureInputProps) {
   const [content, setContent] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('idea');
+  const [selectedCategory, setSelectedCategory] = useState('task');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 自动聚焦到输入框
@@ -72,7 +72,7 @@ export default function CaptureInput({ onSave, onClear, isLoading = false }: Cap
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-8">
+    <div className="w-full">
       {/* 主输入区域 */}
       <div className="mb-6">
         <textarea
@@ -81,33 +81,36 @@ export default function CaptureInput({ onSave, onClear, isLoading = false }: Cap
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="记录您的想法、任务或笔记... (⌘+Enter 保存, ⌘+L 清空, Tab 切换分类)"
-          className="w-full h-56 p-6 border border-slate-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 text-slate-700 text-base bg-slate-50/50 backdrop-blur-sm transition-all font-medium placeholder:text-slate-400"
+          className="w-full h-80 p-4 rounded-xl resize-none form-input text-body transition-all"
+          style={{ 
+            backgroundColor: 'var(--card-background)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-light)'
+          }}
           disabled={isLoading}
         />
-        <div className="flex justify-between items-center mt-3 text-sm text-slate-500">
-          <span className="font-medium">{content.length}/5000 字符</span>
-          <span className="bg-slate-100 px-3 py-1 rounded-xl font-medium">支持快捷键操作</span>
+        <div className="flex justify-between items-center mt-3 text-caption">
+          <span style={{ color: 'var(--text-muted)' }}>{content.length}/5000 字符</span>
+          <span className="px-3 py-1 rounded-lg" style={{ background: 'var(--background-secondary)', color: 'var(--text-tertiary)' }}>支持快捷键操作</span>
         </div>
       </div>
 
       {/* 分类选择器 */}
       <div className="mb-6">
-        <label className="block text-sm font-semibold text-slate-700 mb-3">
+        <label className="block text-body-small font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
           选择分类：
         </label>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`px-6 py-3 rounded-2xl border transition-all duration-200 font-semibold ${
-                selectedCategory === category.id
-                  ? 'bg-gradient-to-r from-sky-500 to-blue-500 text-white border-sky-400 shadow-lg shadow-sky-200'
-                  : 'bg-white/60 text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 backdrop-blur-sm'
+              className={`px-4 py-2 rounded-lg text-body-small font-semibold transition-all ${
+                selectedCategory === category.id ? 'btn-primary' : 'btn-secondary'
               }`}
               disabled={isLoading}
             >
-              <span className="mr-2 text-lg">{category.icon}</span>
+              <span className="mr-2">{category.icon}</span>
               <span>{category.label}</span>
             </button>
           ))}
@@ -115,18 +118,18 @@ export default function CaptureInput({ onSave, onClear, isLoading = false }: Cap
       </div>
 
       {/* 操作按钮 */}
-      <div className="flex gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <button
           onClick={handleSave}
           disabled={!content.trim() || isLoading}
-          className="flex-1 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
+          className="btn-primary py-3 px-4 rounded-lg text-body-small font-semibold transition-all"
         >
           {isLoading ? '保存中...' : '添加记录'}
         </button>
         <button
           onClick={handleClear}
           disabled={isLoading}
-          className="bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 disabled:cursor-not-allowed text-slate-700 font-semibold py-4 px-6 rounded-2xl transition-all duration-200 backdrop-blur-sm"
+          className="btn-secondary py-3 px-4 rounded-lg text-body-small font-semibold transition-all"
         >
           清空内容
         </button>

@@ -31,26 +31,26 @@ export default function RightPanel({ onSave, onClear, isLoading = false }: Right
       
       case 'ideas':
         return (
-          <div className="p-8">
-            <div className="text-center text-slate-500 py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <div className="p-6">
+            <div className="flex flex-col items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--accent-amber)', opacity: 0.1 }}>
                 <span className="text-3xl">💡</span>
               </div>
-              <div className="font-semibold text-lg mb-2">想法管理功能</div>
-              <div className="text-sm font-medium bg-slate-100 px-3 py-1 rounded-xl inline-block">即将推出...</div>
+              <div className="text-body-large font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>想法管理功能</div>
+              <div className="px-3 py-1 rounded-xl text-caption font-medium" style={{ background: 'var(--info-bg)', color: 'var(--info)' }}>即将推出...</div>
             </div>
           </div>
         );
       
       case 'notes':
         return (
-          <div className="p-8">
-            <div className="text-center text-slate-500 py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <div className="p-6">
+            <div className="flex flex-col items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--accent-emerald)', opacity: 0.1 }}>
                 <span className="text-3xl">📝</span>
               </div>
-              <div className="font-semibold text-lg mb-2">笔记管理功能</div>
-              <div className="text-sm font-medium bg-slate-100 px-3 py-1 rounded-xl inline-block">即将推出...</div>
+              <div className="text-body-large font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>笔记管理功能</div>
+              <div className="px-3 py-1 rounded-xl text-caption font-medium" style={{ background: 'var(--info-bg)', color: 'var(--info)' }}>即将推出...</div>
             </div>
           </div>
         );
@@ -61,18 +61,23 @@ export default function RightPanel({ onSave, onClear, isLoading = false }: Right
   };
 
   return (
-    <div className="h-full flex flex-col border-l border-slate-200/60" style={{ background: 'var(--card-background)' }}>
+    <div className="h-full flex flex-col card" style={{ borderLeft: '1px solid var(--border-light)', background: 'var(--card-background)' }}>
       {/* Tab 导航 */}
-      <div className="flex border-b border-slate-200/60 bg-slate-50/30">
+      <div className="flex" style={{ borderBottom: '1px solid var(--border-light)', background: 'var(--background-secondary)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+            className={`flex-1 px-4 py-3 text-body-small font-semibold transition-all ${
               activeTab === tab.id
-                ? 'text-sky-600 border-b-2 border-sky-500 bg-white/80 backdrop-blur-sm'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
+                ? 'btn-primary'
+                : 'text-body-small hover:btn-secondary'
             }`}
+            style={{
+              color: activeTab === tab.id ? 'white' : 'var(--text-secondary)',
+              backgroundColor: activeTab === tab.id ? 'var(--primary)' : 'transparent',
+              borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : 'none'
+            }}
           >
             <span className="mr-2 text-base">{tab.icon}</span>
             <span className="hidden sm:inline">{tab.label}</span>

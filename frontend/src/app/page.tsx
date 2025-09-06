@@ -9,7 +9,7 @@ interface Record {
   category: string;
   parent_id?: number;
   priority?: string;
-  progress?: number;
+  progress_notes?: string; // 替换progress为progress_notes
   created_at: string;
   updated_at: string;
   status: string;
@@ -24,6 +24,10 @@ export default function App() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedTask, setSelectedTask] = useState<Record | null>(null);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [showAllLevels, setShowAllLevels] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -79,7 +83,27 @@ export default function App() {
 
   // 搜索记录
   const handleSearch = (query: string) => {
-    // 搜索功能由TaskList组件内部处理
+    setSearchQuery(query);
+    const searchEvent = new CustomEvent('taskSearch', { 
+      detail: { query } 
+    });
+    window.dispatchEvent(searchEvent);
+  };
+
+  // 处理筛选
+  const handleFilter = (type: string, value: string) => {
+    if (type === 'status') {
+      setStatusFilter(value);
+    } else if (type === 'priority') {
+      setPriorityFilter(value);
+    } else if (type === 'showAllLevels') {
+      setShowAllLevels(value === 'true');
+    }
+    
+    const filterEvent = new CustomEvent('taskFilter', { 
+      detail: { type, value } 
+    });
+    window.dispatchEvent(filterEvent);
   };
 
   // 清空输入
@@ -175,7 +199,7 @@ export default function App() {
                   {/* 搜索下拉框 */}
                   {showSearchDropdown && (
                     <div 
-                      className="absolute top-full left-0 mt-1 w-80 p-4 card shadow-lg z-50"
+                      className="absolute top-full left-0 -mt-1 w-80 p-4 card shadow-lg z-50 pt-5"
                       style={{ backgroundColor: 'var(--card-background)' }}
                     >
                       <div className="space-y-3">
@@ -183,15 +207,10 @@ export default function App() {
                         <div className="relative">
                           <input
                             type="text"
+                            value={searchQuery}
                             placeholder="搜索任务..."
                             className="w-full pl-8 pr-4 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => {
-                              // 直接传递搜索值给TaskList组件
-                              const searchEvent = new CustomEvent('taskSearch', { 
-                                detail: { query: e.target.value } 
-                              });
-                              window.dispatchEvent(searchEvent);
-                            }}
+                            onChange={(e) => handleSearch(e.target.value)}
                           />
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span className="text-sm" style={{ color: 'var(--text-muted)' }}>🔍</span>
@@ -201,13 +220,9 @@ export default function App() {
                         {/* 筛选器 */}
                         <div className="grid grid-cols-2 gap-3">
                           <select
+                            value={statusFilter}
                             className="px-3 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => {
-                              const filterEvent = new CustomEvent('taskFilter', { 
-                                detail: { type: 'status', value: e.target.value } 
-                              });
-                              window.dispatchEvent(filterEvent);
-                            }}
+                            onChange={(e) => handleFilter('status', e.target.value)}
                           >
                             <option value="all">所有状态</option>
                             <option value="active">进行中</option>
@@ -217,13 +232,9 @@ export default function App() {
                           </select>
                           
                           <select
+                            value={priorityFilter}
                             className="px-3 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => {
-                              const filterEvent = new CustomEvent('taskFilter', { 
-                                detail: { type: 'priority', value: e.target.value } 
-                              });
-                              window.dispatchEvent(filterEvent);
-                            }}
+                            onChange={(e) => handleFilter('priority', e.target.value)}
                           >
                             <option value="all">所有优先级</option>
                             <option value="urgent">紧急</option>
@@ -238,14 +249,10 @@ export default function App() {
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
                               type="checkbox"
+                              checked={showAllLevels}
                               className="rounded w-4 h-4"
                               style={{ accentColor: 'var(--primary)' }}
-                              onChange={(e) => {
-                                const filterEvent = new CustomEvent('taskFilter', { 
-                                  detail: { type: 'showAllLevels', value: e.target.checked } 
-                                });
-                                window.dispatchEvent(filterEvent);
-                              }}
+                              onChange={(e) => handleFilter('showAllLevels', e.target.checked.toString())}
                             />
                             <span className="text-body-small font-medium" style={{ color: 'var(--text-secondary)' }}>
                               显示所有层级任务

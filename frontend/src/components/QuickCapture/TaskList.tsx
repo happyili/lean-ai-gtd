@@ -6,7 +6,7 @@ interface Record {
   category: string;
   parent_id?: number;
   priority?: string;
-  progress?: number;
+  progress_notes?: string; // 替换progress为progress_notes
   created_at: string;
   updated_at: string;
   status: string;
@@ -43,9 +43,423 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [showAllLevels, setShowAllLevels] = useState(false); // 默认只显示顶级任务
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
+  const [progressNotesCache, setProgressNotesCache] = useState<{[key: number]: string}>({});
+  const [progressNotesHistory, setProgressNotesHistory] = useState<{[key: number]: string[]}>({});
+  const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: NodeJS.Timeout}>({});
+  const [newSubtaskContent, setNewSubtaskContent] = useState<{[key: number]: string}>({});
+  const [isAddingSubtask, setIsAddingSubtask] = useState<number | null>(null);
+  const [editingSubtask, setEditingSubtask] = useState<number | null>(null);
+  const [editingSubtaskContent, setEditingSubtaskContent] = useState<{[key: number]: string}>({});
+  const [editingTask, setEditingTask] = useState<number | null>(null);
+  const [editingTaskContent, setEditingTaskContent] = useState<{[key: number]: string}>({});
+
+  // 更新任务内容
+  const handleUpdateTaskContent = async (taskId: number, content: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新任务内容失败');
+      }
+
+      // 更新本地状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, content }
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('更新任务内容失败:', error);
+    }
+  };
+
+  // 更新任务状态
+  const handleUpdateStatus = async (taskId: number, newStatus: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新任务状态失败');
+      }
+
+      // 更新本地状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, status: newStatus }
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('更新任务状态失败:', error);
+    }
+  };
+
+  // 更新任务进展记录
+  const handleUpdateProgressNotes = async (taskId: number, progressNotes: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ progress_notes: progressNotes }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新进展记录失败');
+      }
+
+      // 更新本地状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, progress_notes: progressNotes }
+            : task
+        )
+      );
+    } catch (error) {
+      console.error('更新进展记录失败:', error);
+    }
+  };
+
+  // 处理进展记录输入变化（支持中文输入）
+  const handleProgressNotesChange = (taskId: number, value: string) => {
+    // 保存到历史记录（用于撤销）
+    setProgressNotesHistory(prev => {
+      const currentTask = tasks.find(t => t.id === taskId);
+      const currentValue = progressNotesCache[taskId] || currentTask?.progress_notes || '';
+      const history = prev[taskId] || [];
+      
+      // 只在值有显著变化时保存到历史
+      if (currentValue !== value && (value.length === 0 || Math.abs(value.length - currentValue.length) > 5)) {
+        return {
+          ...prev,
+          [taskId]: [...history.slice(-9), currentValue] // 保留最近10个状态
+        };
+      }
+      return prev;
+    });
+
+    // 立即更新缓存
+    setProgressNotesCache(prev => ({
+      ...prev,
+      [taskId]: value
+    }));
+
+    // 清除之前的定时器
+    if (saveTimeouts[taskId]) {
+      clearTimeout(saveTimeouts[taskId]);
+    }
+
+    // 设置新的10秒自动保存定时器
+    const timeout = setTimeout(() => {
+      handleUpdateProgressNotes(taskId, value);
+      setSaveTimeouts(prev => {
+        const newTimeouts = { ...prev };
+        delete newTimeouts[taskId];
+        return newTimeouts;
+      });
+    }, 10000);
+
+    setSaveTimeouts(prev => ({
+      ...prev,
+      [taskId]: timeout
+    }));
+  };
+
+  // 立即保存进展记录
+  const saveProgressNotesImmediately = (taskId: number) => {
+    const cachedValue = progressNotesCache[taskId];
+    if (cachedValue !== undefined) {
+      // 清除定时器
+      if (saveTimeouts[taskId]) {
+        clearTimeout(saveTimeouts[taskId]);
+        setSaveTimeouts(prev => {
+          const newTimeouts = { ...prev };
+          delete newTimeouts[taskId];
+          return newTimeouts;
+        });
+      }
+      
+      handleUpdateProgressNotes(taskId, cachedValue);
+    }
+  };
+
+  // 撤销进展记录更改
+  const undoProgressNotesChange = (taskId: number) => {
+    const history = progressNotesHistory[taskId];
+    if (history && history.length > 0) {
+      const previousValue = history[history.length - 1];
+      
+      // 更新缓存和任务状态
+      setProgressNotesCache(prev => ({
+        ...prev,
+        [taskId]: previousValue
+      }));
+      
+      handleUpdateProgressNotes(taskId, previousValue);
+      
+      // 移除最后一个历史记录
+      setProgressNotesHistory(prev => ({
+        ...prev,
+        [taskId]: history.slice(0, -1)
+      }));
+    }
+  };
+
+  // 获取当前进展记录值
+  const getCurrentProgressNotes = (taskId: number): string => {
+    if (progressNotesCache[taskId] !== undefined) {
+      return progressNotesCache[taskId];
+    }
+    const task = tasks.find(t => t.id === taskId);
+    return task?.progress_notes || '';
+  };
+
+  // 添加子任务
+  const handleAddSubtask = async (parentId: number) => {
+    const content = newSubtaskContent[parentId]?.trim();
+    if (!content) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${parentId}/subtasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: content,
+          category: 'task'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('添加子任务失败');
+      }
+
+      const data = await response.json();
+      
+      // 更新任务列表，添加新子任务
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === parentId) {
+            return {
+              ...task,
+              subtasks: [...(task.subtasks || []), data.subtask],
+              subtask_count: (task.subtask_count || 0) + 1
+            };
+          }
+          return task;
+        })
+      );
+
+      // 清空输入框并关闭添加状态
+      setNewSubtaskContent(prev => ({ ...prev, [parentId]: '' }));
+      setIsAddingSubtask(null);
+
+    } catch (error) {
+      console.error('添加子任务失败:', error);
+    }
+  };
+
+  // 删除子任务
+  const handleDeleteSubtask = async (subtaskId: number, parentId: number) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('删除子任务失败');
+      }
+
+      // 更新任务列表，移除子任务
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === parentId) {
+            return {
+              ...task,
+              subtasks: (task.subtasks || []).filter(subtask => subtask.id !== subtaskId),
+              subtask_count: Math.max(0, (task.subtask_count || 0) - 1)
+            };
+          }
+          return task;
+        })
+      );
+
+    } catch (error) {
+      console.error('删除子任务失败:', error);
+    }
+  };
+
+  // 处理子任务输入变化
+  const handleSubtaskContentChange = (parentId: number, content: string) => {
+    setNewSubtaskContent(prev => ({
+      ...prev,
+      [parentId]: content
+    }));
+  };
+
+  // 开始编辑任务标题
+  const startEditingTask = (taskId: number, currentContent: string) => {
+    setEditingTask(taskId);
+    setEditingTaskContent(prev => ({
+      ...prev,
+      [taskId]: currentContent
+    }));
+  };
+
+  // 取消编辑任务标题
+  const cancelEditingTask = () => {
+    setEditingTask(null);
+    setEditingTaskContent({});
+  };
+
+  // 保存任务标题编辑
+  const saveTaskEdit = async (taskId: number) => {
+    const newContent = editingTaskContent[taskId]?.trim();
+    if (!newContent) return;
+
+    try {
+      await handleUpdateTaskContent(taskId, newContent);
+
+      // 结束编辑状态
+      setEditingTask(null);
+      setEditingTaskContent(prev => {
+        const newState = { ...prev };
+        delete newState[taskId];
+        return newState;
+      });
+
+    } catch (error) {
+      console.error('更新任务标题失败:', error);
+    }
+  };
+
+  // 开始编辑子任务
+  const startEditingSubtask = (subtaskId: number, currentContent: string) => {
+    setEditingSubtask(subtaskId);
+    setEditingSubtaskContent(prev => ({
+      ...prev,
+      [subtaskId]: currentContent
+    }));
+  };
+
+  // 取消编辑子任务
+  const cancelEditingSubtask = () => {
+    setEditingSubtask(null);
+    setEditingSubtaskContent({});
+  };
+
+  // 保存子任务编辑
+  const saveSubtaskEdit = async (subtaskId: number, parentId: number) => {
+    const newContent = editingSubtaskContent[subtaskId]?.trim();
+    if (!newContent) return;
+
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: newContent
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新子任务失败');
+      }
+
+      // 更新任务列表中的子任务内容
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === parentId) {
+            return {
+              ...task,
+              subtasks: (task.subtasks || []).map(subtask => 
+                subtask.id === subtaskId 
+                  ? { ...subtask, content: newContent }
+                  : subtask
+              )
+            };
+          }
+          return task;
+        })
+      );
+
+      // 结束编辑状态
+      setEditingSubtask(null);
+      setEditingSubtaskContent(prev => {
+        const newState = { ...prev };
+        delete newState[subtaskId];
+        return newState;
+      });
+
+    } catch (error) {
+      console.error('更新子任务失败:', error);
+    }
+  };
+
+  // 更新子任务状态
+  const updateSubtaskStatus = async (subtaskId: number, parentId: number, newStatus: string) => {
+    try {
+      const response = await fetch(`http://localhost:5050/api/records/${subtaskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('更新子任务状态失败');
+      }
+
+      // 更新任务列表中的子任务状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === parentId) {
+            return {
+              ...task,
+              subtasks: (task.subtasks || []).map(subtask => 
+                subtask.id === subtaskId 
+                  ? { ...subtask, status: newStatus }
+                  : subtask
+              )
+            };
+          }
+          return task;
+        })
+      );
+
+    } catch (error) {
+      console.error('更新子任务状态失败:', error);
+    }
+  };
 
   const handleTaskClick = (task: Record) => {
     if (expandedTask === task.id) {
+      // 保存进展记录当收起任务时
+      saveProgressNotesImmediately(task.id);
       setExpandedTask(null);
     } else {
       setExpandedTask(task.id);
@@ -68,14 +482,33 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       }
     };
 
+    const handleClickOutside = (e: MouseEvent) => {
+      setStatusDropdownOpen(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 处理Ctrl+Z撤销功能
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && expandedTask) {
+        e.preventDefault();
+        undoProgressNotesChange(expandedTask);
+      }
+    };
+
     window.addEventListener('taskSearch', handleSearch);
     window.addEventListener('taskFilter', handleFilter);
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('taskSearch', handleSearch);
       window.removeEventListener('taskFilter', handleFilter);
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      
+      // 清理所有定时器
+      Object.values(saveTimeouts).forEach(timeout => clearTimeout(timeout));
     };
-  }, []);
+  }, [expandedTask, saveTimeouts]);
 
   // 获取任务列表
   const fetchTasks = async (search?: string, status?: string, priority?: string) => {
@@ -243,12 +676,43 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                       
                       {/* 任务内容 */}
                       <div className="flex-1 min-w-0">
-                        <span 
-                          className="text-body font-medium truncate block" 
-                          style={{ color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)' }}
-                        >
-                          {task.content}
-                        </span>
+                        {editingTask === task.id ? (
+                          <input
+                            type="text"
+                            value={editingTaskContent[task.id] || task.content}
+                            onChange={(e) => setEditingTaskContent(prev => ({
+                              ...prev,
+                              [task.id]: e.target.value
+                            }))}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                saveTaskEdit(task.id);
+                              } else if (e.key === 'Escape') {
+                                cancelEditingTask();
+                              }
+                            }}
+                            onBlur={() => saveTaskEdit(task.id)}
+                            className="w-full px-2 py-1 text-body font-medium rounded form-input"
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)'
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="text-body font-medium truncate block cursor-pointer hover:underline" 
+                            style={{ color: isSubtask ? 'var(--text-secondary)' : 'var(--text-primary)' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditingTask(task.id, task.content);
+                            }}
+                            title="点击编辑任务标题"
+                          >
+                            {task.content}
+                          </span>
+                        )}
                       </div>
                       
                       {/* 状态和优先级标签 */}
@@ -256,17 +720,61 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                         <span className={`px-2 py-1 rounded-lg text-xs font-medium ${priorityInfo.color}`}>
                           {priorityInfo.label}
                         </span>
-                        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${statusInfo.color}`}>
-                          {statusInfo.label}
-                        </span>
+                        
+                        {/* 可点击的状态标签带下拉菜单 */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStatusDropdownOpen(statusDropdownOpen === task.id ? null : task.id);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${statusInfo.color} flex items-center space-x-1`}
+                          >
+                            <span>{statusInfo.label}</span>
+                            <span className="text-xs">▼</span>
+                          </button>
+                          
+                          {/* 状态下拉菜单 */}
+                          {statusDropdownOpen === task.id && (
+                            <div 
+                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                              style={{ 
+                                backgroundColor: 'var(--card-background)',
+                                border: '1px solid var(--border-light)'
+                              }}
+                            >
+                              {Object.entries(statusMap).map(([key, info]) => (
+                                <button
+                                  key={key}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateStatus(task.id, key);
+                                    setStatusDropdownOpen(null);
+                                  }}
+                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                    task.status === key ? 'font-bold' : ''
+                                  }`}
+                                  style={{ 
+                                    color: task.status === key ? 'var(--primary)' : 'var(--text-primary)',
+                                    backgroundColor: task.status === key ? 'var(--primary-light)' : 'transparent'
+                                  }}
+                                >
+                                  {info.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* 进度百分比 */}
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className="text-body-small font-medium" style={{ color: 'var(--text-secondary)' }}>
-                          {task.progress || 0}%
-                        </span>
-                      </div>
+                      {/* 进展概要 */}
+                      {task.progress_notes && (
+                        <div className="flex items-center space-x-2 flex-shrink-0 max-w-32">
+                          <span className="text-body-small font-medium truncate" style={{ color: 'var(--text-secondary)' }} title={task.progress_notes}>
+                            📝 {task.progress_notes}
+                          </span>
+                        </div>
+                      )}
                       
                       {/* 时间 */}
                       <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
@@ -307,7 +815,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                       {task.subtasks.slice(0, 3).map((subtask: Record, index: number) => (
                         <div 
                           key={subtask.id} 
-                          className="flex items-center justify-between py-1 text-body-small"
+                          className="group flex items-center justify-between py-1 text-body-small"
                           style={{ 
                             borderLeft: '2px solid var(--border-light)', 
                             paddingLeft: '12px',
@@ -317,21 +825,106 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                         >
                           <div className="flex items-center space-x-2 flex-1 min-w-0">
                             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
-                            <span className="truncate font-medium">
-                              {subtask.content}
-                            </span>
+                            
+                            {/* 子任务内容 - 可点击编辑 */}
+                            {editingSubtask === subtask.id ? (
+                              <input
+                                type="text"
+                                value={editingSubtaskContent[subtask.id] || subtask.content}
+                                onChange={(e) => setEditingSubtaskContent(prev => ({
+                                  ...prev,
+                                  [subtask.id]: e.target.value
+                                }))}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveSubtaskEdit(subtask.id, task.id);
+                                  } else if (e.key === 'Escape') {
+                                    cancelEditingSubtask();
+                                  }
+                                }}
+                                onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
+                                className="flex-1 px-2 py-1 text-xs rounded form-input"
+                                style={{
+                                  backgroundColor: 'var(--card-background)',
+                                  border: '1px solid var(--border-light)',
+                                  color: 'var(--text-primary)'
+                                }}
+                                autoFocus
+                              />
+                            ) : (
+                              <span 
+                                className="truncate font-medium cursor-pointer hover:underline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startEditingSubtask(subtask.id, subtask.content);
+                                }}
+                                title="点击编辑内容"
+                              >
+                                {subtask.content}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center space-x-2 flex-shrink-0">
-                            <span 
-                              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
-                              }`}
+                            {/* 可点击编辑的状态标签 */}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
+                                }}
+                                className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
+                                  statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
+                                } flex items-center space-x-1`}
+                                title="点击修改状态"
+                              >
+                                <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
+                                <span className="text-xs">▼</span>
+                              </button>
+                              
+                              {/* 子任务状态下拉菜单 */}
+                              {statusDropdownOpen === subtask.id && (
+                                <div 
+                                  className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                                  style={{ 
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border-light)'
+                                  }}
+                                >
+                                  {Object.entries(statusMap).map(([key, info]) => (
+                                    <button
+                                      key={key}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        updateSubtaskStatus(subtask.id, task.id, key);
+                                        setStatusDropdownOpen(null);
+                                      }}
+                                      className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                        subtask.status === key ? 'font-bold' : ''
+                                      }`}
+                                      style={{ 
+                                        color: subtask.status === key ? 'var(--primary)' : 'var(--text-primary)',
+                                        backgroundColor: subtask.status === key ? 'var(--primary-light)' : 'transparent'
+                                      }}
+                                    >
+                                      {info.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* 删除子任务按钮 */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubtask(subtask.id, task.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-xs px-1 py-0.5 rounded transition-all hover:bg-red-100 hover:text-red-600"
+                              style={{ color: 'var(--text-muted)' }}
+                              title="删除子任务"
                             >
-                              {statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}
-                            </span>
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                              {subtask.progress || 0}%
-                            </span>
+                              ✕
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -350,76 +943,236 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                     </div>
                   )}
 
-                  {/* 展开的详情区域 */}
+                  {/* 简化的展开区域 - 只显示进展记录编辑 */}
                   {isExpanded && (
-                    <div className="px-8 pb-4 card" style={{ backgroundColor: 'var(--background-secondary)' }}>
-                      {/* 详细进度条 */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between text-body-small mb-2" style={{ color: 'var(--text-secondary)' }}>
-                          <span className="font-medium">进度详情</span>
-                          <span className="font-semibold">{task.progress || 0}%</span>
-                        </div>
-                        <div className="w-full h-2 rounded-full" style={{ backgroundColor: 'var(--border-light)' }}>
-                          <div 
-                            className="h-2 rounded-full transition-all duration-500"
-                            style={{ 
-                              width: `${task.progress || 0}%`,
-                              backgroundColor: 'var(--primary)'
+                    <div className="pl-12 pr-6 py-4" style={{ backgroundColor: 'var(--background-secondary)', borderTop: '1px solid var(--border-light)' }}>
+                      <div className="space-y-4">
+                        {/* 进展记录编辑区域 */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                              📝 进展记录和遇到的问题：
+                            </label>
+                            <div className="flex items-center space-x-2">
+                              {progressNotesHistory[task.id] && progressNotesHistory[task.id].length > 0 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    undoProgressNotesChange(task.id);
+                                  }}
+                                  className="text-xs px-2 py-1 rounded btn-secondary"
+                                  title="撤销 (Ctrl+Z)"
+                                >
+                                  ↶ 撤销
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <textarea
+                            value={getCurrentProgressNotes(task.id)}
+                            onChange={(e) => handleProgressNotesChange(task.id, e.target.value)}
+                            onBlur={() => saveProgressNotesImmediately(task.id)}
+                            onCompositionStart={() => {
+                              // 中文输入开始时，清除自动保存定时器
+                              if (saveTimeouts[task.id]) {
+                                clearTimeout(saveTimeouts[task.id]);
+                              }
+                            }}
+                            onCompositionEnd={(e) => {
+                              // 中文输入结束时，重新开始自动保存
+                              handleProgressNotesChange(task.id, e.currentTarget.value);
+                            }}
+                            placeholder="记录当前进展、遇到的问题和难点..."
+                            className="w-full p-3 rounded-lg form-input text-body-small resize-none"
+                            rows={3}
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: 'var(--text-primary)'
                             }}
                           />
-                        </div>
-                      </div>
-
-                      {/* 所有子任务详情 */}
-                      {task.subtasks && task.subtasks.length > 0 && (
-                        <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}>
-                          <div className="text-body-small font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-                            📋 所有子任务 ({task.subtasks.length})
+                          <div className="flex items-center justify-between text-caption" style={{ color: 'var(--text-muted)' }}>
+                            <span>10秒自动保存 • 支持多行输入 • Ctrl+Z撤销</span>
+                            <span>{getCurrentProgressNotes(task.id).length} 字符</span>
                           </div>
-                          <div className="space-y-2">
-                            {task.subtasks.map((subtask: Record) => (
-                              <div key={subtask.id} className="flex items-center justify-between p-2 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
-                                <span className="text-body-small font-medium flex-1" style={{ color: 'var(--text-primary)' }}>
-                                  {subtask.content}
-                                </span>
-                                <div className="flex items-center space-x-2">
-                                  <span 
-                                    className={`px-2 py-1 rounded text-xs font-medium ${
-                                      statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
-                                    }`}
-                                  >
-                                    {statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}
-                                  </span>
-                                  <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                    {subtask.progress || 0}%
-                                  </span>
-                                </div>
+                        </div>
+
+                        {/* 子任务管理区域 */}
+                        {!isSubtask && (
+                          <div className="space-y-3" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+                            <div className="flex items-center justify-between">
+                              <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                                📋 子任务管理：
+                              </label>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
+                                }}
+                                className="text-xs px-3 py-1 rounded btn-primary"
+                              >
+                                {isAddingSubtask === task.id ? '取消添加' : '+ 添加子任务'}
+                              </button>
+                            </div>
+
+                            {/* 添加子任务输入框 */}
+                            {isAddingSubtask === task.id && (
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={newSubtaskContent[task.id] || ''}
+                                  onChange={(e) => handleSubtaskContentChange(task.id, e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleAddSubtask(task.id);
+                                    }
+                                  }}
+                                  placeholder="输入子任务内容..."
+                                  className="flex-1 px-3 py-2 rounded-lg form-input text-body-small"
+                                  style={{
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border-light)',
+                                    color: 'var(--text-primary)'
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddSubtask(task.id);
+                                  }}
+                                  className="px-3 py-2 rounded-lg btn-primary text-body-small"
+                                  disabled={!newSubtaskContent[task.id]?.trim()}
+                                >
+                                  添加
+                                </button>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                            )}
 
-                      {/* 操作按钮组 */}
-                      <div className="flex items-center space-x-3">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewDetail(task);
-                          }}
-                          className="text-xs px-4 py-2 rounded-lg font-medium transition-all btn-primary"
-                        >
-                          详细编辑
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedTask(null);
-                          }}
-                          className="text-xs px-4 py-2 rounded-lg font-medium transition-all btn-secondary"
-                        >
-                          收起
-                        </button>
+                            {/* 所有子任务列表 */}
+                            {task.subtasks && task.subtasks.length > 0 && (
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {task.subtasks.map((subtask: Record) => (
+                                  <div 
+                                    key={subtask.id}
+                                    className="group flex items-center justify-between p-2 rounded-lg hover:bg-opacity-50 transition-all"
+                                    style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}
+                                  >
+                                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
+                                      
+                                      {/* 子任务内容 - 可点击编辑 */}
+                                      {editingSubtask === subtask.id ? (
+                                        <input
+                                          type="text"
+                                          value={editingSubtaskContent[subtask.id] || subtask.content}
+                                          onChange={(e) => setEditingSubtaskContent(prev => ({
+                                            ...prev,
+                                            [subtask.id]: e.target.value
+                                          }))}
+                                          onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                              saveSubtaskEdit(subtask.id, task.id);
+                                            } else if (e.key === 'Escape') {
+                                              cancelEditingSubtask();
+                                            }
+                                          }}
+                                          onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
+                                          className="flex-1 px-2 py-1 text-body-small rounded form-input"
+                                          style={{
+                                            backgroundColor: 'var(--card-background)',
+                                            border: '1px solid var(--border-light)',
+                                            color: 'var(--text-primary)'
+                                          }}
+                                          autoFocus
+                                        />
+                                      ) : (
+                                        <span 
+                                          className="truncate text-body-small font-medium cursor-pointer hover:underline"
+                                          style={{ color: 'var(--text-primary)' }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            startEditingSubtask(subtask.id, subtask.content);
+                                          }}
+                                          title="点击编辑内容"
+                                        >
+                                          {subtask.content}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      {/* 可点击编辑的状态标签 */}
+                                      <div className="relative">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
+                                          }}
+                                          className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
+                                            statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
+                                          } flex items-center space-x-1`}
+                                          title="点击修改状态"
+                                        >
+                                          <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
+                                          <span className="text-xs">▼</span>
+                                        </button>
+                                        
+                                        {/* 子任务状态下拉菜单 */}
+                                        {statusDropdownOpen === subtask.id && (
+                                          <div 
+                                            className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                                            style={{ 
+                                              backgroundColor: 'var(--card-background)',
+                                              border: '1px solid var(--border-light)'
+                                            }}
+                                          >
+                                            {Object.entries(statusMap).map(([key, info]) => (
+                                              <button
+                                                key={key}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  updateSubtaskStatus(subtask.id, task.id, key);
+                                                  setStatusDropdownOpen(null);
+                                                }}
+                                                className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                                  subtask.status === key ? 'font-bold' : ''
+                                                }`}
+                                                style={{ 
+                                                  color: subtask.status === key ? 'var(--primary)' : 'var(--text-primary)',
+                                                  backgroundColor: subtask.status === key ? 'var(--primary-light)' : 'transparent'
+                                                }}
+                                              >
+                                                {info.label}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteSubtask(subtask.id, task.id);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all hover:bg-red-100 hover:text-red-600"
+                                        style={{ color: 'var(--text-muted)' }}
+                                        title="删除子任务"
+                                      >
+                                        删除
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {task.subtasks && task.subtasks.length === 0 && !isAddingSubtask && (
+                              <div className="text-center py-4 text-caption" style={{ color: 'var(--text-muted)' }}>
+                                暂无子任务，点击上方按钮添加子任务
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
