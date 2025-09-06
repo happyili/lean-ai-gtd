@@ -2,6 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from app.database.init import init_database
 from app.routes.records import records_bp
+import os
 
 def create_app():
     """创建Flask应用"""
@@ -9,7 +10,7 @@ def create_app():
     
     # 启用CORS支持
     CORS(app)
-    
+
     # 初始化数据库
     init_database(app)
     

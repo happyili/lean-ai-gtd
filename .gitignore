@@ -13,6 +13,7 @@ memory/agents/*
 coordination/memory_bank/*
 coordination/subtasks/*
 coordination/orchestration/*
+frontend/dist/*
 *.pyc
 *.db
 *.db-journal
@@ -24,3 +25,4 @@ claude-flow
 claude-flow.bat
 claude-flow.ps1
 hive-mind-prompt-*.txt
+.vercel

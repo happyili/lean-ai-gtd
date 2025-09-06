@@ -12,8 +12,8 @@
 
 1. 访问 [Supabase](https://supabase.com) 创建新项目
 2. 在项目设置中获取数据库连接信息：
-   - Database URL
-   - API Key
+   - Database URL： https://bkhfvcundjhzadxpdzuz.supabase.co 
+   - API Key： xxx
 3. 在SQL编辑器中运行 `supabase/migrations/001_create_records_table.sql`
 
 ### 2. 准备OpenRouter API
@@ -24,41 +24,40 @@
 
 ### 3. 部署后端到Vercel
 
-1. 安装Vercel CLI:
+方法1：使用部署脚本（推荐）
    ```bash
-   npm i -g vercel
+   ./deploy.sh
    ```
 
-2. 在项目根目录登录Vercel:
-   ```bash
-   vercel login
-   ```
+方法2：手动修复
+1. 先部署后端
+```bash
+cd backend
+vercel --prod --name aigtd-backend
+```
+记录后端URL（例如：https://aigtd-backend-xxx.vercel.app）
 
-3. 部署后端:
-   ```bash
-   vercel --prod
-   ```
+2. 设置前端环境变量
+```bash
+cd frontend
+echo "VITE_API_BASE_URL=https://aigtd-backend-xxx.vercel.app" > .env.local
+```
 
-4. 在Vercel Dashboard中设置环境变量:
-   - `DATABASE_URL`: Supabase数据库连接字符串
-   - `OPENROUTER_API_KEY`: OpenRouter API密钥
-   - `FLASK_ENV`: production
-   - `SECRET_KEY`: 随机生成的密钥
+3. 部署前端
+```bash
+vercel --prod --name aigtd-frontend
+```
 
-### 4. 部署前端到Vercel
+4. 在Vercel Dashboard中设置环境变量
 
-1. 进入前端目录:
-   ```bash
-   cd frontend
-   ```
+**后端环境变量：**
+- `DATABASE_URL`: postgresql://postgres:[YOUR-PASSWORD]@bkhfvcundjhzadxpdzuz.supabase.co:5432/postgres
+- `OPENROUTER_API_KEY`: 你的OpenRouter API密钥
+- `FLASK_ENV`: production
+- `SECRET_KEY`: 随机生成的密钥
 
-2. 部署前端:
-   ```bash
-   vercel --prod
-   ```
-
-3. 在Vercel Dashboard中设置环境变量:
-   - `VITE_API_BASE_URL`: 后端API的URL
+**前端环境变量：**
+- `VITE_API_BASE_URL`: https://aigtd-backend-xxx.vercel.app
 
 ### 5. 配置域名和路由
 

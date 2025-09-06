@@ -35,7 +35,7 @@ const statusMap = {
   cancelled: { label: '已取消', color: 'bg-red-100 text-red-800' }
 };
 
-export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListProps) {
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch }: TaskListProps) {
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +47,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
   const [progressNotesCache, setProgressNotesCache] = useState<{[key: number]: string}>({});
   const [progressNotesHistory, setProgressNotesHistory] = useState<{[key: number]: string[]}>({});
-  const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: NodeJS.Timeout}>({});
+  const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: number}>({});
   const [newSubtaskContent, setNewSubtaskContent] = useState<{[key: number]: string}>({});
   const [isAddingSubtask, setIsAddingSubtask] = useState<number | null>(null);
   const [editingSubtask, setEditingSubtask] = useState<number | null>(null);
@@ -484,7 +484,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
       }
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (_e: MouseEvent) => {
       setStatusDropdownOpen(null);
     };
 
@@ -598,10 +598,6 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
     }
   };
 
-  const truncateContent = (content: string, maxLength: number = 100) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
-  };
 
   return (
     <div className="h-full flex flex-col card">
@@ -814,7 +810,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
                   {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务时显示 */}
                   {!showAllLevels && !isSubtask && task.subtasks && task.subtasks.length > 0 && (
                     <div className="pl-12 pr-4 pb-2">
-                      {task.subtasks.slice(0, 3).map((subtask: Record, index: number) => (
+                      {task.subtasks.slice(0, 3).map((subtask: Record, _index: number) => (
                         <div 
                           key={subtask.id} 
                           className="group flex items-center justify-between py-1 text-body-small"
@@ -1202,7 +1198,7 @@ export default function TaskList({ onViewDetail, onDelete, onSearch }: TaskListP
         taskId={showAISuggestions || 0}
         isVisible={showAISuggestions !== null}
         onClose={() => setShowAISuggestions(null)}
-        onCreateSubtasks={(suggestions) => {
+        onCreateSubtasks={(_suggestions) => {
           // 重新获取任务列表以显示新创建的子任务
           fetchTasks(searchQuery, statusFilter, priorityFilter);
         }}

@@ -148,12 +148,12 @@ export default function App() {
   };
 
   // 添加子任务
-  const handleAddSubtask = async (parentId: number, content: string) => {
+  const handleAddSubtask = async (_parentId: number, _content: string) => {
     showNotification('子任务添加成功', 'success');
   };
 
   // 删除子任务
-  const handleDeleteSubtask = async (subtaskId: number) => {
+  const handleDeleteSubtask = async (_subtaskId: number) => {
     showNotification('子任务删除成功', 'success');
   };
 
