@@ -13,11 +13,12 @@ interface Record {
   created_at: string;
   updated_at: string;
   status: string;
+  task_type?: string; // work/hobby/life - 工作/业余/生活
   subtask_count?: number;
   subtasks?: Record[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+import { apiPost, apiDelete, apiPut } from '@/utils/api';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +28,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [taskTypeFilter, setTaskTypeFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
 
@@ -40,18 +42,11 @@ export default function App() {
   const handleSave = async (content: string, category: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content, category }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '保存失败');
-      }
+      await apiPost(
+        '/api/records',
+        { content, category },
+        '保存记录'
+      );
 
       showNotification('记录保存成功！', 'success');
       
@@ -66,19 +61,16 @@ export default function App() {
   // 删除记录
   const handleDelete = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('删除失败');
-      }
+      await apiDelete(
+        `/api/records/${id}`,
+        '删除记录'
+      );
 
       showNotification('记录删除成功', 'success');
       
     } catch (error) {
       console.error('删除记录失败:', error);
-      showNotification('删除记录失败', 'error');
+      showNotification(error instanceof Error ? error.message : '删除记录失败', 'error');
     }
   };
 
@@ -97,6 +89,8 @@ export default function App() {
       setStatusFilter(value);
     } else if (type === 'priority') {
       setPriorityFilter(value);
+    } else if (type === 'taskType') {
+      setTaskTypeFilter(value);
     } else if (type === 'showAllLevels') {
       setShowAllLevels(value === 'true');
     }
@@ -125,17 +119,11 @@ export default function App() {
   // 更新任务
   const handleUpdateTask = async (updatedTask: Record) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${updatedTask.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedTask),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新任务失败');
-      }
+      await apiPut(
+        `/api/records/${updatedTask.id}`,
+        updatedTask,
+        '更新任务'
+      );
 
       showNotification('任务更新成功', 'success');
       
@@ -144,7 +132,7 @@ export default function App() {
       
     } catch (error) {
       console.error('更新任务失败:', error);
-      showNotification('更新任务失败', 'error');
+      showNotification(error instanceof Error ? error.message : '更新任务失败', 'error');
     }
   };
 
@@ -219,7 +207,7 @@ export default function App() {
                         </div>
                         
                         {/* 筛选器 */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           <select
                             value={statusFilter}
                             className="px-3 py-2 rounded-lg form-input text-body-small"
@@ -243,6 +231,17 @@ export default function App() {
                             <option value="high">高</option>
                             <option value="medium">中</option>
                             <option value="low">低</option>
+                          </select>
+                          
+                          <select
+                            value={taskTypeFilter}
+                            className="px-3 py-2 rounded-lg form-input text-body-small"
+                            onChange={(e) => handleFilter('taskType', e.target.value)}
+                          >
+                            <option value="all">所有类型</option>
+                            <option value="work">工作</option>
+                            <option value="hobby">业余</option>
+                            <option value="life">生活</option>
                           </select>
                         </div>
                         

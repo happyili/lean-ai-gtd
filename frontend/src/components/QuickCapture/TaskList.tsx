@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AISuggestions from './AISuggestions';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+import { buildUrl, handleApiError } from '@/utils/api';
 
 interface Record {
   id: number;
@@ -13,6 +12,7 @@ interface Record {
   created_at: string;
   updated_at: string;
   status: string;
+  task_type?: string; // work/hobby/life - 工作/业余/生活
   subtask_count?: number;
   subtasks?: Record[];
 }
@@ -39,12 +39,19 @@ const statusMap = {
   cancelled: { label: '已取消', color: 'bg-red-100 text-red-800' }
 };
 
+const taskTypeMap = {
+  work: { label: '工作', color: 'bg-blue-100 text-blue-800' },
+  hobby: { label: '业余', color: 'bg-green-100 text-green-800' },
+  life: { label: '生活', color: 'bg-purple-100 text-purple-800' }
+};
+
 export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, showNotification }: TaskListProps) {
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [taskTypeFilter, setTaskTypeFilter] = useState('all'); // 任务类型筛选
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleteSubtaskConfirm, setDeleteSubtaskConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
@@ -63,21 +70,18 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [editingTaskContent, setEditingTaskContent] = useState<{[key: number]: string}>({});
   const [showAISuggestions, setShowAISuggestions] = useState<number | null>(null);
   const [priorityDropdownOpen, setPriorityDropdownOpen] = useState<number | null>(null);
+  const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新任务内容失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${taskId}`,
+        { content },
+        '更新任务内容'
+      );
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -89,23 +93,20 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       );
     } catch (error) {
       console.error('更新任务内容失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新任务内容失败', 'error');
     }
   };
 
   // 更新任务优先级
   const handleUpdatePriority = async (taskId: number, newPriority: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ priority: newPriority }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新任务优先级失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${taskId}`,
+        { priority: newPriority },
+        '更新任务优先级'
+      );
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -125,23 +126,20 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       );
     } catch (error) {
       console.error('更新任务优先级失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新任务优先级失败', 'error');
     }
   };
 
   // 更新任务状态
   const handleUpdateStatus = async (taskId: number, newStatus: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新任务状态失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${taskId}`,
+        { status: newStatus },
+        '更新任务状态'
+      );
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -153,23 +151,53 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       );
     } catch (error) {
       console.error('更新任务状态失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新任务状态失败', 'error');
+    }
+  };
+
+  // 更新任务类型
+  const handleUpdateTaskType = async (taskId: number, newTaskType: string) => {
+    try {
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${taskId}`,
+        { task_type: newTaskType },
+        '更新任务类型'
+      );
+
+      // 更新本地状态
+      setTasks(prevTasks => 
+        prevTasks.map(task => {
+          if (task.id === taskId) {
+            return { ...task, task_type: newTaskType };
+          }
+          // 同时更新子任务中的对应项
+          if (task.subtasks) {
+            const updatedSubtasks = task.subtasks.map(subtask => 
+              subtask.id === taskId ? { ...subtask, task_type: newTaskType } : subtask
+            );
+            return { ...task, subtasks: updatedSubtasks };
+          }
+          return task;
+        })
+      );
+    } catch (error) {
+      console.error('更新任务类型失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新任务类型失败', 'error');
     }
   };
 
   // 更新任务进展记录
   const handleUpdateProgressNotes = async (taskId: number, progressNotes: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ progress_notes: progressNotes }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新进展记录失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${taskId}`,
+        { progress_notes: progressNotes },
+        '更新进展记录'
+      );
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -181,6 +209,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       );
     } catch (error) {
       console.error('更新进展记录失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新进展记录失败', 'error');
     }
   };
 
@@ -284,20 +313,16 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!content) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${parentId}/subtasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { apiPost } = await import('@/utils/api');
+      
+      const response = await apiPost(
+        `/api/records/${parentId}/subtasks`,
+        {
           content: content,
           category: 'task'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('添加子任务失败');
-      }
+        },
+        '添加子任务'
+      );
 
       const data = await response.json();
       
@@ -321,6 +346,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
     } catch (error) {
       console.error('添加子任务失败:', error);
+      showNotification(error instanceof Error ? error.message : '添加子任务失败', 'error');
     }
   };
 
@@ -328,13 +354,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const handleDeleteSubtask = async (subtaskId: number, parentId: number) => {
     if (deleteSubtaskConfirm === subtaskId) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error('删除子任务失败');
-        }
+        const { apiDelete } = await import('@/utils/api');
+        
+        await apiDelete(
+          `/api/records/${subtaskId}`,
+          '删除子任务'
+        );
 
         // 更新任务列表，移除子任务
         setTasks(prevTasks => 
@@ -353,6 +378,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         setDeleteSubtaskConfirm(null);
       } catch (error) {
         console.error('删除子任务失败:', error);
+        showNotification(error instanceof Error ? error.message : '删除子任务失败', 'error');
       }
     } else {
       setDeleteSubtaskConfirm(subtaskId);
@@ -426,19 +452,13 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!newContent) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: newContent
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新子任务失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${subtaskId}`,
+        { content: newContent },
+        '更新子任务'
+      );
 
       // 更新任务列表中的子任务内容
       setTasks(prevTasks => 
@@ -467,25 +487,20 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
     } catch (error) {
       console.error('更新子任务失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新子任务失败', 'error');
     }
   };
 
   // 更新子任务状态
   const updateSubtaskStatus = async (subtaskId: number, parentId: number, newStatus: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: newStatus
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('更新子任务状态失败');
-      }
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${subtaskId}`,
+        { status: newStatus },
+        '更新子任务状态'
+      );
 
       // 更新任务列表中的子任务状态
       setTasks(prevTasks => 
@@ -506,6 +521,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
     } catch (error) {
       console.error('更新子任务状态失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新子任务状态失败', 'error');
     }
   };
 
@@ -530,6 +546,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         setStatusFilter(e.detail.value);
       } else if (e.detail.type === 'priority') {
         setPriorityFilter(e.detail.value);
+      } else if (e.detail.type === 'taskType') {
+        setTaskTypeFilter(e.detail.value);
       } else if (e.detail.type === 'showAllLevels') {
         setShowAllLevels(e.detail.value);
       }
@@ -538,6 +556,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     const handleClickOutside = (_e: MouseEvent) => {
       setStatusDropdownOpen(null);
       setPriorityDropdownOpen(null);
+      setTaskTypeDropdownOpen(null);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -565,29 +584,33 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   }, [expandedTask, saveTimeouts]);
 
   // 获取任务列表
-  const fetchTasks = async (search?: string, status?: string, priority?: string) => {
+  const fetchTasks = async (search?: string, status?: string, priority?: string, taskType?: string) => {
     setIsLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (status && status !== 'all') params.append('status', status);
-      if (priority && priority !== 'all') params.append('priority', priority);
-      params.append('category', 'task');
-      params.append('include_subtasks', 'true');
-      params.append('subtask_detail', 'true'); // 获取子任务详细内容
-      // 总是获取所有任务，在前端筛选显示哪些任务
-      params.append('top_level_only', 'false');
+      const params: {[key: string]: string | number | boolean} = {
+        category: 'task',
+        include_subtasks: true,
+        subtask_detail: true,
+        top_level_only: false
+      };
       
-      const response = await fetch(`${API_BASE_URL}/api/records?${params}`);
+      if (search) params.search = search;
+      if (status && status !== 'all') params.status = status;
+      if (priority && priority !== 'all') params.priority = priority;
+      if (taskType && taskType !== 'all') params.task_type = taskType;
       
-      if (!response.ok) {
-        throw new Error('获取任务失败');
-      }
+      const url = buildUrl('/api/records', params);
+      const response = await handleApiError(
+        await fetch(url),
+        '获取任务'
+      );
       
       const data = await response.json();
       setTasks(data.records || []);
     } catch (error) {
       console.error('获取任务失败:', error);
+      // 清空任务列表以防止显示旧数据
+      setTasks([]);
     } finally {
       setIsLoading(false);
     }
@@ -601,30 +624,30 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 防抖搜索
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchTasks(searchQuery, statusFilter, priorityFilter);
+      fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
       onSearch(searchQuery);
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, priorityFilter, showAllLevels]);
+  }, [searchQuery, statusFilter, priorityFilter, taskTypeFilter, showAllLevels]);
 
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/records/${id}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error('删除失败');
-        }
+        const { apiDelete } = await import('@/utils/api');
+        
+        await apiDelete(
+          `/api/records/${id}`,
+          '删除任务'
+        );
 
         // 重新获取任务列表
-        await fetchTasks(searchQuery, statusFilter, priorityFilter);
+        await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
         onDelete(id);
         setDeleteConfirm(null);
       } catch (error) {
         console.error('删除任务失败:', error);
+        showNotification(error instanceof Error ? error.message : '删除任务失败', 'error');
       }
     } else {
       setDeleteConfirm(id);
@@ -660,7 +683,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       setIsAddingTask(false);
       showNotification('任务创建成功！', 'success');
       // 重新获取任务列表
-      await fetchTasks(searchQuery, statusFilter, priorityFilter);
+      await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
     } catch (error) {
       console.error('创建任务失败:', error);
       showNotification('创建任务失败', 'error');
@@ -855,6 +878,53 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       
                       {/* 状态和优先级标签 */}
                       <div className="flex items-center space-x-2 flex-shrink-0">
+                        {/* 可点击的任务类型标签带下拉菜单 */}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTaskTypeDropdownOpen(taskTypeDropdownOpen === task.id ? null : task.id);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
+                              taskTypeMap[task.task_type as keyof typeof taskTypeMap]?.color || 'bg-gray-100 text-gray-800'
+                            } flex items-center space-x-1`}
+                          >
+                            <span>{taskTypeMap[task.task_type as keyof typeof taskTypeMap]?.label || '工作'}</span>
+                            <span className="text-xs">▼</span>
+                          </button>
+                          
+                          {/* 任务类型下拉菜单 */}
+                          {taskTypeDropdownOpen === task.id && (
+                            <div 
+                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
+                              style={{ 
+                                backgroundColor: 'var(--card-background)',
+                                border: '1px solid var(--border-light)'
+                              }}
+                            >
+                              {Object.entries(taskTypeMap).map(([key, info]) => (
+                                <button
+                                  key={key}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateTaskType(task.id, key);
+                                    setTaskTypeDropdownOpen(null);
+                                  }}
+                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
+                                    task.task_type === key ? 'font-bold' : ''
+                                  }`}
+                                  style={{ 
+                                    color: task.task_type === key ? 'var(--primary)' : 'var(--text-primary)',
+                                    backgroundColor: task.task_type === key ? 'var(--primary-light)' : 'transparent'
+                                  }}
+                                >
+                                  {info.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
                         {/* 可点击的优先级标签带下拉菜单 */}
                         <div className="relative">
                           <button

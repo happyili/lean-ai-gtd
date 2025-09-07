@@ -1,7 +1,22 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.models.record import Record, db
 from app.services.ai_intelligence import ai_intelligence_service
 from datetime import datetime
+import traceback
+
+def create_error_response(error_message, error_code, details=None, status_code=500):
+    """创建统一的错误响应"""
+    error_data = {
+        'error': error_message,
+        'error_code': error_code,
+        'details': details or error_message
+    }
+    
+    if current_app.debug:
+        error_data['traceback'] = traceback.format_exc()
+        error_data['suggestion'] = '请检查数据库连接和表结构是否正确'
+    
+    return jsonify(error_data), status_code
 
 records_bp = Blueprint('records', __name__)
 
@@ -31,10 +46,16 @@ def create_record():
             if not parent_record or not parent_record.is_task():
                 return jsonify({'error': '父任务不存在或不是任务类型'}), 400
         
+        # 任务类型
+        task_type = data.get('task_type', 'work')
+        if task_type not in ['work', 'hobby', 'life']:
+            task_type = 'work'
+        
         record = Record(
             content=content,
             category=category,
-            parent_id=parent_id
+            parent_id=parent_id,
+            task_type=task_type
         )
         
         db.session.add(record)
@@ -59,6 +80,7 @@ def get_records():
         category = request.args.get('category', '')
         status = request.args.get('status', '')
         priority = request.args.get('priority', '')
+        task_type = request.args.get('task_type', '')
         
         # 构建查询
         query = Record.query
@@ -81,6 +103,9 @@ def get_records():
         if priority and priority in ['low', 'medium', 'high', 'urgent']:
             query = query.filter_by(priority=priority)
         
+        if task_type and task_type in ['work', 'hobby', 'life']:
+            query = query.filter_by(task_type=task_type)
+        
         # 检查是否只获取顶级任务（不包含子任务）
         include_subtasks = request.args.get('include_subtasks', 'false').lower() == 'true'
         if not include_subtasks:
@@ -100,7 +125,11 @@ def get_records():
         })
         
     except Exception as e:
-        return jsonify({'error': f'获取记录失败: {str(e)}'}), 500
+        return create_error_response(
+            f'获取记录失败: {str(e)}',
+            'DATABASE_ERROR',
+            details=str(e)
+        )
 
 @records_bp.route('/api/records/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
@@ -181,8 +210,13 @@ def create_subtask(record_id):
         if category not in ['idea', 'task', 'note', 'general']:
             category = 'task'
         
+        # 任务类型
+        task_type = data.get('task_type', parent_record.task_type or 'work')
+        if task_type not in ['work', 'hobby', 'life']:
+            task_type = 'work'
+        
         # 创建子任务
-        subtask = parent_record.add_subtask(content, category)
+        subtask = parent_record.add_subtask(content, category, task_type)
         db.session.add(subtask)
         db.session.commit()
         
@@ -252,6 +286,12 @@ def update_record(record_id):
             if not isinstance(progress, int) or progress < 0 or progress > 100:
                 return jsonify({'error': '进度值必须在0-100之间'}), 400
             record.progress = progress
+        
+        if 'task_type' in data:
+            task_type = data.get('task_type')
+            if task_type not in ['work', 'hobby', 'life']:
+                return jsonify({'error': '无效的任务类型'}), 400
+            record.task_type = task_type
         
         record.updated_at = datetime.utcnow()
         db.session.commit()

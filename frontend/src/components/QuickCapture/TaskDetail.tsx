@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+import { apiGet, apiPost, apiDelete } from '@/utils/api';
 
 interface Record {
   id: number;
@@ -12,6 +11,7 @@ interface Record {
   created_at: string;
   updated_at: string;
   status: string;
+  task_type?: string; // work/hobby/life - 工作/业余/生活
   subtask_count?: number;
   subtasks?: Record[];
 }
@@ -38,6 +38,12 @@ const priorityOptions = [
   { value: 'urgent', label: '紧急', color: 'bg-red-100 text-red-800' }
 ];
 
+const taskTypeOptions = [
+  { value: 'work', label: '工作', color: 'bg-blue-100 text-blue-800' },
+  { value: 'hobby', label: '业余', color: 'bg-green-100 text-green-800' },
+  { value: 'life', label: '生活', color: 'bg-purple-100 text-purple-800' }
+];
+
 export default function TaskDetail({ 
   task, 
   onClose, 
@@ -50,6 +56,7 @@ export default function TaskDetail({
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
   const [status, setStatus] = useState(task.status);
   const [priority, setPriority] = useState(task.priority || 'medium');
+  const [taskType, setTaskType] = useState(task.task_type || 'work');
   const [progressNotes, setProgressNotes] = useState(task.progress_notes || '');
   const [subtasks, setSubtasks] = useState<Record[]>(task.subtasks || []);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -61,13 +68,16 @@ export default function TaskDetail({
 
   const fetchSubtasks = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${task.id}/subtasks`);
-      if (response.ok) {
-        const data = await response.json();
-        setSubtasks(data.subtasks || []);
-      }
+      const response = await apiGet(
+        `/api/records/${task.id}/subtasks`,
+        '获取子任务'
+      );
+      const data = await response.json();
+      setSubtasks(data.subtasks || []);
     } catch (error) {
       console.error('获取子任务失败:', error);
+      // 显示错误信息给用户
+      alert(`获取子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -77,6 +87,7 @@ export default function TaskDetail({
       content: editedContent,
       status,
       priority,
+      task_type: taskType,
       progress_notes: progressNotes
     };
     onUpdate(updatedTask);
@@ -87,40 +98,38 @@ export default function TaskDetail({
     if (!newSubtaskContent.trim()) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${task.id}/subtasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await apiPost(
+        `/api/records/${task.id}/subtasks`,
+        {
           content: newSubtaskContent,
-          category: 'task'
-        }),
-      });
+          category: 'task',
+          task_type: taskType || 'work'
+        },
+        '添加子任务'
+      );
 
-      if (response.ok) {
-        const data = await response.json();
-        setSubtasks([...subtasks, data.subtask]);
-        setNewSubtaskContent('');
-        onAddSubtask(task.id, newSubtaskContent);
-      }
+      const data = await response.json();
+      setSubtasks([...subtasks, data.subtask]);
+      setNewSubtaskContent('');
+      onAddSubtask(task.id, newSubtaskContent);
     } catch (error) {
       console.error('添加子任务失败:', error);
+      alert(`添加子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
   const handleDeleteSubtask = async (subtaskId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${subtaskId}`, {
-        method: 'DELETE',
-      });
+      await apiDelete(
+        `/api/records/${subtaskId}`,
+        '删除子任务'
+      );
 
-      if (response.ok) {
-        setSubtasks(subtasks.filter(subtask => subtask.id !== subtaskId));
-        onDeleteSubtask(subtaskId);
-      }
+      setSubtasks(subtasks.filter(subtask => subtask.id !== subtaskId));
+      onDeleteSubtask(subtaskId);
     } catch (error) {
       console.error('删除子任务失败:', error);
+      alert(`删除子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -183,7 +192,7 @@ export default function TaskDetail({
               </div>
             </div>
 
-            {/* 状态和优先级 */}
+            {/* 状态、优先级和任务类型 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
                 <span className="text-sm font-semibold text-slate-600">状态</span>
@@ -227,6 +236,29 @@ export default function TaskDetail({
                     priorityOptions.find(opt => opt.value === priority)?.color || 'bg-slate-100 text-slate-800'
                   }`}>
                     {priorityOptions.find(opt => opt.value === priority)?.label || priority}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-sm font-semibold text-slate-600">任务类型</span>
+                {isEditing ? (
+                  <select
+                    value={taskType}
+                    onChange={(e) => setTaskType(e.target.value)}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-slate-50/50 backdrop-blur-sm transition-all font-medium"
+                  >
+                    {taskTypeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className={`inline-flex px-4 py-2 rounded-2xl text-xs font-semibold ${
+                    taskTypeOptions.find(opt => opt.value === taskType)?.color || 'bg-slate-100 text-slate-800'
+                  }`}>
+                    {taskTypeOptions.find(opt => opt.value === taskType)?.label || taskType}
                   </span>
                 )}
               </div>
@@ -354,6 +386,9 @@ export default function TaskDetail({
                 onClick={() => {
                   setEditedContent(task.content);
                   setStatus(task.status);
+                  setPriority(task.priority || 'medium');
+                  setTaskType(task.task_type || 'work');
+                  setProgressNotes(task.progress_notes || '');
                   setIsEditing(false);
                 }}
                 className="px-6 py-3 text-slate-600 border border-slate-200 rounded-2xl hover:bg-slate-50 font-semibold transition-all backdrop-blur-sm"

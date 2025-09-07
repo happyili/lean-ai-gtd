@@ -17,6 +17,7 @@ class Record(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status = db.Column(db.String(20), default='active')  # active/completed/paused/cancelled/archived/deleted
+    task_type = db.Column(db.String(20), default='work')  # work/hobby/life - 工作/业余/生活
     
     # 关系定义
     parent = db.relationship('Record', remote_side=[id], backref=db.backref('subtasks', lazy='dynamic'))
@@ -33,7 +34,8 @@ class Record(db.Model):
             'progress_notes': self.progress_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'status': self.status
+            'status': self.status,
+            'task_type': self.task_type
         }
         
         if include_subtasks:
@@ -71,7 +73,7 @@ class Record(db.Model):
         """判断是否可以拥有子任务（只有任务类型可以）"""
         return self.is_task()
     
-    def add_subtask(self, content, category='task'):
+    def add_subtask(self, content, category='task', task_type='work'):
         """添加子任务"""
         if not self.can_have_subtasks():
             raise ValueError("只有任务类型才能添加子任务")
@@ -79,7 +81,8 @@ class Record(db.Model):
         subtask = Record(
             content=content,
             category=category,
-            parent_id=self.id
+            parent_id=self.id,
+            task_type=task_type
         )
         return subtask
     
