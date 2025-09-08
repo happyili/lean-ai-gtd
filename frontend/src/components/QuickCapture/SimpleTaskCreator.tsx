@@ -146,8 +146,7 @@ export default function SimpleTaskCreator({ onSave, onClose, isLoading = false }
                     style={{
                       backgroundColor: formData.priority === option.value ? option.bg : 'var(--background-secondary)',
                       color: formData.priority === option.value ? option.color : 'var(--text-secondary)',
-                      borderColor: formData.priority === option.value ? option.color : 'var(--border-light)',
-                      ringColor: option.color
+                      borderColor: formData.priority === option.value ? option.color : 'var(--border-light)'
                     }}
                     disabled={isLoading}
                   >

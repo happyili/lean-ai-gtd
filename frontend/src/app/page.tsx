@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
+import { apiPost, apiDelete } from '@/utils/api';
 
 interface TaskCreateData {
   content: string;
@@ -35,11 +38,12 @@ interface Record {
   task_type?: string; // work/hobby/life - 工作/业余/生活
   subtask_count?: number;
   subtasks?: Record[];
+  user_id?: number | null; // 用户ID，null表示guest用户
 }
 
-import { apiPost, apiDelete, apiPut } from '@/utils/api';
 
 export default function App() {
+  const { isAuthenticated, isLoading: authLoading, accessToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedTask, setSelectedTask] = useState<Record | null>(null);
@@ -54,6 +58,16 @@ export default function App() {
   const [selectedTaskType, setSelectedTaskType] = useState('all');
   const [isTaskTypeFilterExpanded, setIsTaskTypeFilterExpanded] = useState(false);
 
+  // 如果正在加载认证状态，显示加载状态
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">正在加载...</span>
+      </div>
+    );
+  }
+
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type });
@@ -64,10 +78,18 @@ export default function App() {
   const handleSave = async (content: string, category: string) => {
     setIsLoading(true);
     try {
+      const payload: any = { content, category };
+      
+      // 如果是guest用户，不指定user_id，让后端自动设置为NULL
+      if (!isAuthenticated) {
+        // 不需要添加user_id参数，后端会自动处理为NULL
+      }
+      
       await apiPost(
         '/api/records',
-        { content, category },
-        '保存记录'
+        payload,
+        '保存记录',
+        accessToken || undefined
       );
 
       showNotification('记录保存成功！', 'success');
@@ -85,7 +107,7 @@ export default function App() {
   const handleSaveTaskData = async (taskData: TaskCreateData) => {
     setIsLoading(true);
     try {
-      const payload = {
+      const payload: any = {
         content: taskData.content,
         category: taskData.category,
         priority: taskData.priority,
@@ -93,11 +115,17 @@ export default function App() {
         estimated_time: taskData.estimatedTime,
         tags: taskData.tags?.join(',') || ''
       };
+      
+      // 如果是guest用户，不指定user_id，让后端自动设置为NULL
+      if (!isAuthenticated) {
+        // 不需要添加user_id参数，后端会自动处理为NULL
+      }
 
       await apiPost(
         '/api/records',
         payload,
-        '保存任务'
+        '保存任务',
+        accessToken || undefined
       );
 
       showNotification('任务创建成功！', 'success');
@@ -140,7 +168,8 @@ export default function App() {
     try {
       await apiDelete(
         `/api/records/${id}`,
-        '删除记录'
+        '删除记录',
+        accessToken || undefined
       );
 
       showNotification('记录删除成功', 'success');
@@ -204,11 +233,22 @@ export default function App() {
   // 更新任务
   const handleUpdateTask = async (updatedTask: Record) => {
     try {
-      await apiPut(
-        `/api/records/${updatedTask.id}`,
-        updatedTask,
-        '更新任务'
-      );
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
+      
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${updatedTask.id}`,
+          updatedTask,
+          '更新任务',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${updatedTask.id}`,
+          updatedTask,
+          '更新任务'
+        );
+      }
 
       showNotification('任务更新成功', 'success');
       
@@ -232,7 +272,8 @@ export default function App() {
           content: content,
           category: 'task'
         },
-        '添加子任务'
+        '添加子任务',
+        accessToken || undefined
       );
 
       await response.json();
@@ -255,7 +296,8 @@ export default function App() {
       
       await apiDelete(
         `/api/records/${subtaskId}`,
-        '删除子任务'
+        '删除子任务',
+        accessToken || undefined
       );
 
       showNotification('子任务删除成功', 'success');
@@ -475,14 +517,9 @@ export default function App() {
               </nav>
             </div>
 
-            {/* 右侧：My Account */}
+            {/* 右侧：用户菜单 */}
             <div className="flex items-center">
-              <button className="flex items-center space-x-2 px-3 py-1 text-xs font-medium transition-all rounded-md hover:btn-secondary" style={{ color: 'var(--text-secondary)' }}>
-                <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--border-default)' }}>
-                  <span className="text-white text-xs font-medium">U</span>
-                </div>
-                <span>My Account</span>
-              </button>
+              <UserMenu />
             </div>
           </div>
         </div>

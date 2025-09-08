@@ -9,7 +9,7 @@ class RateLimiter:
     """简单的内存速率限制器"""
     
     def __init__(self):
-        self.requests = defaultdict(lambda: defaultdict(deque))
+        self.requests = defaultdict(deque)
         self.lock = Lock()
     
     def is_rate_limited(self, key: str, max_requests: int, window: int, identifier: str = None) -> bool:

@@ -70,8 +70,14 @@ export const apiFetch = async (
 /**
  * GET请求封装
  */
-export const apiGet = async (url: string, operation: string): Promise<Response> => {
-  return apiFetch(url, { method: 'GET' }, operation);
+export const apiGet = async (url: string, operation: string, token?: string): Promise<Response> => {
+  const headers: HeadersInit = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return apiFetch(url, { method: 'GET', headers }, operation);
 };
 
 /**
@@ -80,13 +86,20 @@ export const apiGet = async (url: string, operation: string): Promise<Response> 
 export const apiPost = async (
   url: string, 
   data: any, 
-  operation: string
+  operation: string,
+  token?: string
 ): Promise<Response> => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return apiFetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(data),
   }, operation);
 };
@@ -97,13 +110,20 @@ export const apiPost = async (
 export const apiPut = async (
   url: string, 
   data: any, 
-  operation: string
+  operation: string,
+  token?: string
 ): Promise<Response> => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return apiFetch(url, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(data),
   }, operation);
 };
@@ -111,8 +131,14 @@ export const apiPut = async (
 /**
  * DELETE请求封装
  */
-export const apiDelete = async (url: string, operation: string): Promise<Response> => {
-  return apiFetch(url, { method: 'DELETE' }, operation);
+export const apiDelete = async (url: string, operation: string, token?: string): Promise<Response> => {
+  const headers: HeadersInit = {};
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return apiFetch(url, { method: 'DELETE', headers }, operation);
 };
 
 /**
@@ -150,12 +176,48 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T> {
   per_page: number;
 }
 
+/**
+ * 不需要认证的POST请求封装（用于guest用户）
+ */
+export const apiPostPublic = async (
+  url: string, 
+  data: any, 
+  operation: string
+): Promise<Response> => {
+  return apiFetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  }, operation);
+};
+
+/**
+ * 不需要认证的PUT请求封装（用于guest用户）
+ */
+export const apiPutPublic = async (
+  url: string, 
+  data: any, 
+  operation: string
+): Promise<Response> => {
+  return apiFetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  }, operation);
+};
+
 export default {
   handleApiError,
   apiFetch,
   apiGet,
   apiPost,
+  apiPostPublic,
   apiPut,
+  apiPutPublic,
   apiDelete,
   buildUrl,
 };

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiGet, apiPost, apiDelete } from '@/utils/api';
+import { apiGet, apiPost, apiPostPublic } from '@/utils/api';
 
 // 用户数据接口
 interface User {
@@ -29,7 +29,7 @@ interface AuthState {
 // 认证上下文接口
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
@@ -74,20 +74,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }));
         } else {
           // Token无效，尝试刷新
-          await refreshAccessToken();
+          try {
+            await refreshAccessToken();
+          } catch (error) {
+            // 刷新失败，清除token并设置为未认证状态
+            clearTokens();
+            setAuthState(prev => ({
+              ...prev,
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            }));
+          }
         }
       } else {
+        // 没有token，作为guest用户
         setAuthState(prev => ({
           ...prev,
+          user: null,
+          isAuthenticated: false,
           isLoading: false,
         }));
       }
     } catch (error) {
       console.error('初始化认证失败:', error);
-      // 清除无效Token
+      // 清除无效Token，作为guest用户
       clearTokens();
       setAuthState(prev => ({
         ...prev,
+        user: null,
+        isAuthenticated: false,
         isLoading: false,
       }));
     }
@@ -100,14 +116,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const payload = JSON.parse(atob(token.split('.')[1]));
       const exp = payload.exp * 1000; // 转换为毫秒
       return Date.now() < exp;
-    } catch (error) {
+    } catch {
       return false;
     }
   };
 
   // 获取用户信息
   const fetchUserInfo = async (): Promise<User> => {
-    const response = await apiGet('/api/auth/user', '获取用户信息');
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('没有访问Token');
+    }
+    const response = await apiGet('/api/auth/user', '获取用户信息', token);
     const data = await response.json();
     return data.user;
   };
@@ -146,24 +166,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (
     username: string,
     email: string,
-    password: string,
-    firstName?: string,
-    lastName?: string
+    password: string
   ): Promise<void> => {
     try {
-      const response = await apiPost(
+      await apiPost(
         '/api/auth/register',
         { 
           username, 
           email, 
-          password,
-          first_name: firstName,
-          last_name: lastName
+          password
         },
         '用户注册'
       );
-      
-      const data = await response.json();
       
       // 自动登录
       await login(username, password);
@@ -177,7 +191,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 登出
   const logout = async (): Promise<void> => {
     try {
-      if (authState.refreshToken) {
+      if (authState.accessToken) {
         await apiPost(
           '/api/auth/logout',
           {},
@@ -287,40 +301,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 检查用户名是否可用
   const checkUsername = async (username: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/check-username', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username }),
-      });
+      console.log('检查用户名:', username);
+      const response = await apiPostPublic('/api/auth/check-username', { username }, '检查用户名');
+      
+      console.log('用户名检查响应状态:', response.status);
+      
+      if (!response.ok) {
+        console.error('用户名检查API错误:', response.status, response.statusText);
+        return true; // API错误时假设用户名可用，避免阻塞用户
+      }
       
       const data = await response.json();
+      console.log('用户名检查结果:', data);
       return data.available;
       
     } catch (error) {
       console.error('检查用户名失败:', error);
-      return false;
+      return true; // 网络错误时假设用户名可用，避免阻塞用户
     }
   };
 
   // 检查邮箱是否可用
   const checkEmail = async (email: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/check-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      console.log('检查邮箱:', email);
+      const response = await apiPostPublic('/api/auth/check-email', { email }, '检查邮箱');
+      
+      console.log('邮箱检查响应状态:', response.status);
+      
+      if (!response.ok) {
+        console.error('邮箱检查API错误:', response.status, response.statusText);
+        return true; // API错误时假设邮箱可用，避免阻塞用户
+      }
       
       const data = await response.json();
+      console.log('邮箱检查结果:', data);
       return data.available;
       
     } catch (error) {
       console.error('检查邮箱失败:', error);
-      return false;
+      return true; // 网络错误时假设邮箱可用，避免阻塞用户
     }
   };
 

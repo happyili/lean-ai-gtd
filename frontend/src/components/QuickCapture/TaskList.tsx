@@ -3,6 +3,7 @@ import AISuggestions from './AISuggestions';
 import AIChatSidebar from './AIChatSidebar';
 import AIPomodoroTimer from './AIPomodoroTimer';
 import { buildUrl, handleApiError } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Record {
   id: number;
@@ -17,6 +18,7 @@ interface Record {
   task_type?: string; // work/hobby/life - 工作/业余/生活
   subtask_count?: number;
   subtasks?: Record[];
+  user_id?: number | null; // 用户ID，null表示guest用户
 }
 
 interface PomodoroTask {
@@ -58,6 +60,7 @@ const taskTypeMap = {
 };
 
 export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification }: TaskListProps) {
+  const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,13 +94,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${taskId}`,
-        { content },
-        '更新任务内容'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${taskId}`,
+          { content },
+          '更新任务内容',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${taskId}`,
+          { content },
+          '更新任务内容'
+        );
+      }
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -116,13 +128,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务优先级
   const handleUpdatePriority = async (taskId: number, newPriority: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${taskId}`,
-        { priority: newPriority },
-        '更新任务优先级'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${taskId}`,
+          { priority: newPriority },
+          '更新任务优先级',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${taskId}`,
+          { priority: newPriority },
+          '更新任务优先级'
+        );
+      }
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -149,13 +170,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务状态
   const handleUpdateStatus = async (taskId: number, newStatus: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${taskId}`,
-        { status: newStatus },
-        '更新任务状态'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${taskId}`,
+          { status: newStatus },
+          '更新任务状态',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${taskId}`,
+          { status: newStatus },
+          '更新任务状态'
+        );
+      }
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -174,13 +204,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务类型
   const handleUpdateTaskType = async (taskId: number, newTaskType: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${taskId}`,
-        { task_type: newTaskType },
-        '更新任务类型'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${taskId}`,
+          { task_type: newTaskType },
+          '更新任务类型',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${taskId}`,
+          { task_type: newTaskType },
+          '更新任务类型'
+        );
+      }
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -207,13 +246,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新任务进展记录
   const handleUpdateProgressNotes = async (taskId: number, progressNotes: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${taskId}`,
-        { progress_notes: progressNotes },
-        '更新进展记录'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${taskId}`,
+          { progress_notes: progressNotes },
+          '更新进展记录',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${taskId}`,
+          { progress_notes: progressNotes },
+          '更新进展记录'
+        );
+      }
 
       // 更新本地状态
       setTasks(prevTasks => 
@@ -337,7 +385,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           content: content,
           category: 'task'
         },
-        '添加子任务'
+        '添加子任务',
+        accessToken || undefined
       );
 
       const data = await response.json();
@@ -468,13 +517,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!newContent) return;
 
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${subtaskId}`,
-        { content: newContent },
-        '更新子任务'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${subtaskId}`,
+          { content: newContent },
+          '更新子任务',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${subtaskId}`,
+          { content: newContent },
+          '更新子任务'
+        );
+      }
 
       // 更新任务列表中的子任务内容
       setTasks(prevTasks => 
@@ -510,13 +568,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   // 更新子任务状态
   const updateSubtaskStatus = async (subtaskId: number, parentId: number, newStatus: string) => {
     try {
-      const { apiPut } = await import('@/utils/api');
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
       
-      await apiPut(
-        `/api/records/${subtaskId}`,
-        { status: newStatus },
-        '更新子任务状态'
-      );
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/records/${subtaskId}`,
+          { status: newStatus },
+          '更新子任务状态',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/records/${subtaskId}`,
+          { status: newStatus },
+          '更新子任务状态'
+        );
+      }
 
       // 更新任务列表中的子任务状态
       setTasks(prevTasks => 
@@ -607,8 +674,14 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         category: 'task',
         include_subtasks: true,
         subtask_detail: true,
-        top_level_only: false
+        top_level_only: false,
+        per_page: 100  // 增加每页数量，确保能获取所有任务
       };
+      
+      // 如果是guest用户，只获取user_id为NULL的任务
+      if (!isAuthenticated) {
+        params.user_id = 'null';
+      }
       
       if (search) params.search = search;
       if (status && status !== 'all') params.status = status;
@@ -616,8 +689,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       if (taskType && taskType !== 'all') params.task_type = taskType;
       
       const url = buildUrl('/api/records', params);
+      const headers: HeadersInit = {};
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
       const response = await handleApiError(
-        await fetch(url),
+        await fetch(url, { headers }),
         '获取任务'
       );
       
@@ -636,6 +713,11 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // 监听认证状态变化，重新获取任务列表
+  useEffect(() => {
+    fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+  }, [isAuthenticated, accessToken]);
 
   // 防抖搜索
   useEffect(() => {
@@ -1124,6 +1206,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                             }}
                             title={task.content}
                           >
+                            {/* 为guest用户的top level task添加GUEST标签 */}
+                            {!isSubtask && task.user_id === null && (
+                              <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded mr-2 font-medium">
+                                GUEST
+                              </span>
+                            )}
                             {task.content}
                           </span>
                         )}
