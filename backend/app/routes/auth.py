@@ -426,3 +426,4 @@ from datetime import datetime
 __all__ = ['auth_bp']// Login API implementation
 // Logout API implementation
 // Token refresh implementation
+// Get user info API
