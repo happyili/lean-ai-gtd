@@ -3,6 +3,16 @@ import TaskList from '@/components/QuickCapture/TaskList';
 import RightPanel from '@/components/QuickCapture/RightPanel';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
+import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
+
+interface TaskCreateData {
+  content: string;
+  category: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  taskType: 'work' | 'hobby' | 'life';
+  estimatedTime?: number;
+  tags?: string[];
+}
 
 interface PomodoroTask {
   id: string;
@@ -66,6 +76,36 @@ export default function App() {
     } catch (error) {
       console.error('保存记录失败:', error);
       showNotification(error instanceof Error ? error.message : '保存记录失败', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 保存详细任务数据
+  const handleSaveTaskData = async (taskData: TaskCreateData) => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        content: taskData.content,
+        category: taskData.category,
+        priority: taskData.priority,
+        task_type: taskData.taskType,
+        estimated_time: taskData.estimatedTime,
+        tags: taskData.tags?.join(',') || ''
+      };
+
+      await apiPost(
+        '/api/records',
+        payload,
+        '保存任务'
+      );
+
+      showNotification('任务创建成功！', 'success');
+      setShowAddDialog(false); // 关闭对话框
+      
+    } catch (error) {
+      console.error('保存任务失败:', error);
+      showNotification(error instanceof Error ? error.message : '保存任务失败', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -407,48 +447,13 @@ export default function App() {
         />
       )}
 
-      {/* 居中的添加任务悬浮对话框 */}
+      {/* 简化的添加任务对话框 */}
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="card max-w-2xl w-full max-h-[80vh] overflow-hidden" style={{ 
-            backgroundColor: 'var(--card-background)',
-            border: '1px solid var(--border-light)'
-          }}>
-            {/* 头部 */}
-            <div className="flex items-center justify-between p-6" style={{ 
-              borderBottom: '1px solid var(--border-light)', 
-              backgroundColor: 'var(--background-secondary)' 
-            }}>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg" style={{ 
-                  background: 'var(--primary)' 
-                }}>
-                  <span className="text-white text-lg font-bold">+</span>
-                </div>
-                <h2 className="text-heading-2 font-bold" style={{ color: 'var(--text-primary)' }}>
-                  添加新任务
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:btn-secondary"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <span className="text-xl">×</span>
-              </button>
-            </div>
-
-            {/* 内容区域 */}
-            <div className="p-6">
-              <RightPanel
-                onSave={handleSave}
-                onClear={handleClear}
-                isLoading={isLoading}
-                onClose={() => setShowAddDialog(false)}
-              />
-            </div>
-          </div>
-        </div>
+        <SimpleTaskCreator
+          onSave={handleSaveTaskData}
+          onClose={() => setShowAddDialog(false)}
+          isLoading={isLoading}
+        />
       )}
     </div>
   );
