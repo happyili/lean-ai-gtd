@@ -359,4 +359,4 @@ export const useAuth = (): AuthContextType => {
 };
 
 // 导出类型
-export type { User, AuthContextType };
+export type { User, AuthContextType };// AuthContext improvements
