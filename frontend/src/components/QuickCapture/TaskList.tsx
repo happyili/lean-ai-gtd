@@ -849,8 +849,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             <div className="relative">
               <button
                 onClick={() => setShowStatsDetail(!showStatsDetail)}
-                className="px-4 py-2 rounded-xl cursor-pointer hover:opacity-80 transition-all flex items-center space-x-2"
-                style={{ background: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}
+                className="px-4 py-2 rounded-xl cursor-pointer hover:shadow-sm transition-all flex items-center space-x-2 bg-white border border-gray-200 hover:border-gray-300"
+                style={{ 
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                }}
               >
                 <div className="flex items-center space-x-3">
                   <div className="text-center">
@@ -1002,27 +1006,29 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             </button>
             <button
               onClick={() => setShowAIChatSidebar(true)}
-              className="px-3 py-2 rounded-xl text-body-small font-semibold transition-all"
+              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm"
               style={{ 
-                background: 'var(--accent-purple)', 
-                color: 'white',
-                border: '1px solid var(--accent-purple)'
+                backgroundColor: 'white',
+                color: 'var(--text-primary)',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
               }}
               title="AI助手聊天"
             >
-              🤖 AI助手
+              AI助手
             </button>
             <button
               onClick={() => setShowAIPomodoroTimer(true)}
-              className="px-3 py-2 rounded-xl text-body-small font-semibold transition-all"
+              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm"
               style={{ 
-                background: 'var(--accent-amber)', 
-                color: 'white',
-                border: '1px solid var(--accent-amber)'
+                backgroundColor: 'white',
+                color: 'var(--text-primary)',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
               }}
               title="AI番茄时钟"
             >
-              🍅 AI番茄时钟
+              AI番茄时钟
             </button>
             {showAllLevels && (
               <div className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
