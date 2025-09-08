@@ -49,3 +49,4 @@ app = create_app()
 # Vercel需要这个handler
 def handler(request):
     return app(request.environ, lambda *args: None)
+# Flask app auth integration
