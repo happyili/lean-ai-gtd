@@ -1,11 +1,9 @@
-from flask_sqlalchemy import SQLAlchemy
+from app.database import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
 import secrets
 from typing import Optional, Dict, Any
-
-db = SQLAlchemy()
 
 class User(db.Model):
     """用户数据模型"""

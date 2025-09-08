@@ -1,7 +1,5 @@
 import os
-from flask_sqlalchemy import SQLAlchemy
-from app.models.record import db, Record
-from app.models.user import User
+from app.database import db
 from sqlalchemy import inspect, text
 
 def init_database_enhanced(app):
@@ -21,6 +19,10 @@ def init_database_enhanced(app):
     with app.app_context():
         # 创建所有表
         db.create_all()
+        
+        # 导入模型（避免循环导入）
+        from app.models.user import User
+        from app.models.record import Record
         
         # 添加用户ID外键到records表（如果不存在）
         try:

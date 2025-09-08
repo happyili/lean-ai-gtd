@@ -1,7 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
+from app.database import db
 from datetime import datetime
-
-db = SQLAlchemy()
 
 class Record(db.Model):
     """记录数据模型"""
@@ -11,6 +9,7 @@ class Record(db.Model):
     content = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(20), default='general')  # idea/task/note/general
     parent_id = db.Column(db.Integer, db.ForeignKey('records.id'), nullable=True)  # 父任务ID，支持子任务
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # 用户ID外键
     priority = db.Column(db.String(20), default='medium')  # low/medium/high/urgent
     progress = db.Column(db.Integer, default=0)  # 进度百分比 0-100
     progress_notes = db.Column(db.Text, nullable=True)  # 进展记录和问题描述
