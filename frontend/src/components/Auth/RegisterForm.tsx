@@ -411,4 +411,4 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   );
 }
 
-export default RegisterForm;// RegisterForm component features
+export default RegisterForm;
