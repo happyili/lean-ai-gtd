@@ -44,6 +44,21 @@ const taskTypeOptions = [
   { value: 'life', label: '生活', color: 'bg-purple-100 text-purple-800' }
 ];
 
+const priorityWeight = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1
+};
+
+const statusOptionsForFilter = [
+  { value: 'all', label: '全部状态' },
+  { value: 'active', label: '进行中' },
+  { value: 'pending', label: '待办' },
+  { value: 'completed', label: '已完成' },
+  { value: 'paused', label: '暂停' }
+];
+
 export default function TaskDetail({ 
   task, 
   onClose, 
@@ -51,15 +66,26 @@ export default function TaskDetail({
   onAddSubtask, 
   onDeleteSubtask 
 }: TaskDetailProps) {
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // 显示通知
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(task.content);
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
+  const [newSubtaskPriority, setNewSubtaskPriority] = useState('medium');
+  const [newSubtaskTaskType, setNewSubtaskTaskType] = useState(task.task_type || 'work');
   const [status, setStatus] = useState(task.status);
   const [priority, setPriority] = useState(task.priority || 'medium');
   const [taskType, setTaskType] = useState(task.task_type || 'work');
   const [progressNotes, setProgressNotes] = useState(task.progress_notes || '');
   const [subtasks, setSubtasks] = useState<Record[]>(task.subtasks || []);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [sortBy, setSortBy] = useState<'priority' | 'created' | 'status'>('priority');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // 获取子任务
   useEffect(() => {
@@ -77,7 +103,7 @@ export default function TaskDetail({
     } catch (error) {
       console.error('获取子任务失败:', error);
       // 显示错误信息给用户
-      alert(`获取子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showNotification(`获取子任务失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
     }
   };
 
@@ -103,7 +129,8 @@ export default function TaskDetail({
         {
           content: newSubtaskContent,
           category: 'task',
-          task_type: taskType || 'work'
+          priority: newSubtaskPriority,
+          task_type: newSubtaskTaskType
         },
         '添加子任务'
       );
@@ -111,10 +138,12 @@ export default function TaskDetail({
       const data = await response.json();
       setSubtasks([...subtasks, data.subtask]);
       setNewSubtaskContent('');
+      setNewSubtaskPriority('medium');
+      setNewSubtaskTaskType(task.task_type || 'work');
       onAddSubtask(task.id, newSubtaskContent);
     } catch (error) {
       console.error('添加子任务失败:', error);
-      alert(`添加子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showNotification(`添加子任务失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
     }
   };
 
@@ -129,7 +158,31 @@ export default function TaskDetail({
       onDeleteSubtask(subtaskId);
     } catch (error) {
       console.error('删除子任务失败:', error);
-      alert(`删除子任务失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      showNotification(`删除子任务失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
+    }
+  };
+
+  const handleUpdateSubtaskStatus = async (subtaskId: number, newStatus: string) => {
+    try {
+      const { apiPut } = await import('@/utils/api');
+      
+      await apiPut(
+        `/api/records/${subtaskId}`,
+        { status: newStatus },
+        '更新子任务状态'
+      );
+
+      // 更新本地状态
+      setSubtasks(prevSubtasks => 
+        prevSubtasks.map(subtask => 
+          subtask.id === subtaskId 
+            ? { ...subtask, status: newStatus }
+            : subtask
+        )
+      );
+    } catch (error) {
+      console.error('更新子任务状态失败:', error);
+      showNotification(`更新子任务状态失败: ${error instanceof Error ? error.message : '未知错误'}`, 'error');
     }
   };
 
@@ -144,15 +197,63 @@ export default function TaskDetail({
     });
   };
 
-  const filteredSubtasks = showCompleted 
-    ? subtasks 
-    : subtasks.filter(subtask => subtask.status !== 'completed');
+  const sortSubtasks = (subtasks: Record[]) => {
+    return [...subtasks].sort((a, b) => {
+      switch (sortBy) {
+        case 'priority':
+          const priorityA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0;
+          const priorityB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0;
+          return priorityB - priorityA; // Higher priority first
+        case 'created':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Newer first
+        case 'status':
+          const statusOrder = { active: 1, pending: 2, paused: 3, completed: 4, cancelled: 5 };
+          const statusA = statusOrder[a.status as keyof typeof statusOrder] || 6;
+          const statusB = statusOrder[b.status as keyof typeof statusOrder] || 6;
+          return statusA - statusB;
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const filteredSubtasks = (() => {
+    let result = subtasks;
+    
+    // Filter by status
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'pending') {
+        result = result.filter(subtask => !['completed', 'cancelled'].includes(subtask.status));
+      } else {
+        result = result.filter(subtask => subtask.status === filterStatus);
+      }
+    }
+    
+    // Filter by completion status
+    if (!showCompleted) {
+      result = result.filter(subtask => subtask.status !== 'completed');
+    }
+    
+    // Sort the results
+    return sortSubtasks(result);
+  })();
 
   const completedCount = subtasks.filter(subtask => subtask.status === 'completed').length;
   const totalSubtasks = subtasks.length;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {/* 通知栏 */}
+      {notification && (
+        <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl transition-all backdrop-blur-sm ${
+          notification.type === 'success' 
+            ? 'status-success'
+            : 'status-error'
+        }`}>
+          <div className="font-semibold text-sm">{notification.message}</div>
+        </div>
+      )}
+      
       <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden border border-slate-200/60">
         {/* 头部 */}
         <div className="flex items-center justify-between p-8 border-b border-slate-200/60 bg-gradient-to-r from-slate-50/80 to-sky-50/80">
@@ -309,35 +410,97 @@ export default function TaskDetail({
                   </span>
                 )}
               </h4>
-              <label className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100/60 px-4 py-2 rounded-2xl backdrop-blur-sm">
-                <input
-                  type="checkbox"
-                  checked={showCompleted}
-                  onChange={(e) => setShowCompleted(e.target.checked)}
-                  className="rounded w-4 h-4"
-                />
-                <span className="font-medium">显示已完成</span>
-              </label>
+              <div className="flex items-center gap-3">
+                {/* 排序选择 */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'priority' | 'created' | 'status')}
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 bg-white/60 backdrop-blur-sm"
+                >
+                  <option value="priority">按优先级排序</option>
+                  <option value="created">按创建时间排序</option>
+                  <option value="status">按状态排序</option>
+                </select>
+                
+                {/* 状态筛选 */}
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 bg-white/60 backdrop-blur-sm"
+                >
+                  {statusOptionsForFilter.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                
+                {/* 显示已完成复选框 */}
+                <label className="flex items-center gap-2 text-sm text-slate-600 bg-slate-100/60 px-4 py-2 rounded-2xl backdrop-blur-sm">
+                  <input
+                    type="checkbox"
+                    checked={showCompleted}
+                    onChange={(e) => setShowCompleted(e.target.checked)}
+                    className="rounded w-4 h-4"
+                  />
+                  <span className="font-medium">显示已完成</span>
+                </label>
+              </div>
             </div>
 
             {/* 添加子任务 */}
             <div className="mb-6 p-6 bg-gradient-to-r from-slate-50/80 to-sky-50/80 rounded-2xl border border-slate-200/60 backdrop-blur-sm">
-              <div className="flex gap-4">
+              <div className="space-y-3">
+                {/* 子任务内容输入 */}
                 <input
                   type="text"
                   value={newSubtaskContent}
                   onChange={(e) => setNewSubtaskContent(e.target.value)}
                   placeholder="添加新的子任务..."
-                  className="flex-1 px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-white/60 backdrop-blur-sm transition-all font-medium placeholder:text-slate-400"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-300 bg-white/60 backdrop-blur-sm transition-all font-medium placeholder:text-slate-400"
                   onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
                 />
-                <button
-                  onClick={handleAddSubtask}
-                  disabled={!newSubtaskContent.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-2xl disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  添加
-                </button>
+                
+                {/* 选项控制 */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600 font-medium">优先级:</label>
+                    <select
+                      value={newSubtaskPriority}
+                      onChange={(e) => setNewSubtaskPriority(e.target.value)}
+                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/40 bg-white/60"
+                    >
+                      {priorityOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-slate-600 font-medium">类型:</label>
+                    <select
+                      value={newSubtaskTaskType}
+                      onChange={(e) => setNewSubtaskTaskType(e.target.value)}
+                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/40 bg-white/60"
+                    >
+                      {taskTypeOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <button
+                    onClick={handleAddSubtask}
+                    disabled={!newSubtaskContent.trim()}
+                    className="px-4 py-1.5 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-lg disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed font-medium transition-all duration-200 shadow hover:shadow-md"
+                  >
+                    添加子任务
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -351,28 +514,64 @@ export default function TaskDetail({
                   </div>
                 </div>
               ) : (
-                filteredSubtasks.map((subtask) => (
-                  <div key={subtask.id} className="flex items-center gap-4 p-4 bg-white/60 border border-slate-200/60 rounded-2xl hover:bg-white/80 hover:shadow-md transition-all duration-200 backdrop-blur-sm">
-                    <input
-                      type="checkbox"
-                      checked={subtask.status === 'completed'}
-                      onChange={() => {
-                        // 这里可以添加更新子任务状态的逻辑
-                      }}
-                      className="rounded w-5 h-5"
-                    />
-                    <span className="flex-1 text-sm font-medium text-slate-700">{subtask.content}</span>
-                    <span className="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-xl font-medium">
-                      {formatDate(subtask.created_at)}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteSubtask(subtask.id)}
-                      className="text-red-500 hover:text-red-700 text-sm bg-red-50 hover:bg-red-100 px-3 py-1 rounded-xl transition-all font-medium"
-                    >
-                      删除
-                    </button>
-                  </div>
-                ))
+                filteredSubtasks.map((subtask) => {
+                  const subtaskPriorityInfo = priorityOptions.find(opt => opt.value === subtask.priority);
+                  const subtaskStatusInfo = statusOptions.find(opt => opt.value === subtask.status);
+                  const subtaskTaskTypeInfo = taskTypeOptions.find(opt => opt.value === subtask.task_type);
+                  
+                  return (
+                    <div key={subtask.id} className="flex items-center gap-3 p-4 bg-white/60 border border-slate-200/60 rounded-2xl hover:bg-white/80 hover:shadow-md transition-all duration-200 backdrop-blur-sm">
+                      <input
+                        type="checkbox"
+                        checked={subtask.status === 'completed'}
+                        onChange={() => {
+                          const newStatus = subtask.status === 'completed' ? 'active' : 'completed';
+                          handleUpdateSubtaskStatus(subtask.id, newStatus);
+                        }}
+                        className="rounded w-5 h-5 flex-shrink-0"
+                      />
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-slate-700 truncate">{subtask.content}</span>
+                          
+                          {/* 优先级标签 */}
+                          {subtaskPriorityInfo && (
+                            <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${subtaskPriorityInfo.color}`}>
+                              {subtaskPriorityInfo.label}
+                            </span>
+                          )}
+                          
+                          {/* 状态标签 */}
+                          {subtaskStatusInfo && (
+                            <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${subtaskStatusInfo.color}`}>
+                              {subtaskStatusInfo.label}
+                            </span>
+                          )}
+                          
+                          {/* 任务类型标签 */}
+                          {subtaskTaskTypeInfo && (
+                            <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${subtaskTaskTypeInfo.color}`}>
+                              {subtaskTaskTypeInfo.label}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* 创建时间 */}
+                        <div className="text-xs text-slate-500">
+                          创建于 {formatDate(subtask.created_at)}
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleDeleteSubtask(subtask.id)}
+                        className="text-red-500 hover:text-red-700 text-sm bg-red-50 hover:bg-red-100 px-3 py-1 rounded-xl transition-all font-medium flex-shrink-0"
+                      >
+                        删除
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
+import { apiPost } from '@/utils/api';
 
 interface AIAnalysis {
   execution_strategy: {
@@ -45,16 +44,11 @@ export default function AISuggestions({
     setError(null);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}/ai-analysis`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('AI分析请求失败');
-      }
+      const response = await apiPost(
+        `/api/records/${taskId}/ai-analysis`,
+        {},
+        'AI分析'
+      );
 
       const data = await response.json();
       setAnalysis(data.analysis);
@@ -83,19 +77,13 @@ export default function AISuggestions({
     );
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/records/${taskId}/create-subtasks-from-ai`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      await apiPost(
+        `/api/records/${taskId}/create-subtasks-from-ai`,
+        {
           subtask_suggestions: selectedSuggestions
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('创建子任务失败');
-      }
+        },
+        '创建AI建议的子任务'
+      );
 
       onCreateSubtasks(selectedSuggestions);
       setSelectedSubtasks(new Set());

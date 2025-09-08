@@ -137,13 +137,52 @@ export default function App() {
   };
 
   // 添加子任务
-  const handleAddSubtask = async (_parentId: number, _content: string) => {
-    showNotification('子任务添加成功', 'success');
+  const handleAddSubtask = async (parentId: number, content: string) => {
+    try {
+      const { apiPost } = await import('@/utils/api');
+      
+      const response = await apiPost(
+        `/api/records/${parentId}/subtasks`,
+        {
+          content: content,
+          category: 'task'
+        },
+        '添加子任务'
+      );
+
+      await response.json();
+      showNotification('子任务添加成功', 'success');
+      
+      // Refresh task list to show new subtask
+      const refreshEvent = new CustomEvent('taskRefresh');
+      window.dispatchEvent(refreshEvent);
+      
+    } catch (error) {
+      console.error('添加子任务失败:', error);
+      showNotification(error instanceof Error ? error.message : '添加子任务失败', 'error');
+    }
   };
 
   // 删除子任务
-  const handleDeleteSubtask = async (_subtaskId: number) => {
-    showNotification('子任务删除成功', 'success');
+  const handleDeleteSubtask = async (subtaskId: number) => {
+    try {
+      const { apiDelete } = await import('@/utils/api');
+      
+      await apiDelete(
+        `/api/records/${subtaskId}`,
+        '删除子任务'
+      );
+
+      showNotification('子任务删除成功', 'success');
+      
+      // Refresh task list to remove deleted subtask
+      const refreshEvent = new CustomEvent('taskRefresh');
+      window.dispatchEvent(refreshEvent);
+      
+    } catch (error) {
+      console.error('删除子任务失败:', error);
+      showNotification(error instanceof Error ? error.message : '删除子任务失败', 'error');
+    }
   };
 
   return (
