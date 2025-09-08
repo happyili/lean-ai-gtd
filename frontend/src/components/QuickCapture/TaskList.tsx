@@ -81,6 +81,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [editingTask, setEditingTask] = useState<number | null>(null);
   const [editingTaskContent, setEditingTaskContent] = useState<{[key: number]: string}>({});
   const [showAISuggestions, setShowAISuggestions] = useState<number | null>(null);
+  const [showStrategySuggestions, setShowStrategySuggestions] = useState<number | null>(null);
   const [priorityDropdownOpen, setPriorityDropdownOpen] = useState<number | null>(null);
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
   const [showStatsDetail, setShowStatsDetail] = useState(false);
@@ -1579,12 +1580,33 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    _onViewDetail(task);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-secondary"
+                                  title="查看任务详情"
+                                >
+                                  📋 详情
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     setShowAISuggestions(task.id);
                                   }}
                                   className="text-xs px-3 py-1 rounded btn-primary"
                                   style={{ background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
                                 >
                                   🤖 AI智能分析
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowStrategySuggestions(task.id);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-primary"
+                                  style={{ background: 'var(--primary)', borderColor: 'var(--primary)' }}
+                                  title="AI策略建议"
+                                >
+                                  🎯 策略建议
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -1845,6 +1867,18 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           // 重新获取任务列表以显示新创建的子任务
           fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
         }}
+      />
+      
+      {/* AI策略建议弹窗 */}
+      <AISuggestions
+        taskId={showStrategySuggestions || 0}
+        isVisible={showStrategySuggestions !== null}
+        onClose={() => setShowStrategySuggestions(null)}
+        onCreateSubtasks={(_suggestions) => {
+          // 重新获取任务列表以显示新创建的子任务
+          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+        }}
+        mode="strategy"
       />
       
       {/* AI聊天侧边栏 */}

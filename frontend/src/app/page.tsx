@@ -47,7 +47,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [taskTypeFilter, setTaskTypeFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [currentPomodoroTask, setCurrentPomodoroTask] = useState<PomodoroTask | null>(null);
@@ -168,7 +167,6 @@ export default function App() {
     } else if (type === 'priority') {
       setPriorityFilter(value);
     } else if (type === 'taskType') {
-      setTaskTypeFilter(value);
       setSelectedTaskType(value);
       // 选择任务类型后自动折叠
       setIsTaskTypeFilterExpanded(false);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiGet, apiPost, apiDelete } from '@/utils/api';
+import AISuggestions from './AISuggestions';
 
 interface Record {
   id: number;
@@ -73,6 +74,17 @@ export default function TaskDetail({
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
+
+  // 处理策略建议
+  const handleStrategySuggestions = () => {
+    setShowStrategySuggestions(true);
+  };
+
+  // 处理创建子任务（来自AI建议）
+  const handleCreateSubtasksFromAI = (suggestions: any[]) => {
+    // 这里可以添加额外的逻辑，比如显示成功消息
+    showNotification(`成功创建 ${suggestions.length} 个子任务`, 'success');
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(task.content);
   const [newSubtaskContent, setNewSubtaskContent] = useState('');
@@ -86,6 +98,7 @@ export default function TaskDetail({
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortBy, setSortBy] = useState<'priority' | 'created' | 'status'>('priority');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showStrategySuggestions, setShowStrategySuggestions] = useState(false);
 
   // 获取子任务
   useEffect(() => {
@@ -384,6 +397,17 @@ export default function TaskDetail({
               </div>
             </div>
 
+            {/* AI策略建议按钮 */}
+            <div className="mb-6">
+              <button
+                onClick={handleStrategySuggestions}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+              >
+                <span className="text-lg">🎯</span>
+                <span>策略建议</span>
+              </button>
+            </div>
+
             {/* 时间信息 */}
             <div className="bg-slate-50/60 rounded-2xl p-6 backdrop-blur-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
@@ -611,6 +635,14 @@ export default function TaskDetail({
           )}
         </div>
       </div>
+
+      {/* AI策略建议弹窗 */}
+      <AISuggestions
+        taskId={task.id}
+        isVisible={showStrategySuggestions}
+        onClose={() => setShowStrategySuggestions(false)}
+        onCreateSubtasks={handleCreateSubtasksFromAI}
+      />
     </div>
   );
 }
