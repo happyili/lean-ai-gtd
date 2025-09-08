@@ -2,6 +2,16 @@ import { useState } from 'react';
 import TaskList from '@/components/QuickCapture/TaskList';
 import RightPanel from '@/components/QuickCapture/RightPanel';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
+import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
+
+interface PomodoroTask {
+  id: string;
+  title: string;
+  description: string;
+  estimatedTime: number;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+}
 
 interface Record {
   id: number;
@@ -31,6 +41,8 @@ export default function App() {
   const [taskTypeFilter, setTaskTypeFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [currentPomodoroTask, setCurrentPomodoroTask] = useState<PomodoroTask | null>(null);
+  const [isPomodoroActive, setIsPomodoroActive] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -57,6 +69,30 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 开始番茄时钟
+  const handleStartPomodoro = (task: PomodoroTask) => {
+    setCurrentPomodoroTask(task);
+    setIsPomodoroActive(true);
+    showNotification(`开始专注模式: ${task.title}`, 'success');
+  };
+
+  // 番茄时钟完成
+  const handlePomodoroComplete = () => {
+    showNotification('番茄时钟完成！休息一下吧 🎉', 'success');
+  };
+
+  // 番茄时钟暂停
+  const handlePomodoroPause = () => {
+    showNotification('番茄时钟已暂停', 'success');
+  };
+
+  // 番茄时钟停止
+  const handlePomodoroStop = () => {
+    setCurrentPomodoroTask(null);
+    setIsPomodoroActive(false);
+    showNotification('番茄时钟已停止', 'success');
   };
 
   // 删除记录
@@ -188,6 +224,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      {/* 番茄时钟专注模式 */}
+      <PomodoroFocusMode
+        isActive={isPomodoroActive}
+        task={currentPomodoroTask}
+        onComplete={handlePomodoroComplete}
+        onPause={handlePomodoroPause}
+        onStop={handlePomodoroStop}
+      />
+
       {/* 通知栏 */}
       {notification && (
         <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl transition-all backdrop-blur-sm ${
@@ -328,7 +373,7 @@ export default function App() {
       </header>
 
       {/* 主要内容区域 */}
-      <div className="flex h-[calc(100vh-48px)]">
+      <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-120px)] mt-[120px]' : 'h-[calc(100vh-48px)]'}`}>
         {/* 任务列表占满整个宽度 */}
         <main className="w-full">
           <TaskList
@@ -336,6 +381,7 @@ export default function App() {
             onDelete={handleDelete}
             onSearch={handleSearch}
             onSave={handleSave}
+            onStartPomodoro={handleStartPomodoro}
             showNotification={showNotification}
           />
         </main>

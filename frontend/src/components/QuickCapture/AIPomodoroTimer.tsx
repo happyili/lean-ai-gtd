@@ -1,5 +1,13 @@
 import { useState } from 'react';
 
+interface ExecutionPlan {
+  prompt: string;
+  aiResponse: string;
+  steps: string[];
+  tools: string[];
+  estimatedTime: string;
+}
+
 interface PomodoroTask {
   id: string;
   title: string;
@@ -27,6 +35,8 @@ export default function AIPomodoroTimer({
   const [pomodoroTasks, setPomodoroTasks] = useState<PomodoroTask[]>([]);
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState<Partial<PomodoroTask>>({});
+  const [executionPlans, setExecutionPlans] = useState<{[key: string]: ExecutionPlan}>({});
+  const [generatingPlan, setGeneratingPlan] = useState<string | null>(null);
 
   // 生成AI番茄任务建议
   const generatePomodoroTasks = async () => {
@@ -97,6 +107,62 @@ export default function AIPomodoroTimer({
   const cancelEdit = () => {
     setEditingTask(null);
     setEditingContent({});
+  };
+
+  // 生成AI执行方案
+  const generateExecutionPlan = async (task: PomodoroTask) => {
+    setGeneratingPlan(task.id);
+    
+    try {
+      // 模拟AI生成执行方案（实际应调用后端API）
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      const prompts = [
+        `作为一个高效工作助手，请为"${task.title}"这个任务制定详细的25分钟执行方案。任务描述：${task.description}。请提供具体的执行步骤、所需工具和预期成果。`,
+        `我需要在25分钟内完成"${task.title}"，具体要求是：${task.description}。请帮我制定一个高效的执行计划，包括时间分配和关键节点。`,
+        `请为"${task.title}"任务设计一个番茄时钟工作方案。任务细节：${task.description}。重点关注可操作性和完成度。`
+      ];
+      
+      const selectedPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+      
+      const mockPlans = [
+        {
+          prompt: selectedPrompt,
+          aiResponse: "基于你的任务需求，我为你制定了以下25分钟高效执行方案。这个方案采用了时间分块和重点突破的策略，确保在有限时间内获得最大成果。",
+          steps: [
+            "前5分钟：快速梳理任务要点，明确核心目标",
+            "第6-15分钟：专注完成最重要的核心部分", 
+            "第16-22分钟：处理相关细节和补充内容",
+            "最后3分钟：检查成果，整理输出"
+          ],
+          tools: ["笔记工具", "时间提醒", "专注模式", "检查清单"],
+          estimatedTime: "25分钟"
+        },
+        {
+          prompt: selectedPrompt,
+          aiResponse: "我分析了你的任务特点，设计了这个结构化的执行方案。通过分阶段推进，可以确保工作质量和完成效率。",
+          steps: [
+            "开始3分钟：环境准备和思路整理",
+            "第4-12分钟：核心工作执行阶段",
+            "第13-20分钟：深入完善和质量提升", 
+            "第21-25分钟：总结整理和成果确认"
+          ],
+          tools: ["工作环境", "核心工具", "辅助资料", "验收标准"],
+          estimatedTime: "25分钟"
+        }
+      ];
+      
+      const selectedPlan = mockPlans[Math.floor(Math.random() * mockPlans.length)];
+      
+      setExecutionPlans(prev => ({
+        ...prev,
+        [task.id]: selectedPlan
+      }));
+    } catch (error) {
+      console.error('生成执行方案失败:', error);
+    } finally {
+      setGeneratingPlan(null);
+    }
   };
 
   // 开始番茄时钟
@@ -251,6 +317,18 @@ export default function AIPomodoroTimer({
                           ✏️ 编辑
                         </button>
                         <button
+                          onClick={() => generateExecutionPlan(task)}
+                          disabled={generatingPlan === task.id}
+                          className="px-3 py-1 rounded text-xs font-medium transition-all hover:btn-secondary"
+                          style={{ 
+                            color: executionPlans[task.id] ? 'var(--success)' : 'var(--text-secondary)',
+                            backgroundColor: generatingPlan === task.id ? 'var(--text-disabled)' : 'transparent'
+                          }}
+                        >
+                          {generatingPlan === task.id ? '🤖 生成中...' : 
+                           executionPlans[task.id] ? '✅ 执行方案' : '🧠 AI执行方案'}
+                        </button>
+                        <button
                           onClick={() => startPomodoro(task)}
                           className="px-4 py-2 rounded-lg font-medium transition-all"
                           style={{
@@ -343,13 +421,108 @@ export default function AIPomodoroTimer({
                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <h4 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                          {task.title}
-                        </h4>
-                        <p className="text-body-small leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                          {task.description}
-                        </p>
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="text-body font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                            {task.title}
+                          </h4>
+                          <p className="text-body-small leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                            {task.description}
+                          </p>
+                        </div>
+                        
+                        {/* 显示AI执行方案 */}
+                        {executionPlans[task.id] && (
+                          <div className="mt-4 p-4 rounded-lg" style={{ 
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-light)'
+                          }}>
+                            <div className="flex items-center space-x-2 mb-3">
+                              <span className="text-lg">🧠</span>
+                              <h5 className="text-body font-semibold" style={{ color: 'var(--text-primary)' }}>
+                                AI执行方案
+                              </h5>
+                              <span className="px-2 py-1 rounded text-xs font-medium" style={{
+                                backgroundColor: 'var(--success-bg)',
+                                color: 'var(--success)'
+                              }}>
+                                已生成
+                              </span>
+                            </div>
+                            
+                            {/* 使用的提示词 */}
+                            <div className="mb-3">
+                              <h6 className="text-body-small font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                📝 AI提示词：
+                              </h6>
+                              <div className="p-2 rounded text-xs font-mono" style={{ 
+                                backgroundColor: 'var(--background-secondary)',
+                                color: 'var(--text-muted)',
+                                border: '1px solid var(--border-light)'
+                              }}>
+                                {executionPlans[task.id].prompt}
+                              </div>
+                            </div>
+                            
+                            {/* AI响应 */}
+                            <div className="mb-3">
+                              <h6 className="text-body-small font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                🤖 AI分析：
+                              </h6>
+                              <p className="text-body-small leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                                {executionPlans[task.id].aiResponse}
+                              </p>
+                            </div>
+                            
+                            {/* 执行步骤 */}
+                            <div className="mb-3">
+                              <h6 className="text-body-small font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                📋 执行步骤：
+                              </h6>
+                              <ol className="space-y-1">
+                                {executionPlans[task.id].steps.map((step, stepIndex) => (
+                                  <li key={stepIndex} className="flex items-start space-x-2">
+                                    <span className="text-xs font-medium px-1.5 py-0.5 rounded" style={{
+                                      backgroundColor: 'var(--primary)',
+                                      color: 'white',
+                                      minWidth: '20px',
+                                      textAlign: 'center'
+                                    }}>
+                                      {stepIndex + 1}
+                                    </span>
+                                    <span className="text-body-small flex-1" style={{ color: 'var(--text-primary)' }}>
+                                      {step}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                            
+                            {/* 所需工具 */}
+                            <div className="mb-3">
+                              <h6 className="text-body-small font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                🛠️ 所需工具：
+                              </h6>
+                              <div className="flex flex-wrap gap-2">
+                                {executionPlans[task.id].tools.map((tool, toolIndex) => (
+                                  <span key={toolIndex} className="px-2 py-1 rounded text-xs font-medium" style={{
+                                    backgroundColor: 'var(--info-bg)',
+                                    color: 'var(--info)',
+                                    border: '1px solid var(--info)'
+                                  }}>
+                                    {tool}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {/* 预计时间 */}
+                            <div className="flex items-center space-x-2 text-body-small" style={{ color: 'var(--text-muted)' }}>
+                              <span>⏱️</span>
+                              <span>预计完成时间: {executionPlans[task.id].estimatedTime}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

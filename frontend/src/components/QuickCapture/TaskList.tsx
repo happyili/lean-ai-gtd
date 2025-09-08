@@ -19,11 +19,21 @@ interface Record {
   subtasks?: Record[];
 }
 
+interface PomodoroTask {
+  id: string;
+  title: string;
+  description: string;
+  estimatedTime: number;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+}
+
 interface TaskListProps {
   onViewDetail: (record: Record) => void;
   onDelete: (id: number) => void;
   onSearch: (query: string) => void;
   onSave: (content: string, category: string) => Promise<void>;
+  onStartPomodoro?: (task: PomodoroTask) => void;
   showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -47,7 +57,7 @@ const taskTypeMap = {
   life: { label: '生活', color: 'bg-purple-100 text-purple-800' }
 };
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, showNotification }: TaskListProps) {
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification }: TaskListProps) {
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1915,8 +1925,9 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         onClose={() => setShowAIPomodoroTimer(false)}
         tasks={tasks}
         onStartPomodoro={(task) => {
-          // 这里可以添加开始番茄时钟的逻辑
-          console.log('开始番茄时钟:', task);
+          // 传递给父组件处理番茄时钟开始
+          onStartPomodoro?.(task);
+          setShowAIPomodoroTimer(false); // 关闭对话框
         }}
       />
     </div>
