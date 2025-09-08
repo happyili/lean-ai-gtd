@@ -427,3 +427,4 @@ __all__ = ['auth_bp']// Login API implementation
 // Logout API implementation
 // Token refresh implementation
 // Get user info API
+// Update user info API
