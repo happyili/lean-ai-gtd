@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import AISuggestions from './AISuggestions';
+import AIChatSidebar from './AIChatSidebar';
+import AIPomodoroTimer from './AIPomodoroTimer';
 import { buildUrl, handleApiError } from '@/utils/api';
 
 interface Record {
@@ -72,6 +74,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [priorityDropdownOpen, setPriorityDropdownOpen] = useState<number | null>(null);
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
   const [showStatsDetail, setShowStatsDetail] = useState(false);
+  const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
+  const [showAIPomodoroTimer, setShowAIPomodoroTimer] = useState(false);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
@@ -986,6 +990,30 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             >
               + 任务
             </button>
+            <button
+              onClick={() => setShowAIChatSidebar(true)}
+              className="px-3 py-2 rounded-xl text-body-small font-semibold transition-all"
+              style={{ 
+                background: 'var(--accent-purple)', 
+                color: 'white',
+                border: '1px solid var(--accent-purple)'
+              }}
+              title="AI助手聊天"
+            >
+              🤖 AI助手
+            </button>
+            <button
+              onClick={() => setShowAIPomodoroTimer(true)}
+              className="px-3 py-2 rounded-xl text-body-small font-semibold transition-all"
+              style={{ 
+                background: 'var(--accent-amber)', 
+                color: 'white',
+                border: '1px solid var(--accent-amber)'
+              }}
+              title="AI番茄时钟"
+            >
+              🍅 AI番茄时钟
+            </button>
             {showAllLevels && (
               <div className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
                 显示所有层级
@@ -1871,6 +1899,24 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         onCreateSubtasks={(_suggestions) => {
           // 重新获取任务列表以显示新创建的子任务
           fetchTasks(searchQuery, statusFilter, priorityFilter);
+        }}
+      />
+      
+      {/* AI聊天侧边栏 */}
+      <AIChatSidebar
+        isOpen={showAIChatSidebar}
+        onClose={() => setShowAIChatSidebar(false)}
+        tasks={tasks}
+      />
+      
+      {/* AI番茄时钟 */}
+      <AIPomodoroTimer
+        isOpen={showAIPomodoroTimer}
+        onClose={() => setShowAIPomodoroTimer(false)}
+        tasks={tasks}
+        onStartPomodoro={(task) => {
+          // 这里可以添加开始番茄时钟的逻辑
+          console.log('开始番茄时钟:', task);
         }}
       />
     </div>
