@@ -212,4 +212,4 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
   );
 }
 
-export default LoginForm;
+export default LoginForm;// LoginForm component improvements
