@@ -323,7 +323,7 @@ export default function App() {
                   {/* 搜索下拉框 */}
                   {showSearchDropdown && (
                     <div 
-                      className="absolute top-full left-0 -mt-1 w-80 p-4 card shadow-lg z-50 pt-5"
+                      className="absolute top-full left-3 w-80 p-4 card shadow-lg z-50 pt-5"
                       style={{ backgroundColor: 'var(--card-background)' }}
                     >
                       <div className="space-y-3">
@@ -342,10 +342,10 @@ export default function App() {
                         </div>
                         
                         {/* 筛选器 */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <select
                             value={statusFilter}
-                            className="px-3 py-2 rounded-lg form-input text-body-small"
+                            className="px-4 py-2 rounded-lg form-input text-body-small"
                             onChange={(e) => handleFilter('status', e.target.value)}
                           >
                             <option value="all">所有状态</option>
@@ -358,7 +358,7 @@ export default function App() {
                           
                           <select
                             value={priorityFilter}
-                            className="px-3 py-2 rounded-lg form-input text-body-small"
+                            className="px-4 py-2 rounded-lg form-input text-body-small"
                             onChange={(e) => handleFilter('priority', e.target.value)}
                           >
                             <option value="all">所有优先级</option>
@@ -368,16 +368,6 @@ export default function App() {
                             <option value="low">低</option>
                           </select>
                           
-                          <select
-                            value={taskTypeFilter}
-                            className="px-3 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => handleFilter('taskType', e.target.value)}
-                          >
-                            <option value="all">所有类型</option>
-                            <option value="work">工作</option>
-                            <option value="hobby">业余</option>
-                            <option value="life">生活</option>
-                          </select>
                         </div>
                         
                         {/* 任务层级筛选 */}
@@ -412,8 +402,7 @@ export default function App() {
                       className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1"
                       style={{ 
                         backgroundColor: 'transparent',
-                        color: 'var(--text-secondary)',
-                        border: '1px solid var(--border-light)'
+                        color: 'var(--text-secondary)'
                       }}
                     >
                       <span>{getTaskTypeDisplayText(selectedTaskType)}</span>
