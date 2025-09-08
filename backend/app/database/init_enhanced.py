@@ -61,4 +61,4 @@ def init_database_enhanced(app):
         
         print("✅ 数据库初始化完成，包含用户认证系统")
     
-    return db# Database initialization completed
+    return db
