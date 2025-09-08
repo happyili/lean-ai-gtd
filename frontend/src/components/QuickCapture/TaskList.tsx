@@ -37,29 +37,77 @@ interface TaskListProps {
   onSave: (content: string, category: string) => Promise<void>;
   onStartPomodoro?: (task: PomodoroTask) => void;
   showNotification: (message: string, type: 'success' | 'error') => void;
+  isCollapsed?: boolean;
+  showAllLevels?: boolean;
 }
 
 const priorityMap = {
-  low: { label: '低', color: 'bg-gray-100 text-gray-800' },
-  medium: { label: '中', color: 'bg-yellow-100 text-yellow-800' },
-  high: { label: '高', color: 'bg-orange-100 text-orange-800' },
-  urgent: { label: '紧急', color: 'bg-red-100 text-red-800' }
+  low: { label: '低', color: 'muted' },
+  medium: { label: '中', color: 'warning' },
+  high: { label: '高', color: 'amber' },
+  urgent: { label: '紧急', color: 'error' }
 };
 
 const statusMap = {
-  active: { label: '进行中', color: 'bg-blue-100 text-blue-800' },
-  completed: { label: '已完成', color: 'bg-green-100 text-green-800' },
-  paused: { label: '暂停', color: 'bg-yellow-100 text-yellow-800' },
-  cancelled: { label: '已取消', color: 'bg-red-100 text-red-800' }
+  active: { label: '进行中', color: 'info' },
+  completed: { label: '已完成', color: 'success' },
+  paused: { label: '暂停', color: 'warning' },
+  cancelled: { label: '已取消', color: 'error' }
 };
 
 const taskTypeMap = {
-  work: { label: '工作', color: 'bg-blue-100 text-blue-800' },
-  hobby: { label: '业余', color: 'bg-green-100 text-green-800' },
-  life: { label: '生活', color: 'bg-purple-100 text-purple-800' }
+  work: { label: '工作', color: 'info' },
+  hobby: { label: '业余', color: 'success' },
+  life: { label: '生活', color: 'purple' }
 };
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification }: TaskListProps) {
+// 获取任务类型样式
+const getTaskTypeStyle = (colorType: string) => {
+  switch (colorType) {
+    case 'info':
+      return { backgroundColor: 'transparent', color: 'var(--info)', border: '1px solid var(--info)' };
+    case 'success':
+      return { backgroundColor: 'transparent', color: 'var(--success)', border: '1px solid var(--success)' };
+    case 'purple':
+      return { backgroundColor: 'transparent', color: 'var(--accent-purple)', border: '1px solid var(--accent-purple)' };
+    default:
+      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
+  }
+};
+
+// 获取优先级样式
+const getPriorityStyle = (colorType: string) => {
+  switch (colorType) {
+    case 'muted':
+      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
+    case 'warning':
+      return { backgroundColor: 'transparent', color: 'var(--warning)', border: '1px solid var(--warning)' };
+    case 'amber':
+      return { backgroundColor: 'var(--error-bg)', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)' };
+    case 'error':
+      return { backgroundColor: 'var(--error-bg)', color: 'var(--error)', border: '1px solid var(--error)' };
+    default:
+      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
+  }
+};
+
+// 获取状态样式
+const getStatusStyle = (colorType: string) => {
+  switch (colorType) {
+    case 'info':
+      return { backgroundColor: 'transparent', color: 'var(--info)', border: '1px solid var(--info)' };
+    case 'success':
+      return { backgroundColor: 'transparent', color: 'var(--success)', border: '1px solid var(--success)' };
+    case 'warning':
+      return { backgroundColor: 'transparent', color: 'var(--warning)', border: '1px solid var(--warning)' };
+    case 'error':
+      return { backgroundColor: 'transparent', color: 'var(--error)', border: '1px solid var(--error)' };
+    default:
+      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
+  }
+};
+
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification, isCollapsed = false, showAllLevels = false }: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +118,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleteSubtaskConfirm, setDeleteSubtaskConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
-  const [showAllLevels, setShowAllLevels] = useState(false); // 默认只显示顶级任务
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskContent, setNewTaskContent] = useState('');
@@ -90,6 +137,11 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [showStatsDetail, setShowStatsDetail] = useState(false);
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
   const [showAIPomodoroTimer, setShowAIPomodoroTimer] = useState(false);
+  
+  // 翻页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
@@ -632,7 +684,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       } else if (e.detail.type === 'taskType') {
         setTaskTypeFilter(e.detail.value);
       } else if (e.detail.type === 'showAllLevels') {
-        setShowAllLevels(e.detail.value);
+        // showAllLevels 状态由父组件管理，这里不需要重复设置
+        // setShowAllLevels(e.detail.value === 'true');
       }
     };
 
@@ -650,14 +703,25 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       }
     };
 
+    const handleCollapse = (e: CustomEvent) => {
+      const { collapsed } = e.detail;
+      if (collapsed) {
+        // 折叠所有子任务
+        setExpandedTask(null);
+      }
+      // 如果collapsed为false，保持当前展开状态
+    };
+
     window.addEventListener('taskSearch', handleSearch);
     window.addEventListener('taskFilter', handleFilter);
+    window.addEventListener('taskCollapse', handleCollapse as EventListener);
     document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('taskSearch', handleSearch);
       window.removeEventListener('taskFilter', handleFilter);
+      window.removeEventListener('taskCollapse', handleCollapse as EventListener);
       document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
       
@@ -667,7 +731,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   }, [expandedTask, saveTimeouts]);
 
   // 获取任务列表
-  const fetchTasks = async (search?: string, status?: string, priority?: string, taskType?: string) => {
+  const fetchTasks = async (search?: string, status?: string, priority?: string, taskType?: string, page: number = 1) => {
     setIsLoading(true);
     try {
       const params: {[key: string]: string | number | boolean} = {
@@ -675,7 +739,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         include_subtasks: true,
         subtask_detail: true,
         top_level_only: false,
-        per_page: 100  // 增加每页数量，确保能获取所有任务
+        per_page: 30,  // 设置每页显示30个任务
+        page: page      // 添加页码参数
       };
       
       // 如果是guest用户，只获取user_id为NULL的任务
@@ -700,10 +765,18 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       
       const data = await response.json();
       setTasks(data.records || []);
+      
+      // 更新分页信息
+      setCurrentPage(data.page || 1);
+      setTotalPages(data.pages || 1);
+      setTotalTasks(data.total || 0);
     } catch (error) {
       console.error('获取任务失败:', error);
       // 清空任务列表以防止显示旧数据
       setTasks([]);
+      setCurrentPage(1);
+      setTotalPages(1);
+      setTotalTasks(0);
     } finally {
       setIsLoading(false);
     }
@@ -716,18 +789,20 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
   // 监听认证状态变化，重新获取任务列表
   useEffect(() => {
-    fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+    setCurrentPage(1); // 重置到第一页
+    fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, 1);
   }, [isAuthenticated, accessToken]);
 
   // 防抖搜索
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+      setCurrentPage(1); // 搜索时重置到第一页
+      fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, 1);
       onSearch(searchQuery);
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, priorityFilter, taskTypeFilter, showAllLevels]);
+  }, [searchQuery, statusFilter, priorityFilter, taskTypeFilter]);
 
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {
@@ -740,7 +815,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         );
 
         // 重新获取任务列表
-        await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+        await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
         onDelete(id);
         setDeleteConfirm(null);
       } catch (error) {
@@ -781,7 +856,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       setIsAddingTask(false);
       showNotification('任务创建成功！', 'success');
       // 重新获取任务列表
-      await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+      await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
     } catch (error) {
       console.error('创建任务失败:', error);
       showNotification('创建任务失败', 'error');
@@ -849,6 +924,50 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
   const stats = calculateTaskStats();
 
+  // 翻页处理函数
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      setCurrentPage(page);
+      fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, page);
+    }
+  };
+
+  // 生成页码数组
+  const generatePageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5; // 最多显示5个页码按钮
+    
+    if (totalPages <= maxVisiblePages) {
+      // 如果总页数少于等于5页，显示所有页码
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // 如果总页数大于5页，显示当前页附近的页码
+      const start = Math.max(1, currentPage - 2);
+      const end = Math.min(totalPages, currentPage + 2);
+      
+      if (start > 1) {
+        pages.push(1);
+        if (start > 2) {
+          pages.push('...');
+        }
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (end < totalPages) {
+        if (end < totalPages - 1) {
+          pages.push('...');
+        }
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
 
   return (
     <div className="h-full flex flex-col card">
@@ -861,11 +980,11 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             <div className="relative">
               <button
                 onClick={() => setShowStatsDetail(!showStatsDetail)}
-                className="px-4 py-1 rounded-xl cursor-pointer hover:shadow-sm transition-all flex items-center space-x-2 bg-white border border-gray-200 hover:border-gray-300"
+                className="px-4 py-1 rounded-xl cursor-pointer hover:shadow-sm transition-all flex items-center space-x-2"
                 style={{ 
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  boxShadow: '0 1px 2px 0 var(--shadow-light)'
                 }}
               >
                 <div className="flex items-center space-x-3">
@@ -1018,12 +1137,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             </button>
             <button
               onClick={() => setShowAIChatSidebar(true)}
-              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
               style={{ 
-                backgroundColor: 'white',
-                color: 'var(--text-primary)',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                backgroundColor: 'var(--card-background)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-light)',
+                boxShadow: '0 1px 2px 0 var(--shadow-light)'
               }}
               title="AI助手聊天"
             >
@@ -1031,22 +1150,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             </button>
             <button
               onClick={() => setShowAIPomodoroTimer(true)}
-              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
               style={{ 
-                backgroundColor: 'white',
-                color: 'var(--text-primary)',
-                border: '1px solid #e5e7eb',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                backgroundColor: 'var(--card-background)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-light)',
+                boxShadow: '0 1px 2px 0 var(--shadow-light)'
               }}
               title="AI番茄时钟"
             >
               AI番茄时钟
             </button>
-            {showAllLevels && (
-              <div className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
-                显示所有层级
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1208,7 +1322,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           >
                             {/* 为guest用户的top level task添加GUEST标签 */}
                             {!isSubtask && task.user_id === null && (
-                              <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded mr-2 font-medium">
+                              <span className="inline-block text-xs px-2 py-1 rounded mr-2 font-medium" style={{ backgroundColor: 'var(--background-secondary)', color: 'var(--text-muted)' }}>
                                 GUEST
                               </span>
                             )}
@@ -1226,9 +1340,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               e.stopPropagation();
                               setTaskTypeDropdownOpen(taskTypeDropdownOpen === task.id ? null : task.id);
                             }}
-                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
-                              taskTypeMap[task.task_type as keyof typeof taskTypeMap]?.color || 'bg-gray-100 text-gray-800'
-                            } flex items-center space-x-1`}
+                            className="px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                            style={getTaskTypeStyle(taskTypeMap[task.task_type as keyof typeof taskTypeMap]?.color || 'default')}
                           >
                             <span>{taskTypeMap[task.task_type as keyof typeof taskTypeMap]?.label || '工作'}</span>
                             <span className="text-xs">▼</span>
@@ -1379,7 +1492,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               e.stopPropagation();
                               handleDelete(task.id);
                             }}
-                            className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                            className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
                             style={{ color: 'var(--error)' }}
                           >
                             确认
@@ -1391,7 +1504,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               setDeleteConfirm(task.id);
                               setTimeout(() => setDeleteConfirm(null), 3000);
                             }}
-                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
                             style={{ color: 'var(--text-muted)' }}
                             title="删除任务"
                           >
@@ -1402,8 +1515,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                     </div>
                   </div>
 
-                  {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示 */}
-                  {!showAllLevels && !isSubtask && !isExpanded && task.subtasks && task.subtasks.length > 0 && (
+                  {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示，且未折叠时显示 */}
+                  {!showAllLevels && !isSubtask && !isExpanded && !isCollapsed && task.subtasks && task.subtasks.length > 0 && (
                     <div className="pl-12 pr-4 pb-2">
                       {task.subtasks.slice(0, 3).map((subtask: Record, _index: number) => (
                         <div 
@@ -1465,9 +1578,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                   e.stopPropagation();
                                   setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
                                 }}
-                                className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
-                                  priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'bg-gray-100 text-gray-600'
-                                } flex items-center space-x-1`}
+                                className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
                                 title="点击修改优先级"
                               >
                                 <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
@@ -1513,9 +1625,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                   e.stopPropagation();
                                   setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
                                 }}
-                                className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
-                                  statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
-                                } flex items-center space-x-1`}
+                                className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
                                 title="点击修改状态"
                               >
                                 <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
@@ -1566,7 +1677,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                   e.stopPropagation();
                                   handleDeleteSubtask(subtask.id, task.id);
                                 }}
-                                className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                                className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
                                 style={{ color: 'var(--error)' }}
                               >
                                 确认
@@ -1578,7 +1689,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                   setDeleteSubtaskConfirm(subtask.id);
                                   setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                                className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
                                 style={{ color: 'var(--text-muted)' }}
                                 title="删除子任务"
                               >
@@ -1803,9 +1914,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                             e.stopPropagation();
                                             setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
                                           }}
-                                          className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
-                                            priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'bg-gray-100 text-gray-600'
-                                          } flex items-center space-x-1`}
+                                          className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                          style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
                                           title="点击修改优先级"
                                         >
                                           <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
@@ -1851,9 +1961,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                             e.stopPropagation();
                                             setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
                                           }}
-                                          className={`px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${
-                                            statusMap[subtask.status as keyof typeof statusMap]?.color || 'bg-gray-100 text-gray-600'
-                                          } flex items-center space-x-1`}
+                                          className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                          style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
                                           title="点击修改状态"
                                         >
                                           <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
@@ -1899,7 +2008,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                             e.stopPropagation();
                                             handleDeleteSubtask(subtask.id, task.id);
                                           }}
-                                          className="text-xs px-2 py-1 rounded font-medium transition-all hover:bg-red-100 hover:text-red-600"
+                                          className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
                                           style={{ color: 'var(--error)' }}
                                         >
                                           确认
@@ -1911,7 +2020,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                             setDeleteSubtaskConfirm(subtask.id);
                                             setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
                                           }}
-                                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:bg-red-100 hover:text-red-600"
+                                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
                                           style={{ color: 'var(--text-muted)' }}
                                           title="删除子任务"
                                         >
@@ -1946,6 +2055,109 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         )}
       </div>
       
+      {/* 翻页组件 */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--card-background)' }}>
+          <div className="flex items-center justify-between">
+            {/* 左侧：显示任务总数和当前页信息 */}
+            <div className="flex items-center space-x-4">
+              <span className="text-body-small" style={{ color: 'var(--text-muted)' }}>
+                共 {totalTasks} 个任务，第 {currentPage} / {totalPages} 页
+              </span>
+            </div>
+            
+            {/* 中间：翻页按钮 */}
+            <div className="flex items-center space-x-2">
+              {/* 上一页按钮 */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className={`px-3 py-2 rounded-lg text-body-small font-medium transition-all ${
+                  currentPage <= 1 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:btn-secondary cursor-pointer'
+                }`}
+                style={{ 
+                  backgroundColor: currentPage <= 1 ? 'var(--background-secondary)' : 'transparent',
+                  color: currentPage <= 1 ? 'var(--text-disabled)' : 'var(--text-primary)',
+                  border: `1px solid ${currentPage <= 1 ? 'var(--border-light)' : 'var(--border-default)'}`
+                }}
+              >
+                ← 上一页
+              </button>
+              
+              {/* 页码按钮 */}
+              <div className="flex items-center space-x-1">
+                {generatePageNumbers().map((page, index) => (
+                  <button
+                    key={index}
+                    onClick={() => typeof page === 'number' ? handlePageChange(page) : undefined}
+                    disabled={page === '...'}
+                    className={`px-3 py-2 rounded-lg text-body-small font-medium transition-all ${
+                      page === currentPage
+                        ? 'text-white'
+                        : page === '...'
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:btn-secondary cursor-pointer'
+                    }`}
+                    style={{ 
+                      backgroundColor: page === currentPage ? 'var(--primary)' : 'transparent',
+                      color: page === currentPage ? 'white' : page === '...' ? 'var(--text-disabled)' : 'var(--text-primary)',
+                      border: `1px solid ${page === currentPage ? 'var(--primary)' : 'var(--border-light)'}`,
+                      minWidth: '40px'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              
+              {/* 下一页按钮 */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className={`px-3 py-2 rounded-lg text-body-small font-medium transition-all ${
+                  currentPage >= totalPages 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:btn-secondary cursor-pointer'
+                }`}
+                style={{ 
+                  backgroundColor: currentPage >= totalPages ? 'var(--background-secondary)' : 'transparent',
+                  color: currentPage >= totalPages ? 'var(--text-disabled)' : 'var(--text-primary)',
+                  border: `1px solid ${currentPage >= totalPages ? 'var(--border-light)' : 'var(--border-default)'}`
+                }}
+              >
+                下一页 →
+              </button>
+            </div>
+            
+            {/* 右侧：快速跳转 */}
+            <div className="flex items-center space-x-2">
+              <span className="text-body-small" style={{ color: 'var(--text-muted)' }}>跳转到</span>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= totalPages) {
+                    handlePageChange(page);
+                  }
+                }}
+                className="w-16 px-2 py-1 rounded form-input text-center text-body-small"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+              <span className="text-body-small" style={{ color: 'var(--text-muted)' }}>页</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* AI智能分析弹窗 */}
       <AISuggestions
         taskId={showAISuggestions || 0}
@@ -1953,7 +2165,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         onClose={() => setShowAISuggestions(null)}
         onCreateSubtasks={(_suggestions) => {
           // 重新获取任务列表以显示新创建的子任务
-          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
         }}
       />
       
@@ -1964,7 +2176,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         onClose={() => setShowStrategySuggestions(null)}
         onCreateSubtasks={(_suggestions) => {
           // 重新获取任务列表以显示新创建的子任务
-          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
+          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
         }}
         mode="strategy"
       />

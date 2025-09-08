@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
@@ -47,16 +47,37 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [selectedTask, setSelectedTask] = useState<Record | null>(null);
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
+  const [isTaskTypeFilterExpanded, setIsTaskTypeFilterExpanded] = useState(false);
+  const [isStatusFilterExpanded, setIsStatusFilterExpanded] = useState(false);
+  const [isPriorityFilterExpanded, setIsPriorityFilterExpanded] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [currentPomodoroTask, setCurrentPomodoroTask] = useState<PomodoroTask | null>(null);
   const [isPomodoroActive, setIsPomodoroActive] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState('all');
-  const [isTaskTypeFilterExpanded, setIsTaskTypeFilterExpanded] = useState(false);
+  const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
+
+  // 点击外部关闭搜索框
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isSearchExpanded && !target.closest('.search-container')) {
+        setIsSearchExpanded(false);
+      }
+    };
+
+    if (isSearchExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchExpanded]);
 
   // 如果正在加载认证状态，显示加载状态
   if (authLoading) {
@@ -189,12 +210,60 @@ export default function App() {
     window.dispatchEvent(searchEvent);
   };
 
+  // 获取任务类型显示文本 - 用于折叠按钮
+  const getTaskTypeDisplayText = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'all': '类型',
+      'work': '工作',
+      'hobby': '业余', 
+      'life': '生活'
+    };
+    return typeMap[type] || '类型';
+  };
+
+  // 获取状态显示文本 - 用于折叠按钮
+  const getStatusDisplayText = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'all': '状态',
+      'pending': '待办',
+      'active': '进行中',
+      'completed': '已完成',
+      'paused': '暂停',
+      'cancelled': '已取消'
+    };
+    return statusMap[status] || '状态';
+  };
+
+  // 获取优先级显示文本 - 用于折叠按钮
+  const getPriorityDisplayText = (priority: string) => {
+    const priorityMap: { [key: string]: string } = {
+      'all': '优先',
+      'urgent': '紧急',
+      'high': '高',
+      'medium': '中',
+      'low': '低'
+    };
+    return priorityMap[priority] || '优先';
+  };
+
+  // 获取搜索显示文本 - 用于折叠按钮
+  const getSearchDisplayText = (query: string) => {
+    if (!query || query.trim() === '') {
+      return '搜索';
+    }
+    return query.length > 10 ? query.substring(0, 10) + '...' : query;
+  };
+
   // 处理筛选
   const handleFilter = (type: string, value: string) => {
     if (type === 'status') {
       setStatusFilter(value);
+      // 选择状态后自动折叠
+      setIsStatusFilterExpanded(false);
     } else if (type === 'priority') {
       setPriorityFilter(value);
+      // 选择优先级后自动折叠
+      setIsPriorityFilterExpanded(false);
     } else if (type === 'taskType') {
       setSelectedTaskType(value);
       // 选择任务类型后自动折叠
@@ -209,16 +278,6 @@ export default function App() {
     window.dispatchEvent(filterEvent);
   };
 
-  // 获取任务类型显示文本 - 用于折叠按钮
-  const getTaskTypeDisplayText = (type: string) => {
-    const typeMap: { [key: string]: string } = {
-      'all': '全部',
-      'work': '工作',
-      'hobby': '业余', 
-      'life': '生活'
-    };
-    return typeMap[type] || '全部';
-  };
 
   // 查看任务详情
   const handleViewDetail = (record: Record) => {
@@ -351,84 +410,69 @@ export default function App() {
               
               {/* 导航菜单 */}
               <nav className="flex items-center space-x-1 relative">
-                <div 
-                  className="relative"
-                  onMouseEnter={() => setShowSearchDropdown(true)}
-                  onMouseLeave={() => setShowSearchDropdown(false)}
-                >
-                  <button className="px-3 py-1 text-xs font-medium transition-all rounded-md hover:btn-secondary" style={{ color: 'var(--text-tertiary)' }}>
-                    Search
-                  </button>
-                  
-                  {/* 搜索下拉框 */}
-                  {showSearchDropdown && (
-                    <div 
-                      className="absolute top-full left-3 w-80 p-4 card shadow-lg z-50 pt-5"
-                      style={{ backgroundColor: 'var(--card-background)' }}
+                {/* 搜索筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1 search-container">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isSearchExpanded ? (
+                    <button
+                      onClick={() => setIsSearchExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        searchQuery && searchQuery.trim() !== '' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: searchQuery && searchQuery.trim() !== '' ? 'var(--info-bg)' : 'transparent',
+                        color: searchQuery && searchQuery.trim() !== '' ? 'var(--info)' : 'var(--text-secondary)',
+                        border: `1px solid ${searchQuery && searchQuery.trim() !== '' ? 'var(--info)' : 'transparent'}`
+                      }}
                     >
-                      <div className="space-y-3">
-                        {/* 搜索框 */}
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            placeholder="搜索任务..."
-                            className="w-full pl-8 pr-4 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => handleSearch(e.target.value)}
-                          />
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>🔍</span>
-                          </div>
-                        </div>
-                        
-                        {/* 筛选器 */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <select
-                            value={statusFilter}
-                            className="px-4 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => handleFilter('status', e.target.value)}
-                          >
-                            <option value="all">所有状态</option>
-                            <option value="pending">待办</option>
-                            <option value="active">进行中</option>
-                            <option value="completed">已完成</option>
-                            <option value="paused">暂停</option>
-                            <option value="cancelled">已取消</option>
-                          </select>
-                          
-                          <select
-                            value={priorityFilter}
-                            className="px-4 py-2 rounded-lg form-input text-body-small"
-                            onChange={(e) => handleFilter('priority', e.target.value)}
-                          >
-                            <option value="all">所有优先级</option>
-                            <option value="urgent">紧急</option>
-                            <option value="high">高</option>
-                            <option value="medium">中</option>
-                            <option value="low">低</option>
-                          </select>
-                          
-                        </div>
-                        
-                        {/* 任务层级筛选 */}
-                        <div className="flex items-center space-x-3 pt-2" style={{ borderTop: '1px solid var(--border-light)' }}>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={showAllLevels}
-                              className="rounded w-4 h-4"
-                              style={{ accentColor: 'var(--primary)' }}
-                              onChange={(e) => handleFilter('showAllLevels', e.target.checked.toString())}
-                            />
-                            <span className="text-body-small font-medium" style={{ color: 'var(--text-secondary)' }}>
-                              显示所有层级任务
-                            </span>
-                          </label>
-                          <div className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'var(--info-bg)', color: 'var(--info)' }}>
-                            默认只显示主任务
-                          </div>
-                        </div>
+                      <span>{getSearchDisplayText(searchQuery)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的搜索框 */
+                    <div className="flex items-center space-x-1">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          placeholder="搜索任务..."
+                          className="px-3 py-1 rounded-lg text-xs font-medium form-input"
+                          style={{ 
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-light)',
+                            color: 'var(--text-primary)',
+                            minWidth: '120px'
+                          }}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            handleSearch(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setIsSearchExpanded(false);
+                            }
+                            if (e.key === 'Escape') {
+                              setIsSearchExpanded(false);
+                            }
+                          }}
+                          autoFocus
+                        />
                       </div>
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          handleSearch('');
+                          setIsSearchExpanded(false);
+                        }}
+                        className="px-2 py-1 rounded text-xs font-medium transition-all hover:btn-secondary"
+                        style={{ 
+                          backgroundColor: 'transparent',
+                          color: 'var(--text-muted)'
+                        }}
+                        title="清除搜索"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
                 </div>
@@ -439,10 +483,13 @@ export default function App() {
                   {!isTaskTypeFilterExpanded ? (
                     <button
                       onClick={() => setIsTaskTypeFilterExpanded(true)}
-                      className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1"
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        selectedTaskType !== 'all' ? 'ing-blue-300' : ''
+                      }`}
                       style={{ 
-                        backgroundColor: 'transparent',
-                        color: 'var(--text-secondary)'
+                        backgroundColor: selectedTaskType !== 'all' ? 'var(--info-bg)' : 'transparent',
+                        color: selectedTaskType !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
+                        border: `1px solid ${selectedTaskType !== 'all' ? 'var(--info)' : 'transparent'}`
                       }}
                     >
                       <span>{getTaskTypeDisplayText(selectedTaskType)}</span>
@@ -514,6 +561,260 @@ export default function App() {
                     </>
                   )}
                 </div>
+
+                {/* 状态筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isStatusFilterExpanded ? (
+                    <button
+                      onClick={() => setIsStatusFilterExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        statusFilter !== 'all' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: statusFilter !== 'all' ? 'var(--info-bg)' : 'transparent',
+                        color: statusFilter !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
+                        border: `1px solid ${statusFilter !== 'all' ? 'var(--info)' : 'transparent'}`
+                      }}
+                    >
+                      <span>{getStatusDisplayText(statusFilter)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的所有按钮 */
+                    <>
+                      <button
+                        onClick={() => handleFilter('status', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'all' 
+                            ? 'text-white' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'all' ? 'var(--primary)' : 'transparent',
+                          color: statusFilter === 'all' ? 'white' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        全部
+                      </button>
+                      <button
+                        onClick={() => handleFilter('status', 'pending')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'pending' 
+                            ? 'bg-gray-100 text-gray-800 border-gray-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'pending' ? 'var(--background-secondary)' : 'transparent',
+                          color: statusFilter === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'pending' ? 'var(--border-default)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        待办
+                      </button>
+                      <button
+                        onClick={() => handleFilter('status', 'active')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'active' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'active' ? 'var(--info-bg)' : 'transparent',
+                          color: statusFilter === 'active' ? 'var(--info)' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'active' ? 'var(--info)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        进行中
+                      </button>
+                      <button
+                        onClick={() => handleFilter('status', 'completed')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'completed' 
+                            ? 'bg-green-100 text-green-800 border-green-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'completed' ? 'var(--success-bg)' : 'transparent',
+                          color: statusFilter === 'completed' ? 'var(--success)' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'completed' ? 'var(--success)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        已完成
+                      </button>
+                      <button
+                        onClick={() => handleFilter('status', 'paused')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'paused' 
+                            ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'paused' ? 'var(--warning-bg)' : 'transparent',
+                          color: statusFilter === 'paused' ? 'var(--warning)' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'paused' ? 'var(--warning)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        暂停
+                      </button>
+                      <button
+                        onClick={() => handleFilter('status', 'cancelled')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          statusFilter === 'cancelled' 
+                            ? 'bg-red-100 text-red-800 border-red-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: statusFilter === 'cancelled' ? 'var(--error-bg)' : 'transparent',
+                          color: statusFilter === 'cancelled' ? 'var(--error)' : 'var(--text-secondary)',
+                          border: `1px solid ${statusFilter === 'cancelled' ? 'var(--error)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        已取消
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* 优先级筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isPriorityFilterExpanded ? (
+                    <button
+                      onClick={() => setIsPriorityFilterExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        priorityFilter !== 'all' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: priorityFilter !== 'all' ? 'var(--info-bg)' : 'transparent',
+                        color: priorityFilter !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
+                        border: `1px solid ${priorityFilter !== 'all' ? 'var(--info)' : 'transparent'}`
+                      }}
+                    >
+                      <span>{getPriorityDisplayText(priorityFilter)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的所有按钮 */
+                    <>
+                      <button
+                        onClick={() => handleFilter('priority', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          priorityFilter === 'all' 
+                            ? 'text-white' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: priorityFilter === 'all' ? 'var(--primary)' : 'transparent',
+                          color: priorityFilter === 'all' ? 'white' : 'var(--text-secondary)',
+                          border: `1px solid ${priorityFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        全部
+                      </button>
+                      <button
+                        onClick={() => handleFilter('priority', 'urgent')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          priorityFilter === 'urgent' 
+                            ? 'bg-red-100 text-red-800 border-red-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: priorityFilter === 'urgent' ? 'var(--error-bg)' : 'transparent',
+                          color: priorityFilter === 'urgent' ? 'var(--error)' : 'var(--text-secondary)',
+                          border: `1px solid ${priorityFilter === 'urgent' ? 'var(--error)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        紧急
+                      </button>
+                      <button
+                        onClick={() => handleFilter('priority', 'high')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          priorityFilter === 'high' 
+                            ? 'bg-orange-100 text-orange-800 border-orange-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: priorityFilter === 'high' ? 'var(--warning-bg)' : 'transparent',
+                          color: priorityFilter === 'high' ? 'var(--accent-amber)' : 'var(--text-secondary)',
+                          border: `1px solid ${priorityFilter === 'high' ? 'var(--accent-amber)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        高
+                      </button>
+                      <button
+                        onClick={() => handleFilter('priority', 'medium')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          priorityFilter === 'medium' 
+                            ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: priorityFilter === 'medium' ? 'var(--warning-bg)' : 'transparent',
+                          color: priorityFilter === 'medium' ? 'var(--warning)' : 'var(--text-secondary)',
+                          border: `1px solid ${priorityFilter === 'medium' ? 'var(--warning)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        中
+                      </button>
+                      <button
+                        onClick={() => handleFilter('priority', 'low')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          priorityFilter === 'low' 
+                            ? 'bg-gray-100 text-gray-800 border-gray-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: priorityFilter === 'low' ? 'var(--background-secondary)' : 'transparent',
+                          color: priorityFilter === 'low' ? 'var(--text-muted)' : 'var(--text-secondary)',
+                          border: `1px solid ${priorityFilter === 'low' ? 'var(--border-default)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        低
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* 看子任务按钮 */}
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleFilter('showAllLevels', (!showAllLevels).toString())}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      showAllLevels 
+                        ? 'text-white' 
+                        : 'hover:btn-secondary'
+                    }`}
+                    style={{ 
+                      backgroundColor: showAllLevels ? 'var(--info)' : 'transparent',
+                      color: showAllLevels ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${showAllLevels ? 'var(--info)' : 'var(--border-light)'}`
+                    }}
+                    title={showAllLevels ? '隐藏子任务' : '显示子任务'}
+                  >
+                    看子任务
+                  </button>
+                </div>
+
+                {/* 折叠子任务按钮 */}
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setIsSubtaskCollapsed(!isSubtaskCollapsed)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      isSubtaskCollapsed 
+                        ? 'text-white' 
+                        : 'hover:btn-secondary'
+                    }`}
+                    style={{ 
+                      backgroundColor: isSubtaskCollapsed ? 'var(--primary)' : 'transparent',
+                      color: isSubtaskCollapsed ? 'white' : 'var(--text-secondary)',
+                      border: `1px solid ${isSubtaskCollapsed ? 'var(--primary)' : 'var(--border-light)'}`
+                    }}
+                  >
+                    {'折叠'}
+                  </button>
+                </div>
               </nav>
             </div>
 
@@ -536,6 +837,8 @@ export default function App() {
             onSave={handleSave}
             onStartPomodoro={handleStartPomodoro}
             showNotification={showNotification}
+            isCollapsed={isSubtaskCollapsed}
+            showAllLevels={showAllLevels}
           />
         </main>
 

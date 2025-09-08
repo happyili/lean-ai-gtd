@@ -78,6 +78,24 @@
     --primary-light: #0d1117;
     --primary-dark: #388bfd;
     
+    /* Dark Mode Accent Colors */
+    --accent-sky: #58a6ff;
+    --accent-blue: #79c0ff;
+    --accent-emerald: #56d364;
+    --accent-amber: #f0b72f;
+    --accent-red: #f85149;
+    --accent-purple: #a5a3ff;
+    
+    /* Dark Mode Semantic Colors */
+    --success: #56d364;            /* 7.2:1 contrast on dark */
+    --success-bg: rgba(86, 211, 100, 0.15);
+    --warning: #f0b72f;            /* 6.8:1 contrast on dark */
+    --warning-bg: rgba(240, 183, 47, 0.15);
+    --error: #f85149;              /* 7.4:1 contrast on dark */
+    --error-bg: rgba(248, 81, 73, 0.15);
+    --info: #58a6ff;               /* 7.2:1 contrast on dark */
+    --info-bg: rgba(88, 166, 255, 0.15);
+    
     --border-light: #30363d;
     --border-default: #484f58;
     --border-strong: #6e7681;

@@ -81,7 +81,7 @@ export default function UserMenu() {
     const date = new Date(dateString);
     return date.toLocaleDateString('zh-CN', {
       year: 'numeric',
-      month: 'long',
+      month: 'numeric',
       day: 'numeric',
     });
   };
@@ -126,8 +126,20 @@ export default function UserMenu() {
       {/* 用户头像和名称按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-1 text-xs font-medium transition-all rounded-md hover:btn-secondary hover:bg-gray-100"
-        style={{ color: 'var(--text-secondary)' }}
+        className="flex items-center space-x-2 px-3 py-1 text-xs font-medium transition-all rounded-md hover:opacity-80 active:scale-95"
+        style={{ 
+          color: 'var(--text-secondary)',
+          backgroundColor: 'transparent',
+          border: '1px solid transparent'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.borderColor = 'transparent';
+        }}
       >
         {/* 用户头像 */}
         {getAvatarUrl() ? (
@@ -210,7 +222,7 @@ export default function UserMenu() {
               </div>
               <div>
                 <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString('zh-CN') : '-'}
+                  {user.last_login_at ? formatDate(user.last_login_at) : '-'}
                 </div>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   最后登录
@@ -226,8 +238,17 @@ export default function UserMenu() {
                 navigate('/profile');
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3"
-              style={{ color: 'var(--text-secondary)' }}
+              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              style={{ 
+                color: 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <span className="w-4 h-4 flex items-center justify-center">👤</span>
               <span>个人资料</span>
@@ -238,8 +259,17 @@ export default function UserMenu() {
                 navigate('/settings');
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3"
-              style={{ color: 'var(--text-secondary)' }}
+              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              style={{ 
+                color: 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <span className="w-4 h-4 flex items-center justify-center">⚙️</span>
               <span>设置</span>
@@ -251,8 +281,17 @@ export default function UserMenu() {
                   navigate('/admin');
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors flex items-center space-x-3"
-                style={{ color: 'var(--text-secondary)' }}
+                className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+                style={{ 
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 <span className="w-4 h-4 flex items-center justify-center">🔧</span>
                 <span>管理面板</span>
@@ -263,7 +302,17 @@ export default function UserMenu() {
 
             <button
               onClick={handleLogout}
-              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 transition-colors flex items-center space-x-3 text-red-600"
+              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              style={{ 
+                color: 'var(--error)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--error-bg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <span className="w-4 h-4 flex items-center justify-center">🚪</span>
               <span>退出登录</span>
