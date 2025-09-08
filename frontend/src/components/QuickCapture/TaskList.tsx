@@ -71,6 +71,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [showAISuggestions, setShowAISuggestions] = useState<number | null>(null);
   const [priorityDropdownOpen, setPriorityDropdownOpen] = useState<number | null>(null);
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
+  const [showStatsDetail, setShowStatsDetail] = useState(false);
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
@@ -690,11 +691,71 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     }
   };
 
+  // 处理筛选器变化
+  const handleFilter = (type: string, value: string) => {
+    if (type === 'taskType') {
+      setTaskTypeFilter(value);
+    }
+  };
+
   // 取消添加任务
   const handleCancelAddTask = () => {
     setNewTaskContent('');
     setIsAddingTask(false);
   };
+
+  // 计算任务统计数据
+  const calculateTaskStats = () => {
+    const filteredTasks = showAllLevels ? tasks : tasks.filter(task => !task.parent_id);
+    const totalTasks = filteredTasks.length;
+    
+    // 获取本周开始时间
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // 统计各种状态的任务
+    const completedTasks = filteredTasks.filter(task => task.status === 'completed').length;
+    const activeTasks = filteredTasks.filter(task => task.status === 'active').length;
+    const pendingTasks = filteredTasks.filter(task => task.status === 'pending' || !task.status).length;
+    
+    // 本周完成的任务
+    const thisWeekCompleted = filteredTasks.filter(task => {
+      return task.status === 'completed' && new Date(task.updated_at) >= startOfWeek;
+    }).length;
+    
+    // 本周新增的任务
+    const thisWeekNew = filteredTasks.filter(task => {
+      return new Date(task.created_at) >= startOfWeek;
+    }).length;
+    
+    // 按优先级统计
+    const urgentTasks = filteredTasks.filter(task => task.priority === 'urgent').length;
+    const highTasks = filteredTasks.filter(task => task.priority === 'high').length;
+    
+    // 按类型统计
+    const workTasks = filteredTasks.filter(task => task.task_type === 'work').length;
+    const hobbyTasks = filteredTasks.filter(task => task.task_type === 'hobby').length;
+    const lifeTasks = filteredTasks.filter(task => task.task_type === 'life').length;
+    
+    return {
+      totalTasks,
+      completedTasks,
+      activeTasks,
+      pendingTasks,
+      thisWeekCompleted,
+      thisWeekNew,
+      urgentTasks,
+      highTasks,
+      workTasks,
+      hobbyTasks,
+      lifeTasks,
+      completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+    };
+  };
+
+  const stats = calculateTaskStats();
 
 
   return (
@@ -702,13 +763,218 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       {/* 头部 */}
       <div className="p-6" style={{ borderBottom: '1px solid var(--border-light)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
-          <div className="flex items-center space-x-3">
-            <div className="px-4 py-2 rounded-xl" style={{ background: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}>
-              <span className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                共 {showAllLevels ? tasks.length : tasks.filter(task => !task.parent_id).length} 个{showAllLevels ? '' : '主'}任务
-              </span>
+          <div className="flex items-center space-x-4">
+            <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
+            
+            {/* 任务类型快捷筛选 */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleFilter('taskType', 'all')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  taskTypeFilter === 'all' 
+                    ? 'text-white' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: taskTypeFilter === 'all' ? 'var(--primary)' : 'transparent',
+                  color: taskTypeFilter === 'all' ? 'white' : 'var(--text-secondary)',
+                  border: `1px solid ${taskTypeFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                }}
+              >
+                全部
+              </button>
+              <button
+                onClick={() => handleFilter('taskType', 'work')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  taskTypeFilter === 'work' 
+                    ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: taskTypeFilter === 'work' ? 'var(--info-bg)' : 'transparent',
+                  color: taskTypeFilter === 'work' ? 'var(--info)' : 'var(--text-secondary)',
+                  border: `1px solid ${taskTypeFilter === 'work' ? 'var(--info)' : 'var(--border-light)'}`
+                }}
+              >
+                工作
+              </button>
+              <button
+                onClick={() => handleFilter('taskType', 'hobby')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  taskTypeFilter === 'hobby' 
+                    ? 'bg-green-100 text-green-800 border-green-200' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: taskTypeFilter === 'hobby' ? 'var(--success-bg)' : 'transparent',
+                  color: taskTypeFilter === 'hobby' ? 'var(--success)' : 'var(--text-secondary)',
+                  border: `1px solid ${taskTypeFilter === 'hobby' ? 'var(--success)' : 'var(--border-light)'}`
+                }}
+              >
+                业余
+              </button>
+              <button
+                onClick={() => handleFilter('taskType', 'life')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  taskTypeFilter === 'life' 
+                    ? 'bg-purple-100 text-purple-800 border-purple-200' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: taskTypeFilter === 'life' ? 'var(--accent-purple-light)' : 'transparent',
+                  color: taskTypeFilter === 'life' ? 'var(--accent-purple)' : 'var(--text-secondary)',
+                  border: `1px solid ${taskTypeFilter === 'life' ? 'var(--accent-purple)' : 'var(--border-light)'}`
+                }}
+              >
+                生活
+              </button>
             </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {/* 详细进展统计 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStatsDetail(!showStatsDetail)}
+                className="px-4 py-2 rounded-xl cursor-pointer hover:opacity-80 transition-all flex items-center space-x-2"
+                style={{ background: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {stats.totalTasks}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      总任务
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--success)' }}>
+                      {stats.thisWeekCompleted}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      本周完成
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--primary)' }}>
+                      {stats.thisWeekNew}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      本周新增
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--accent-amber)' }}>
+                      {stats.completionRate}%
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      完成率
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {showStatsDetail ? '▲' : '▼'}
+                </span>
+              </button>
+              
+              {/* 展开的详细统计 */}
+              {showStatsDetail && (
+                <div 
+                  className="absolute top-full right-0 mt-2 p-4 card shadow-lg z-50 w-80"
+                  style={{ 
+                    backgroundColor: 'var(--card-background)',
+                    border: '1px solid var(--border-light)'
+                  }}
+                >
+                  <h3 className="text-body font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                    详细统计数据
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {/* 任务状态分布 */}
+                    <div>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        任务状态分布
+                      </h4>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 rounded" style={{ backgroundColor: 'var(--success-bg)' }}>
+                          <div className="text-sm font-bold" style={{ color: 'var(--success)' }}>{stats.completedTasks}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>已完成</div>
+                        </div>
+                        <div className="p-2 rounded" style={{ backgroundColor: 'var(--info-bg)' }}>
+                          <div className="text-sm font-bold" style={{ color: 'var(--info)' }}>{stats.activeTasks}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>进行中</div>
+                        </div>
+                        <div className="p-2 rounded" style={{ backgroundColor: 'var(--background-secondary)' }}>
+                          <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{stats.pendingTasks}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>待办</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 优先级分布 */}
+                    <div>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        优先级分布
+                      </h4>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--error)' }}></div>
+                          <span className="text-xs">紧急: {stats.urgentTasks}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--warning)' }}></div>
+                          <span className="text-xs">高: {stats.highTasks}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 任务类型分布 */}
+                    <div>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        任务类型分布
+                      </h4>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--primary)' }}></div>
+                          <span className="text-xs">工作: {stats.workTasks}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--success)' }}></div>
+                          <span className="text-xs">业余: {stats.hobbyTasks}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: 'var(--accent-purple)' }}></div>
+                          <span className="text-xs">生活: {stats.lifeTasks}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 效率指标 */}
+                    <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        效率指标
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        <div>
+                          <div className="text-sm font-bold" style={{ color: 'var(--primary)' }}>
+                            {stats.totalTasks > 0 ? Math.round((stats.thisWeekCompleted / stats.totalTasks) * 100) : 0}%
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>周完成率</div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold" style={{ color: 'var(--accent-amber)' }}>
+                            {stats.thisWeekNew > 0 ? Math.round((stats.thisWeekCompleted / stats.thisWeekNew) * 100) : 0}%
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>新增完成比</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setIsAddingTask(true)}
               className="px-3 py-2 rounded-xl text-body-small font-semibold btn-primary transition-all"
@@ -796,6 +1062,19 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
             {tasks
               .filter(task => showAllLevels || !task.parent_id) // 根据筛选条件显示任务
+              .sort((a, b) => {
+                // 按紧急程度倒序排序
+                const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+                const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+                const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+                
+                if (aPriority !== bPriority) {
+                  return bPriority - aPriority; // 倒序：紧急度高的在前
+                }
+                
+                // 紧急程度相同时，按创建时间升序排序（旧的在前）
+                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+              })
               .map((task) => {
               const priorityInfo = priorityMap[task.priority as keyof typeof priorityMap] || priorityMap.medium;
               const statusInfo = statusMap[task.status as keyof typeof statusMap] || statusMap.active;
@@ -1270,6 +1549,9 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
+                              <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                10秒自动保存 • 支持多行输入 • Ctrl+Z撤销
+                              </span>
                               {progressNotesHistory[task.id] && progressNotesHistory[task.id].length > 0 && (
                                 <button
                                   onClick={(e) => {
@@ -1283,6 +1565,9 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                 </button>
                               )}
                             </div>
+                            <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                              {getCurrentProgressNotes(task.id).length} 字符
+                            </span>
                           </div>
                           <textarea
                             value={getCurrentProgressNotes(task.id)}
@@ -1299,18 +1584,15 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               handleProgressNotesChange(task.id, e.currentTarget.value);
                             }}
                             placeholder="记录当前进展、遇到的问题和难点..."
-                            className="w-full p-3 rounded-lg form-input text-body-small resize-none"
-                            rows={3}
+                            className="w-full p-4 rounded-lg form-input text-body-small resize-none"
+                            rows={5}
                             style={{
                               backgroundColor: 'var(--card-background)',
                               border: '1px solid var(--border-light)',
-                              color: 'var(--text-primary)'
+                              color: 'var(--text-primary)',
+                              minHeight: '120px'
                             }}
                           />
-                          <div className="flex items-center justify-between text-caption" style={{ color: 'var(--text-muted)' }}>
-                            <span>10秒自动保存 • 支持多行输入 • Ctrl+Z撤销</span>
-                            <span>{getCurrentProgressNotes(task.id).length} 字符</span>
-                          </div>
                         </div>
 
                         {/* 子任务管理区域 */}

@@ -30,7 +30,7 @@ export default function App() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [taskTypeFilter, setTaskTypeFilter] = useState('all');
   const [showAllLevels, setShowAllLevels] = useState(false);
-  const [showRightPanel, setShowRightPanel] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -49,6 +49,7 @@ export default function App() {
       );
 
       showNotification('记录保存成功！', 'success');
+      setShowAddDialog(false); // 关闭对话框
       
     } catch (error) {
       console.error('保存记录失败:', error);
@@ -328,8 +329,8 @@ export default function App() {
 
       {/* 主要内容区域 */}
       <div className="flex h-[calc(100vh-48px)]">
-        {/* 左侧任务列表 */}
-        <main className={`transition-all duration-300 ${showRightPanel ? 'flex-1' : 'w-full'}`}>
+        {/* 任务列表占满整个宽度 */}
+        <main className="w-full">
           <TaskList
             onViewDetail={handleViewDetail}
             onDelete={handleDelete}
@@ -339,28 +340,14 @@ export default function App() {
           />
         </main>
 
-        {/* 右侧操作面板 */}
-        {showRightPanel && (
-          <aside className="w-96 transition-all duration-300">
-            <RightPanel
-              onSave={handleSave}
-              onClear={handleClear}
-              isLoading={isLoading}
-              onClose={() => setShowRightPanel(false)}
-            />
-          </aside>
-        )}
-
-        {/* 展开右侧面板的浮动按钮 */}
-        {!showRightPanel && (
-          <button
-            onClick={() => setShowRightPanel(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
-            title="打开添加面板"
-          >
-            <span className="text-xl font-bold">+</span>
-          </button>
-        )}
+        {/* 展开添加面板的浮动按钮 */}
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
+          title="打开添加面板"
+        >
+          <span className="text-xl font-bold">+</span>
+        </button>
       </div>
 
       {/* 任务详情弹窗 */}
@@ -372,6 +359,50 @@ export default function App() {
           onAddSubtask={handleAddSubtask}
           onDeleteSubtask={handleDeleteSubtask}
         />
+      )}
+
+      {/* 居中的添加任务悬浮对话框 */}
+      {showAddDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card max-w-2xl w-full max-h-[80vh] overflow-hidden" style={{ 
+            backgroundColor: 'var(--card-background)',
+            border: '1px solid var(--border-light)'
+          }}>
+            {/* 头部 */}
+            <div className="flex items-center justify-between p-6" style={{ 
+              borderBottom: '1px solid var(--border-light)', 
+              backgroundColor: 'var(--background-secondary)' 
+            }}>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg" style={{ 
+                  background: 'var(--primary)' 
+                }}>
+                  <span className="text-white text-lg font-bold">+</span>
+                </div>
+                <h2 className="text-heading-2 font-bold" style={{ color: 'var(--text-primary)' }}>
+                  添加新任务
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowAddDialog(false)}
+                className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:btn-secondary"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                <span className="text-xl">×</span>
+              </button>
+            </div>
+
+            {/* 内容区域 */}
+            <div className="p-6">
+              <RightPanel
+                onSave={handleSave}
+                onClear={handleClear}
+                isLoading={isLoading}
+                onClose={() => setShowAddDialog(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
