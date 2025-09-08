@@ -213,4 +213,4 @@ class User(db.Model):
         return user
     
     def __repr__(self) -> str:
-        return f'<User {self.id}: {self.username}>'// User model security features
+        return f'<User {self.id}: {self.username}>'
