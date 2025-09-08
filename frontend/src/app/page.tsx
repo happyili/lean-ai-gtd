@@ -373,7 +373,7 @@ export default function App() {
       </header>
 
       {/* 主要内容区域 */}
-      <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-120px)] mt-[120px]' : 'h-[calc(100vh-48px)]'}`}>
+      <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-128px)] mt-[80px]' : 'h-[calc(100vh-48px)]'}`}>
         {/* 任务列表占满整个宽度 */}
         <main className="w-full">
           <TaskList

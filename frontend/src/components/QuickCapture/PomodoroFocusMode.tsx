@@ -123,7 +123,7 @@ export default function PomodoroFocusMode({
 
   return (
     <div 
-      className="fixed top-0 left-0 right-0 z-40 shadow-lg transition-all duration-300"
+      className="fixed top-12 left-0 right-0 z-50 shadow-lg transition-all duration-300"
       style={{ 
         backgroundColor: 'var(--card-background)',
         borderBottom: '1px solid var(--border-light)'
