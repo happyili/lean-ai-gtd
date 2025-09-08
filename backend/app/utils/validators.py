@@ -297,3 +297,4 @@ __all__ = [
     'validate_ip_address',
     'validate_user_agent'
 ]},// JWT token utilities
+// Security validation functions
