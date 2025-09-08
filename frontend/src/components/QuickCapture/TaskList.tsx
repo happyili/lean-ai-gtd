@@ -705,12 +705,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     }
   };
 
-  // 处理筛选器变化
-  const handleFilter = (type: string, value: string) => {
-    if (type === 'taskType') {
-      setTaskTypeFilter(value);
-    }
-  };
+  // 处理筛选器变化 - 任务类型筛选现在由父组件处理
 
   // 取消添加任务
   const handleCancelAddTask = () => {
@@ -777,73 +772,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       {/* 头部 */}
       <div className="p-6" style={{ borderBottom: '1px solid var(--border-light)' }}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
-            
-            {/* 任务类型快捷筛选 */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleFilter('taskType', 'all')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  taskTypeFilter === 'all' 
-                    ? 'text-white' 
-                    : 'hover:btn-secondary'
-                }`}
-                style={{ 
-                  backgroundColor: taskTypeFilter === 'all' ? 'var(--primary)' : 'transparent',
-                  color: taskTypeFilter === 'all' ? 'white' : 'var(--text-secondary)',
-                  border: `1px solid ${taskTypeFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
-                }}
-              >
-                全部
-              </button>
-              <button
-                onClick={() => handleFilter('taskType', 'work')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  taskTypeFilter === 'work' 
-                    ? 'bg-blue-100 text-blue-800 border-blue-200' 
-                    : 'hover:btn-secondary'
-                }`}
-                style={{ 
-                  backgroundColor: taskTypeFilter === 'work' ? 'var(--info-bg)' : 'transparent',
-                  color: taskTypeFilter === 'work' ? 'var(--info)' : 'var(--text-secondary)',
-                  border: `1px solid ${taskTypeFilter === 'work' ? 'var(--info)' : 'var(--border-light)'}`
-                }}
-              >
-                工作
-              </button>
-              <button
-                onClick={() => handleFilter('taskType', 'hobby')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  taskTypeFilter === 'hobby' 
-                    ? 'bg-green-100 text-green-800 border-green-200' 
-                    : 'hover:btn-secondary'
-                }`}
-                style={{ 
-                  backgroundColor: taskTypeFilter === 'hobby' ? 'var(--success-bg)' : 'transparent',
-                  color: taskTypeFilter === 'hobby' ? 'var(--success)' : 'var(--text-secondary)',
-                  border: `1px solid ${taskTypeFilter === 'hobby' ? 'var(--success)' : 'var(--border-light)'}`
-                }}
-              >
-                业余
-              </button>
-              <button
-                onClick={() => handleFilter('taskType', 'life')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                  taskTypeFilter === 'life' 
-                    ? 'bg-purple-100 text-purple-800 border-purple-200' 
-                    : 'hover:btn-secondary'
-                }`}
-                style={{ 
-                  backgroundColor: taskTypeFilter === 'life' ? 'var(--accent-purple-light)' : 'transparent',
-                  color: taskTypeFilter === 'life' ? 'var(--accent-purple)' : 'var(--text-secondary)',
-                  border: `1px solid ${taskTypeFilter === 'life' ? 'var(--accent-purple)' : 'var(--border-light)'}`
-                }}
-              >
-                生活
-              </button>
-            </div>
-          </div>
+          <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
           <div className="flex items-center space-x-3">
             {/* 详细进展统计 */}
             <div className="relative">
@@ -1914,7 +1843,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         onClose={() => setShowAISuggestions(null)}
         onCreateSubtasks={(_suggestions) => {
           // 重新获取任务列表以显示新创建的子任务
-          fetchTasks(searchQuery, statusFilter, priorityFilter);
+          fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter);
         }}
       />
       

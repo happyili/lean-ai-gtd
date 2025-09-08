@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import TaskList from '@/components/QuickCapture/TaskList';
-import RightPanel from '@/components/QuickCapture/RightPanel';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
@@ -53,6 +52,8 @@ export default function App() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [currentPomodoroTask, setCurrentPomodoroTask] = useState<PomodoroTask | null>(null);
   const [isPomodoroActive, setIsPomodoroActive] = useState(false);
+  const [selectedTaskType, setSelectedTaskType] = useState('all');
+  const [isTaskTypeFilterExpanded, setIsTaskTypeFilterExpanded] = useState(false);
 
   // 显示通知
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -168,6 +169,9 @@ export default function App() {
       setPriorityFilter(value);
     } else if (type === 'taskType') {
       setTaskTypeFilter(value);
+      setSelectedTaskType(value);
+      // 选择任务类型后自动折叠
+      setIsTaskTypeFilterExpanded(false);
     } else if (type === 'showAllLevels') {
       setShowAllLevels(value === 'true');
     }
@@ -178,9 +182,15 @@ export default function App() {
     window.dispatchEvent(filterEvent);
   };
 
-  // 清空输入
-  const handleClear = () => {
-    // 目前只是清空输入框，无需额外操作
+  // 获取任务类型显示文本 - 用于折叠按钮
+  const getTaskTypeDisplayText = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'all': '全部',
+      'work': '工作',
+      'hobby': '业余', 
+      'life': '生活'
+    };
+    return typeMap[type] || '全部';
   };
 
   // 查看任务详情
@@ -393,9 +403,88 @@ export default function App() {
                   )}
                 </div>
                 
-                <button className="px-3 py-1 text-xs font-medium rounded-md transition-all" style={{ color: 'var(--primary)', background: 'var(--primary-light)' }}>
-                  Tasks
-                </button>
+                  {/* 任务类型筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isTaskTypeFilterExpanded ? (
+                    <button
+                      onClick={() => setIsTaskTypeFilterExpanded(true)}
+                      className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1"
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-secondary)',
+                        border: '1px solid var(--border-light)'
+                      }}
+                    >
+                      <span>{getTaskTypeDisplayText(selectedTaskType)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的所有按钮 */
+                    <>
+                      <button
+                        onClick={() => handleFilter('taskType', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedTaskType === 'all' 
+                            ? 'text-white' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: selectedTaskType === 'all' ? 'var(--primary)' : 'transparent',
+                          color: selectedTaskType === 'all' ? 'white' : 'var(--text-secondary)',
+                          border: `1px solid ${selectedTaskType === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        全部
+                      </button>
+                      <button
+                        onClick={() => handleFilter('taskType', 'work')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedTaskType === 'work' 
+                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: selectedTaskType === 'work' ? 'var(--info-bg)' : 'transparent',
+                          color: selectedTaskType === 'work' ? 'var(--info)' : 'var(--text-secondary)',
+                          border: `1px solid ${selectedTaskType === 'work' ? 'var(--info)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        工作
+                      </button>
+                      <button
+                        onClick={() => handleFilter('taskType', 'hobby')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedTaskType === 'hobby' 
+                            ? 'bg-green-100 text-green-800 border-green-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: selectedTaskType === 'hobby' ? 'var(--success-bg)' : 'transparent',
+                          color: selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--text-secondary)',
+                          border: `1px solid ${selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        业余
+                      </button>
+                      <button
+                        onClick={() => handleFilter('taskType', 'life')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedTaskType === 'life' 
+                            ? 'bg-purple-100 text-purple-800 border-purple-200' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: selectedTaskType === 'life' ? 'var(--accent-purple-light)' : 'transparent',
+                          color: selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--text-secondary)',
+                          border: `1px solid ${selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--border-light)'}`
+                        }}
+                      >
+                        生活
+                      </button>
+                    </>
+                  )}
+                </div>
               </nav>
             </div>
 
