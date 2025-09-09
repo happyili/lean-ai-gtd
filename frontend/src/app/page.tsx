@@ -404,16 +404,13 @@ export default function App() {
       )}
 
       {/* 头部 */}
-      <header className="backdrop-blur-lg surface-elevated border-b sticky top-0 z-40" style={{ borderColor: 'var(--border-light)' }}>
-        <div className="max-w-7xl mx-auto px-6 py-2">
+      <header className="backdrop-blur-lg surface-elevated border-b sticky top-0 z-40" >
+        <div className="max-w-7xl mx-auto px-6 py-1">
           <div className="flex items-center justify-between h-8">
             {/* 左侧：Logo + 导航菜单 */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded-md flex items-center justify-center shadow-sm" style={{ background: 'var(--primary)' }}>
-                  <span className="text-white text-xs font-bold">AI</span>
-                </div>
-                <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
+              <div className="flex items-center space-x-3">
+                <h1 className="text-lg font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>
                   AIGTD
                 </h1>
               </div>
@@ -451,7 +448,8 @@ export default function App() {
                             backgroundColor: 'var(--card-background)',
                             border: '1px solid var(--border-light)',
                             color: 'var(--text-primary)',
-                            minWidth: '120px'
+                            minWidth: '100px',
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                           }}
                           onChange={(e) => {
                             setSearchQuery(e.target.value);
@@ -855,10 +853,14 @@ export default function App() {
         {/* 展开添加面板的浮动按钮 */}
         <button
           onClick={() => setShowAddDialog(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
+          className="fixed bottom-6 right-6 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
+          style={{
+            background: 'linear-gradient(135deg, var(--primary), var(--accent-blue))',
+            boxShadow: '0 4px 16px rgba(37, 99, 235, 0.3)'
+          }}
           title="打开添加面板"
         >
-          <span className="text-xl font-bold">+</span>
+          <span className="text-xl font-semibold">+</span>
         </button>
       </div>
 

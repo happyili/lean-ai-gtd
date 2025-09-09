@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  /* Background Colors - High Contrast */
-  --background: #fafbfc;
-  --background-secondary: #f1f3f5;
+  /* Background Colors - Professional Light Beige */
+  --background: #faf8f5;
+  --background-secondary: #f5f3f0;
   --card-background: #ffffff;
   --surface-elevated: #ffffff;
   
@@ -14,54 +14,54 @@
   --text-muted: #636b7c;         /* 5.8:1 contrast on white */
   --text-disabled: #8a92a5;      /* 3.2:1 contrast on white */
   
-  /* Brand Colors - Accessible */
-  --primary: #0c4a6e;            /* 8.9:1 contrast on white */
-  --primary-hover: #0284c7;      /* 6.8:1 contrast on white */
-  --primary-light: #e0f2fe;
-  --primary-dark: #082f49;
+  /* Brand Colors - Professional */
+  --primary: #2563eb;            /* Professional blue */
+  --primary-hover: #1d4ed8;      /* Darker blue on hover */
+  --primary-light: #eff6ff;
+  --primary-dark: #1e40af;
   
-  /* Accent Colors */
-  --accent-sky: #0369a1;         /* 7.2:1 contrast on white */
-  --accent-blue: #1d4ed8;        /* 8.6:1 contrast on white */
-  --accent-emerald: #047857;     /* 6.8:1 contrast on white */
-  --accent-amber: #d97706;       /* 4.7:1 contrast on white */
-  --accent-red: #dc2626;         /* 5.8:1 contrast on white */
-  --accent-purple: #7c3aed;      /* 6.8:1 contrast on white */
+  /* Accent Colors - Professional */
+  --accent-sky: #0ea5e9;         /* Professional sky blue */
+  --accent-blue: #3b82f6;        /* Professional blue */
+  --accent-emerald: #10b981;     /* Professional emerald */
+  --accent-amber: #f59e0b;       /* Professional amber */
+  --accent-red: #ef4444;         /* Professional red */
+  --accent-purple: #8b5cf6;      /* Professional purple */
   --accent-purple-bg: #f3f0ff;
   
-  /* Semantic Colors */
-  --success: #065f46;            /* 8.2:1 contrast */
+  /* Semantic Colors - Professional */
+  --success: #059669;            /* Professional green */
   --success-bg: #ecfdf5;
-  --warning: #92400e;            /* 6.1:1 contrast */
+  --warning: #d97706;            /* Professional amber */
   --warning-bg: #fffbeb;
-  --error: #b91c1c;              /* 7.4:1 contrast */
+  --error: #dc2626;              /* Professional red */
   --error-bg: #fef2f2;
-  --info: #1e40af;               /* 8.9:1 contrast */
+  --info: #2563eb;               /* Professional blue */
   --info-bg: #eff6ff;
   
-  /* Border Colors */
-  --border-light: #d1d5db;
-  --border-default: #9ca3af;
-  --border-strong: #6b7280;
-  --border-interactive: #0c4a6e;
+  /* Border Colors - Professional */
+  --border-light: #e5e7eb;
+  --border-default: #d1d5db;
+  --border-strong: #9ca3af;
+  --border-interactive: #2563eb;
   
-  /* Shadow Colors */
-  --shadow-light: rgba(0, 0, 0, 0.04);
-  --shadow-medium: rgba(0, 0, 0, 0.08);
-  --shadow-strong: rgba(0, 0, 0, 0.12);
-  --shadow-accent: rgba(12, 74, 110, 0.12);
+  /* Shadow Colors - Professional */
+  --shadow-light: rgba(0, 0, 0, 0.02);
+  --shadow-medium: rgba(0, 0, 0, 0.04);
+  --shadow-strong: rgba(0, 0, 0, 0.08);
+  --shadow-accent: rgba(37, 99, 235, 0.08);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--text-primary);
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Consolas', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode - High Contrast */
+    /* Dark Mode - Professional */
     --background: #0f1419;
     --background-secondary: #1c2128;
     --card-background: #21262d;
@@ -74,35 +74,35 @@
     --text-muted: #8d96a0;         /* 6.1:1 contrast on dark bg */
     --text-disabled: #636c76;      /* 3.8:1 contrast on dark bg */
     
-    /* Dark Mode Colors */
-    --primary: #58a6ff;            /* 7.2:1 contrast on dark */
-    --primary-hover: #79c0ff;      /* 5.8:1 contrast on dark */
-    --primary-light: #0d1117;
-    --primary-dark: #388bfd;
+    /* Dark Mode Colors - Professional */
+    --primary: #3b82f6;            /* Professional blue for dark mode */
+    --primary-hover: #2563eb;      /* Darker blue on hover */
+    --primary-light: #1e293b;
+    --primary-dark: #1e40af;
     
-    /* Dark Mode Accent Colors */
-    --accent-sky: #58a6ff;
-    --accent-blue: #79c0ff;
-    --accent-emerald: #56d364;
-    --accent-amber: #f0b72f;
-    --accent-red: #f85149;
-    --accent-purple: #a5a3ff;
-    --accent-purple-bg: rgba(165, 163, 255, 0.15);
+    /* Dark Mode Accent Colors - Professional */
+    --accent-sky: #0ea5e9;
+    --accent-blue: #3b82f6;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-purple-bg: rgba(139, 92, 246, 0.15);
     
-    /* Dark Mode Semantic Colors */
-    --success: #56d364;            /* 7.2:1 contrast on dark */
-    --success-bg: rgba(86, 211, 100, 0.15);
-    --warning: #f0b72f;            /* 6.8:1 contrast on dark */
-    --warning-bg: rgba(240, 183, 47, 0.15);
-    --error: #f85149;              /* 7.4:1 contrast on dark */
-    --error-bg: rgba(248, 81, 73, 0.15);
-    --info: #58a6ff;               /* 7.2:1 contrast on dark */
-    --info-bg: rgba(88, 166, 255, 0.15);
+    /* Dark Mode Semantic Colors - Professional */
+    --success: #10b981;            /* Professional green for dark mode */
+    --success-bg: rgba(16, 185, 129, 0.15);
+    --warning: #f59e0b;            /* Professional amber for dark mode */
+    --warning-bg: rgba(245, 158, 11, 0.15);
+    --error: #ef4444;              /* Professional red for dark mode */
+    --error-bg: rgba(239, 68, 68, 0.15);
+    --info: #3b82f6;               /* Professional blue for dark mode */
+    --info-bg: rgba(59, 130, 246, 0.15);
     
-    --border-light: #30363d;
-    --border-default: #484f58;
-    --border-strong: #6e7681;
-    --border-interactive: #58a6ff;
+    --border-light: #374151;
+    --border-default: #4b5563;
+    --border-strong: #6b7280;
+    --border-interactive: #3b82f6;
   }
 }
 
@@ -110,7 +110,7 @@
 body {
   background: var(--background);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
   font-weight: 400;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -162,7 +162,7 @@ body {
 }
 
 .text-body {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 400;
   line-height: 1.6;
   color: var(--text-secondary);
@@ -182,57 +182,60 @@ body {
   color: var(--text-muted);
 }
 
-/* Interactive Elements */
+/* Interactive Elements - Professional */
 .btn-primary {
   background: var(--primary);
   color: white;
   border: 1px solid var(--primary);
   font-weight: 600;
   transition: all 0.2s ease;
+  border-radius: 5px;
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--shadow-accent);
+  box-shadow: 0 4px 16px var(--shadow-accent);
 }
 
 .btn-secondary {
   background: var(--card-background);
   color: var(--text-primary);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-light);
   font-weight: 500;
   transition: all 0.2s ease;
+  border-radius: 1px;
 }
 
 .btn-secondary:hover {
   background: var(--background-secondary);
   border-color: var(--border-strong);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--shadow-medium);
+  box-shadow: 0 4px 16px var(--shadow-medium);
 }
 
-/* Form Elements */
+/* Form Elements - Professional */
 .form-input {
   background: var(--card-background);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-light);
   color: var(--text-primary);
   font-weight: 400;
   transition: all 0.2s ease;
+  border-radius: 5px;
 }
 
 .form-input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(12, 74, 110, 0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .form-input::placeholder {
   color: var(--text-muted);
 }
 
-/* Cards and Surfaces */
+/* Cards and Surfaces - Professional */
 .card {
   background: var(--card-background);
   border: 1px solid var(--border-light);
@@ -241,14 +244,15 @@ body {
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px var(--shadow-medium);
+  box-shadow: 0 4px 16px var(--shadow-medium);
   border-color: var(--border-default);
+  transform: translateY(-1px);
 }
 
 .surface-elevated {
   background: var(--surface-elevated);
   border: 1px solid var(--border-light);
-  box-shadow: 0 2px 8px var(--shadow-medium);
+  box-shadow: 0 2px 12px var(--shadow-medium);
 }
 
 /* Status Indicators */

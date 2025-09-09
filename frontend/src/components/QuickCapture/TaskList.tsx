@@ -914,7 +914,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   return (
     <div className="h-full flex flex-col card">
       {/* 头部 */}
-      <div className="p-6" style={{ borderBottom: '1px solid var(--border-light)' }}>
+      <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--border-light)' }}>
         <div className="flex items-center justify-between">
           <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
           <div className="flex items-center space-x-3">
@@ -925,8 +925,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                 className="px-4 py-1 rounded-xl cursor-pointer hover:shadow-sm transition-all flex items-center space-x-2"
                 style={{ 
                   backgroundColor: 'var(--card-background)',
-                  border: '1px solid var(--border-light)',
-                  boxShadow: '0 1px 2px 0 var(--shadow-light)'
+                
                 }}
               >
                 <div className="flex items-center space-x-3">
@@ -977,9 +976,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                     border: '1px solid var(--border-light)'
                   }}
                 >
-                  <h3 className="text-body font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-                    详细统计数据
-                  </h3>
                   
                   <div className="space-y-3">
                     {/* 任务状态分布 */}
@@ -1197,7 +1193,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                 <div key={task.id} className="group" style={{ borderColor: 'var(--border-light)' }}>
                   {/* 任务单行显示 */}
                   <div 
-                    className="flex items-center justify-between p-4 hover:bg-opacity-50 cursor-pointer transition-all"
+                    className="flex items-center justify-between p-3 hover:bg-opacity-50 cursor-pointer transition-all"
                     style={{ 
                       backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
                       paddingLeft: isSubtask ? '2rem' : '1rem', // 子任务增加左侧缩进
