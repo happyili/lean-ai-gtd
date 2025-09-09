@@ -45,15 +45,19 @@ def create_record():
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 创建记录
@@ -112,15 +116,19 @@ def get_records():
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 构建查询
@@ -189,15 +197,19 @@ def delete_record(record_id):
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 查找记录，根据用户权限确定删除权限
@@ -239,15 +251,19 @@ def search_records():
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 搜索记录内容
@@ -308,15 +324,41 @@ def get_subtasks(current_user, record_id):
         return jsonify({'error': f'获取子任务失败: {str(e)}'}), 500
 
 @records_bp.route('/api/records/<int:record_id>/subtasks', methods=['POST'])
-@token_required
-def create_subtask(current_user, record_id):
+def create_subtask(record_id):
     """为指定任务创建子任务"""
     try:
-        # 查找父任务，管理员可以为任何任务创建子任务，普通用户只能为自己的任务创建子任务
-        if current_user.is_admin:
+        # 检查是否有认证token
+        current_user = None
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            try:
+                # 尝试解析token获取用户信息
+                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
+                from flask import current_app
+                import jwt
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
+                current_user = User.find_by_id(payload['user_id'])
+            except Exception as e:
+                # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
+                current_user = None
+        
+        # 查找父任务，根据用户权限确定操作权限
+        if current_user and current_user.is_admin:
+            # 管理员可以为任何任务创建子任务
             parent_record = Record.query.get_or_404(record_id)
-        else:
+        elif current_user:
+            # 登录用户只能为自己的任务创建子任务
             parent_record = Record.query.filter_by(id=record_id, user_id=current_user.id).first()
+            if not parent_record:
+                return jsonify({'error': '任务不存在或无权限操作'}), 404
+        else:
+            # 匿名用户只能为公共任务（user_id为NULL）创建子任务
+            parent_record = Record.query.filter_by(id=record_id, user_id=None).first()
             if not parent_record:
                 return jsonify({'error': '任务不存在或无权限操作'}), 404
         
@@ -342,7 +384,7 @@ def create_subtask(current_user, record_id):
         
         # 创建子任务
         subtask = parent_record.add_subtask(content, category, task_type)
-        subtask.user_id = current_user.id  # 设置子任务的用户ID
+        subtask.user_id = current_user.id if current_user else None  # 设置子任务的用户ID，匿名用户为None
         db.session.add(subtask)
         db.session.commit()
         
@@ -365,15 +407,19 @@ def get_record(record_id):
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 查找记录
@@ -415,15 +461,19 @@ def update_record(record_id):
         auth_header = request.headers.get('Authorization')
         if auth_header:
             try:
-                from app.routes.auth import token_required
                 # 尝试解析token获取用户信息
                 token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
                 from flask import current_app
                 import jwt
-                payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+                from jwt.jwk import OctetJWK
+                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+                jwk = OctetJWK(secret_key.encode('utf-8'))
+                jwt_instance = jwt.JWT()
+                payload = jwt_instance.decode(token, jwk)
                 current_user = User.find_by_id(payload['user_id'])
-            except:
+            except Exception as e:
                 # token无效，继续作为匿名用户处理
+                current_app.logger.debug(f"Token解析失败: {e}")
                 current_user = None
         
         # 查找记录，根据用户权限确定更新权限

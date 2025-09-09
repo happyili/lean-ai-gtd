@@ -4,6 +4,18 @@ import AIChatSidebar from './AIChatSidebar';
 import AIPomodoroTimer from './AIPomodoroTimer';
 import { buildUrl, handleApiError } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  taskTypeMap, 
+  priorityMap, 
+  statusMap, 
+  getTaskTypeStyle, 
+  getPriorityStyle, 
+  getStatusStyle, 
+  formatDate,
+  DeleteButton,
+  getDropdownStyle,
+  getDropdownItemStyle
+} from '@/utils/uiComponents';
 
 interface Record {
   id: number;
@@ -41,71 +53,6 @@ interface TaskListProps {
   showAllLevels?: boolean;
 }
 
-const priorityMap = {
-  low: { label: '低', color: 'muted' },
-  medium: { label: '中', color: 'warning' },
-  high: { label: '高', color: 'amber' },
-  urgent: { label: '紧急', color: 'error' }
-};
-
-const statusMap = {
-  active: { label: '进行中', color: 'info' },
-  completed: { label: '已完成', color: 'success' },
-  paused: { label: '暂停', color: 'warning' },
-  cancelled: { label: '已取消', color: 'error' }
-};
-
-const taskTypeMap = {
-  work: { label: '工作', color: 'info' },
-  hobby: { label: '业余', color: 'success' },
-  life: { label: '生活', color: 'purple' }
-};
-
-// 获取任务类型样式
-const getTaskTypeStyle = (colorType: string) => {
-  switch (colorType) {
-    case 'info':
-      return { backgroundColor: 'transparent', color: 'var(--info)', border: '1px solid var(--info)' };
-    case 'success':
-      return { backgroundColor: 'transparent', color: 'var(--success)', border: '1px solid var(--success)' };
-    case 'purple':
-      return { backgroundColor: 'transparent', color: 'var(--accent-purple)', border: '1px solid var(--accent-purple)' };
-    default:
-      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
-  }
-};
-
-// 获取优先级样式
-const getPriorityStyle = (colorType: string) => {
-  switch (colorType) {
-    case 'muted':
-      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
-    case 'warning':
-      return { backgroundColor: 'transparent', color: 'var(--warning)', border: '1px solid var(--warning)' };
-    case 'amber':
-      return { backgroundColor: 'var(--error-bg)', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)' };
-    case 'error':
-      return { backgroundColor: 'var(--error-bg)', color: 'var(--error)', border: '1px solid var(--error)' };
-    default:
-      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
-  }
-};
-
-// 获取状态样式
-const getStatusStyle = (colorType: string) => {
-  switch (colorType) {
-    case 'info':
-      return { backgroundColor: 'transparent', color: 'var(--info)', border: '1px solid var(--info)' };
-    case 'success':
-      return { backgroundColor: 'transparent', color: 'var(--success)', border: '1px solid var(--success)' };
-    case 'warning':
-      return { backgroundColor: 'transparent', color: 'var(--warning)', border: '1px solid var(--warning)' };
-    case 'error':
-      return { backgroundColor: 'transparent', color: 'var(--error)', border: '1px solid var(--error)' };
-    default:
-      return { backgroundColor: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-light)' };
-  }
-};
 
 export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification, isCollapsed = false, showAllLevels = false }: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
@@ -429,17 +376,27 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     if (!content) return;
 
     try {
-      const { apiPost } = await import('@/utils/api');
+      const { apiPost, apiPostPublic } = await import('@/utils/api');
       
-      const response = await apiPost(
-        `/api/records/${parentId}/subtasks`,
-        {
-          content: content,
-          category: 'task'
-        },
-        '添加子任务',
-        accessToken || undefined
-      );
+      // 根据是否登录选择API方法
+      const response = isAuthenticated 
+        ? await apiPost(
+            `/api/records/${parentId}/subtasks`,
+            {
+              content: content,
+              category: 'task'
+            },
+            '添加子任务',
+            accessToken || undefined
+          )
+        : await apiPostPublic(
+            `/api/records/${parentId}/subtasks`,
+            {
+              content: content,
+              category: 'task'
+            },
+            '添加子任务'
+          );
 
       const data = await response.json();
       
@@ -829,21 +786,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) {
-      return '刚刚';
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}小时前`;
-    } else if (diffInHours < 24 * 7) {
-      return `${Math.floor(diffInHours / 24)}天前`;
-    } else {
-      return date.toLocaleDateString('zh-CN');
-    }
-  };
 
   // 添加新任务
   const handleAddTask = async () => {
@@ -1349,13 +1291,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           
                           {/* 任务类型下拉菜单 */}
                           {taskTypeDropdownOpen === task.id && (
-                            <div 
-                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                              style={{ 
-                                backgroundColor: 'var(--card-background)',
-                                border: '1px solid var(--border-light)'
-                              }}
-                            >
+                            <div {...getDropdownStyle()}>
                               {Object.entries(taskTypeMap).map(([key, info]) => (
                                 <button
                                   key={key}
@@ -1364,13 +1300,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                     handleUpdateTaskType(task.id, key);
                                     setTaskTypeDropdownOpen(null);
                                   }}
-                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                    task.task_type === key ? 'font-bold' : ''
-                                  }`}
-                                  style={{ 
-                                    color: task.task_type === key ? 'var(--primary)' : 'var(--text-primary)',
-                                    backgroundColor: task.task_type === key ? 'var(--primary-light)' : 'transparent'
-                                  }}
+                                  {...getDropdownItemStyle(task.task_type === key)}
                                 >
                                   {info.label}
                                 </button>
@@ -1386,7 +1316,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               e.stopPropagation();
                               setPriorityDropdownOpen(priorityDropdownOpen === task.id ? null : task.id);
                             }}
-                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${priorityInfo.color} flex items-center space-x-1`}
+                            className="px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                            style={getPriorityStyle(priorityInfo.color)}
                           >
                             <span>{priorityInfo.label}</span>
                             <span className="text-xs">▼</span>
@@ -1394,13 +1325,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           
                           {/* 优先级下拉菜单 */}
                           {priorityDropdownOpen === task.id && (
-                            <div 
-                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                              style={{ 
-                                backgroundColor: 'var(--card-background)',
-                                border: '1px solid var(--border-light)'
-                              }}
-                            >
+                            <div {...getDropdownStyle()}>
                               {Object.entries(priorityMap).map(([key, info]) => (
                                 <button
                                   key={key}
@@ -1409,13 +1334,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                     handleUpdatePriority(task.id, key);
                                     setPriorityDropdownOpen(null);
                                   }}
-                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                    task.priority === key ? 'font-bold' : ''
-                                  }`}
-                                  style={{ 
-                                    color: task.priority === key ? 'var(--primary)' : 'var(--text-primary)',
-                                    backgroundColor: task.priority === key ? 'var(--primary-light)' : 'transparent'
-                                  }}
+                                  {...getDropdownItemStyle(task.priority === key)}
                                 >
                                   {info.label}
                                 </button>
@@ -1431,7 +1350,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               e.stopPropagation();
                               setStatusDropdownOpen(statusDropdownOpen === task.id ? null : task.id);
                             }}
-                            className={`px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all ${statusInfo.color} flex items-center space-x-1`}
+                            className="px-2 py-1 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                            style={getStatusStyle(statusInfo.color)}
                           >
                             <span>{statusInfo.label}</span>
                             <span className="text-xs">▼</span>
@@ -1439,13 +1359,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                           
                           {/* 状态下拉菜单 */}
                           {statusDropdownOpen === task.id && (
-                            <div 
-                              className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                              style={{ 
-                                backgroundColor: 'var(--card-background)',
-                                border: '1px solid var(--border-light)'
-                              }}
-                            >
+                            <div {...getDropdownStyle()}>
                               {Object.entries(statusMap).map(([key, info]) => (
                                 <button
                                   key={key}
@@ -1454,13 +1368,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                     handleUpdateStatus(task.id, key);
                                     setStatusDropdownOpen(null);
                                   }}
-                                  className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                    task.status === key ? 'font-bold' : ''
-                                  }`}
-                                  style={{ 
-                                    color: task.status === key ? 'var(--primary)' : 'var(--text-primary)',
-                                    backgroundColor: task.status === key ? 'var(--primary-light)' : 'transparent'
-                                  }}
+                                  {...getDropdownItemStyle(task.status === key)}
                                 >
                                   {info.label}
                                 </button>
@@ -1486,31 +1394,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       
                       {/* 操作按钮 */}
                       <div className="flex items-center space-x-2">
-                        {deleteConfirm === task.id ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(task.id);
-                            }}
-                            className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
-                            style={{ color: 'var(--error)' }}
-                          >
-                            确认
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm(task.id);
-                              setTimeout(() => setDeleteConfirm(null), 3000);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
-                            style={{ color: 'var(--text-muted)' }}
-                            title="删除任务"
-                          >
-                            ✕
-                          </button>
-                        )}
+                        <DeleteButton
+                          id={task.id}
+                          deleteConfirm={deleteConfirm}
+                          onDelete={(id) => {
+                            handleDelete(id);
+                          }}
+                          onSetDeleteConfirm={(id) => {
+                            setDeleteConfirm(id);
+                          }}
+                          size="small"
+                        />
                       </div>
                     </div>
                   </div>
@@ -1588,13 +1482,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               
                               {/* 子任务优先级下拉菜单 */}
                               {priorityDropdownOpen === subtask.id && (
-                                <div 
-                                  className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                                  style={{ 
-                                    backgroundColor: 'var(--card-background)',
-                                    border: '1px solid var(--border-light)'
-                                  }}
-                                >
+                                <div {...getDropdownStyle()}>
                                   {Object.entries(priorityMap).map(([key, info]) => (
                                     <button
                                       key={key}
@@ -1603,13 +1491,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         handleUpdatePriority(subtask.id, key);
                                         setPriorityDropdownOpen(null);
                                       }}
-                                      className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                        subtask.priority === key ? 'font-bold' : ''
-                                      }`}
-                                      style={{ 
-                                        color: subtask.priority === key ? 'var(--primary)' : 'var(--text-primary)',
-                                        backgroundColor: subtask.priority === key ? 'var(--primary-light)' : 'transparent'
-                                      }}
+                                      {...getDropdownItemStyle(subtask.priority === key)}
                                     >
                                       {info.label}
                                     </button>
@@ -1635,13 +1517,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                               
                               {/* 子任务状态下拉菜单 */}
                               {statusDropdownOpen === subtask.id && (
-                                <div 
-                                  className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                                  style={{ 
-                                    backgroundColor: 'var(--card-background)',
-                                    border: '1px solid var(--border-light)'
-                                  }}
-                                >
+                                <div {...getDropdownStyle()}>
                                   {Object.entries(statusMap).map(([key, info]) => (
                                     <button
                                       key={key}
@@ -1650,13 +1526,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         updateSubtaskStatus(subtask.id, task.id, key);
                                         setStatusDropdownOpen(null);
                                       }}
-                                      className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                        subtask.status === key ? 'font-bold' : ''
-                                      }`}
-                                      style={{ 
-                                        color: subtask.status === key ? 'var(--primary)' : 'var(--text-primary)',
-                                        backgroundColor: subtask.status === key ? 'var(--primary-light)' : 'transparent'
-                                      }}
+                                      {...getDropdownItemStyle(subtask.status === key)}
                                     >
                                       {info.label}
                                     </button>
@@ -1671,31 +1541,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                             </div>
                             
                             {/* 删除子任务按钮 */}
-                            {deleteSubtaskConfirm === subtask.id ? (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteSubtask(subtask.id, task.id);
-                                }}
-                                className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
-                                style={{ color: 'var(--error)' }}
-                              >
-                                确认
-                              </button>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteSubtaskConfirm(subtask.id);
-                                  setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
-                                style={{ color: 'var(--text-muted)' }}
-                                title="删除子任务"
-                              >
-                                ✕
-                              </button>
-                            )}
+                            <DeleteButton
+                              id={subtask.id}
+                              deleteConfirm={deleteSubtaskConfirm}
+                              onDelete={(id) => {
+                                handleDeleteSubtask(id, task.id);
+                              }}
+                              onSetDeleteConfirm={(id) => {
+                                setDeleteSubtaskConfirm(id);
+                              }}
+                              size="small"
+                            />
                           </div>
                         </div>
                       ))}
@@ -1924,13 +1780,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         
                                         {/* 子任务优先级下拉菜单 */}
                                         {priorityDropdownOpen === subtask.id && (
-                                          <div 
-                                            className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                                            style={{ 
-                                              backgroundColor: 'var(--card-background)',
-                                              border: '1px solid var(--border-light)'
-                                            }}
-                                          >
+                                          <div {...getDropdownStyle()}>
                                             {Object.entries(priorityMap).map(([key, info]) => (
                                               <button
                                                 key={key}
@@ -1939,13 +1789,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                                   handleUpdatePriority(subtask.id, key);
                                                   setPriorityDropdownOpen(null);
                                                 }}
-                                                className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                                  subtask.priority === key ? 'font-bold' : ''
-                                                }`}
-                                                style={{ 
-                                                  color: subtask.priority === key ? 'var(--primary)' : 'var(--text-primary)',
-                                                  backgroundColor: subtask.priority === key ? 'var(--primary-light)' : 'transparent'
-                                                }}
+                                                {...getDropdownItemStyle(subtask.priority === key)}
                                               >
                                                 {info.label}
                                               </button>
@@ -1971,13 +1815,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                         
                                         {/* 子任务状态下拉菜单 */}
                                         {statusDropdownOpen === subtask.id && (
-                                          <div 
-                                            className="absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24"
-                                            style={{ 
-                                              backgroundColor: 'var(--card-background)',
-                                              border: '1px solid var(--border-light)'
-                                            }}
-                                          >
+                                          <div {...getDropdownStyle()}>
                                             {Object.entries(statusMap).map(([key, info]) => (
                                               <button
                                                 key={key}
@@ -1986,13 +1824,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                                   updateSubtaskStatus(subtask.id, task.id, key);
                                                   setStatusDropdownOpen(null);
                                                 }}
-                                                className={`w-full text-left px-3 py-1 text-xs font-medium hover:btn-secondary transition-all ${
-                                                  subtask.status === key ? 'font-bold' : ''
-                                                }`}
-                                                style={{ 
-                                                  color: subtask.status === key ? 'var(--primary)' : 'var(--text-primary)',
-                                                  backgroundColor: subtask.status === key ? 'var(--primary-light)' : 'transparent'
-                                                }}
+                                                {...getDropdownItemStyle(subtask.status === key)}
                                               >
                                                 {info.label}
                                               </button>
@@ -2002,31 +1834,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                       </div>
                                       
                                       {/* 删除子任务按钮 */}
-                                      {deleteSubtaskConfirm === subtask.id ? (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteSubtask(subtask.id, task.id);
-                                          }}
-                                          className="text-xs px-2 py-1 rounded font-medium transition-all hover:opacity-80"
-                                          style={{ color: 'var(--error)' }}
-                                        >
-                                          确认
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeleteSubtaskConfirm(subtask.id);
-                                            setTimeout(() => setDeleteSubtaskConfirm(null), 3000);
-                                          }}
-                                          className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80"
-                                          style={{ color: 'var(--text-muted)' }}
-                                          title="删除子任务"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
+                                      <DeleteButton
+                                        id={subtask.id}
+                                        deleteConfirm={deleteSubtaskConfirm}
+                                        onDelete={(id) => {
+                                          handleDeleteSubtask(id, task.id);
+                                        }}
+                                        onSetDeleteConfirm={(id) => {
+                                          setDeleteSubtaskConfirm(id);
+                                        }}
+                                        size="small"
+                                      />
                                       
                                       {/* 子任务时间 */}
                                       <div className="text-caption" style={{ color: 'var(--text-muted)' }}>

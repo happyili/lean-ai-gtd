@@ -130,9 +130,9 @@ export default function AISuggestions({
   };
 
   const priorityColors = {
-    high: 'bg-red-100 text-red-800',
-    medium: 'bg-yellow-100 text-yellow-800', 
-    low: 'bg-green-100 text-green-800'
+    high: 'text-red-600',
+    medium: 'text-yellow-600', 
+    low: 'text-gray-600'
   };
 
   const priorityLabels = {

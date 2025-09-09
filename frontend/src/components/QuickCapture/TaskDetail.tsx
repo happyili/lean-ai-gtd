@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { apiGet, apiPost, apiDelete } from '@/utils/api';
 import AISuggestions from './AISuggestions';
+import { 
+  formatDetailedDate,
+  DeleteButton
+} from '@/utils/uiComponents';
 
 interface Record {
   id: number;
@@ -25,24 +29,25 @@ interface TaskDetailProps {
   onDeleteSubtask: (subtaskId: number) => void;
 }
 
+// 使用统一的映射，但保持原有的颜色类名以兼容现有样式
 const statusOptions = [
-  { value: 'active', label: '进行中', color: 'bg-blue-100 text-blue-800' },
-  { value: 'completed', label: '已完成', color: 'bg-green-100 text-green-800' },
-  { value: 'paused', label: '暂停', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'cancelled', label: '已取消', color: 'bg-red-100 text-red-800' }
+  { value: 'active', label: '进行中', color: 'text-blue-600' },
+  { value: 'completed', label: '已完成', color: 'text-green-600' },
+  { value: 'paused', label: '暂停', color: 'text-yellow-600' },
+  { value: 'cancelled', label: '已取消', color: 'text-red-600' }
 ];
 
 const priorityOptions = [
-  { value: 'low', label: '低', color: 'bg-gray-100 text-gray-800' },
-  { value: 'medium', label: '中', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'high', label: '高', color: 'bg-orange-100 text-orange-800' },
-  { value: 'urgent', label: '紧急', color: 'bg-red-100 text-red-800' }
+  { value: 'low', label: '低', color: 'text-gray-600' },
+  { value: 'medium', label: '中', color: 'text-yellow-600' },
+  { value: 'high', label: '高', color: 'text-red-600' },
+  { value: 'urgent', label: '紧急', color: 'text-red-600' }
 ];
 
 const taskTypeOptions = [
-  { value: 'work', label: '工作', color: 'bg-blue-100 text-blue-800' },
-  { value: 'hobby', label: '业余', color: 'bg-green-100 text-green-800' },
-  { value: 'life', label: '生活', color: 'bg-purple-100 text-purple-800' }
+  { value: 'work', label: '工作', color: 'text-blue-600' },
+  { value: 'hobby', label: '业余', color: 'text-green-600' },
+  { value: 'life', label: '生活', color: 'text-purple-600' }
 ];
 
 const priorityWeight = {
@@ -99,6 +104,7 @@ export default function TaskDetail({
   const [sortBy, setSortBy] = useState<'priority' | 'created' | 'status'>('priority');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showStrategySuggestions, setShowStrategySuggestions] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   // 获取子任务
   useEffect(() => {
@@ -199,31 +205,23 @@ export default function TaskDetail({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const sortSubtasks = (subtasks: Record[]) => {
     return [...subtasks].sort((a, b) => {
       switch (sortBy) {
-        case 'priority':
+        case 'priority': {
           const priorityA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0;
           const priorityB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0;
           return priorityB - priorityA; // Higher priority first
+        }
         case 'created':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Newer first
-        case 'status':
+        case 'status': {
           const statusOrder = { active: 1, pending: 2, paused: 3, completed: 4, cancelled: 5 };
           const statusA = statusOrder[a.status as keyof typeof statusOrder] || 6;
           const statusB = statusOrder[b.status as keyof typeof statusOrder] || 6;
           return statusA - statusB;
+        }
         default:
           return 0;
       }
@@ -324,7 +322,7 @@ export default function TaskDetail({
                   </select>
                 ) : (
                   <span className={`inline-flex px-4 py-2 rounded-2xl text-xs font-semibold ${
-                    statusOptions.find(opt => opt.value === status)?.color || 'bg-slate-100 text-slate-800'
+                    statusOptions.find(opt => opt.value === status)?.color || 'text-slate-600'
                   }`}>
                     {statusOptions.find(opt => opt.value === status)?.label || status}
                   </span>
@@ -347,7 +345,7 @@ export default function TaskDetail({
                   </select>
                 ) : (
                   <span className={`inline-flex px-4 py-2 rounded-2xl text-xs font-semibold ${
-                    priorityOptions.find(opt => opt.value === priority)?.color || 'bg-slate-100 text-slate-800'
+                    priorityOptions.find(opt => opt.value === priority)?.color || 'text-slate-600'
                   }`}>
                     {priorityOptions.find(opt => opt.value === priority)?.label || priority}
                   </span>
@@ -370,7 +368,7 @@ export default function TaskDetail({
                   </select>
                 ) : (
                   <span className={`inline-flex px-4 py-2 rounded-2xl text-xs font-semibold ${
-                    taskTypeOptions.find(opt => opt.value === taskType)?.color || 'bg-slate-100 text-slate-800'
+                    taskTypeOptions.find(opt => opt.value === taskType)?.color || 'text-slate-600'
                   }`}>
                     {taskTypeOptions.find(opt => opt.value === taskType)?.label || taskType}
                   </span>
@@ -413,11 +411,11 @@ export default function TaskDetail({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold">创建时间:</span>
-                  <span className="font-medium">{formatDate(task.created_at)}</span>
+                  <span className="font-medium">{formatDetailedDate(task.created_at)}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="font-semibold">更新时间:</span>
-                  <span className="font-medium">{formatDate(task.updated_at)}</span>
+                  <span className="font-medium">{formatDetailedDate(task.updated_at)}</span>
                 </div>
               </div>
             </div>
@@ -561,7 +559,14 @@ export default function TaskDetail({
                           
                           {/* 优先级标签 */}
                           {subtaskPriorityInfo && (
-                            <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${subtaskPriorityInfo.color}`}>
+                            <span 
+                              className={`inline-flex px-2 py-1 rounded-lg text-xs font-semibold ${subtaskPriorityInfo.color}`}
+                              style={{
+                                backgroundColor: (subtask.priority === 'high' || subtask.priority === 'urgent') 
+                                  ? 'var(--error-bg)' 
+                                  : 'transparent'
+                              }}
+                            >
                               {subtaskPriorityInfo.label}
                             </span>
                           )}
@@ -583,16 +588,22 @@ export default function TaskDetail({
                         
                         {/* 创建时间 */}
                         <div className="text-xs text-slate-500">
-                          创建于 {formatDate(subtask.created_at)}
+                          创建于 {formatDetailedDate(subtask.created_at)}
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() => handleDeleteSubtask(subtask.id)}
-                        className="text-red-500 hover:text-red-700 text-sm bg-red-50 hover:bg-red-100 px-3 py-1 rounded-xl transition-all font-medium flex-shrink-0"
-                      >
-                        删除
-                      </button>
+                      <DeleteButton
+                        id={subtask.id}
+                        deleteConfirm={deleteConfirm}
+                        onDelete={(id) => {
+                          handleDeleteSubtask(id);
+                        }}
+                        onSetDeleteConfirm={(id) => {
+                          setDeleteConfirm(id);
+                        }}
+                        size="medium"
+                        className="flex-shrink-0"
+                      />
                     </div>
                   );
                 })

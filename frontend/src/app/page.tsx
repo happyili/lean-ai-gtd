@@ -323,17 +323,27 @@ export default function App() {
   // 添加子任务
   const handleAddSubtask = async (parentId: number, content: string) => {
     try {
-      const { apiPost } = await import('@/utils/api');
+      const { apiPost, apiPostPublic } = await import('@/utils/api');
       
-      const response = await apiPost(
-        `/api/records/${parentId}/subtasks`,
-        {
-          content: content,
-          category: 'task'
-        },
-        '添加子任务',
-        accessToken || undefined
-      );
+      // 根据是否登录选择API方法
+      const response = isAuthenticated 
+        ? await apiPost(
+            `/api/records/${parentId}/subtasks`,
+            {
+              content: content,
+              category: 'task'
+            },
+            '添加子任务',
+            accessToken || undefined
+          )
+        : await apiPostPublic(
+            `/api/records/${parentId}/subtasks`,
+            {
+              content: content,
+              category: 'task'
+            },
+            '添加子任务'
+          );
 
       await response.json();
       showNotification('子任务添加成功', 'success');
@@ -420,9 +430,9 @@ export default function App() {
                         searchQuery && searchQuery.trim() !== '' ? 'ring-blue-300' : ''
                       }`}
                       style={{ 
-                        backgroundColor: searchQuery && searchQuery.trim() !== '' ? 'var(--info-bg)' : 'transparent',
-                        color: searchQuery && searchQuery.trim() !== '' ? 'var(--info)' : 'var(--text-secondary)',
-                        border: `1px solid ${searchQuery && searchQuery.trim() !== '' ? 'var(--info)' : 'transparent'}`
+                        backgroundColor: 'transparent',
+                        color: searchQuery && searchQuery.trim() !== '' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
                       }}
                     >
                       <span>{getSearchDisplayText(searchQuery)}</span>
@@ -487,9 +497,9 @@ export default function App() {
                         selectedTaskType !== 'all' ? 'ing-blue-300' : ''
                       }`}
                       style={{ 
-                        backgroundColor: selectedTaskType !== 'all' ? 'var(--info-bg)' : 'transparent',
-                        color: selectedTaskType !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
-                        border: `1px solid ${selectedTaskType !== 'all' ? 'var(--info)' : 'transparent'}`
+                        backgroundColor: 'transparent',
+                        color: selectedTaskType !== 'all' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
                       }}
                     >
                       <span>{getTaskTypeDisplayText(selectedTaskType)}</span>
@@ -507,8 +517,8 @@ export default function App() {
                         }`}
                         style={{ 
                           backgroundColor: selectedTaskType === 'all' ? 'var(--primary)' : 'transparent',
-                          color: selectedTaskType === 'all' ? 'white' : 'var(--text-secondary)',
-                          border: `1px solid ${selectedTaskType === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                          color: selectedTaskType === 'all' ? 'white' : 'var(--text-primary)',
+                          border: `1px solid ${selectedTaskType === 'all' ? 'var(--primary)' : 'var(--border-default)'}`
                         }}
                       >
                         全部
@@ -517,13 +527,13 @@ export default function App() {
                         onClick={() => handleFilter('taskType', 'work')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           selectedTaskType === 'work' 
-                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: selectedTaskType === 'work' ? 'var(--info-bg)' : 'transparent',
-                          color: selectedTaskType === 'work' ? 'var(--info)' : 'var(--text-secondary)',
-                          border: `1px solid ${selectedTaskType === 'work' ? 'var(--info)' : 'var(--border-light)'}`
+                          color: selectedTaskType === 'work' ? 'var(--info)' : 'var(--text-primary)',
+                          border: `1px solid ${selectedTaskType === 'work' ? 'var(--info)' : 'var(--border-default)'}`
                         }}
                       >
                         工作
@@ -532,13 +542,13 @@ export default function App() {
                         onClick={() => handleFilter('taskType', 'hobby')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           selectedTaskType === 'hobby' 
-                            ? 'bg-green-100 text-green-800 border-green-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: selectedTaskType === 'hobby' ? 'var(--success-bg)' : 'transparent',
-                          color: selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--text-secondary)',
-                          border: `1px solid ${selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--border-light)'}`
+                          color: selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--text-primary)',
+                          border: `1px solid ${selectedTaskType === 'hobby' ? 'var(--success)' : 'var(--border-default)'}`
                         }}
                       >
                         业余
@@ -547,13 +557,13 @@ export default function App() {
                         onClick={() => handleFilter('taskType', 'life')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           selectedTaskType === 'life' 
-                            ? 'bg-purple-100 text-purple-800 border-purple-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
-                          backgroundColor: selectedTaskType === 'life' ? 'var(--accent-purple-light)' : 'transparent',
-                          color: selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--text-secondary)',
-                          border: `1px solid ${selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--border-light)'}`
+                          backgroundColor: selectedTaskType === 'life' ? 'var(--accent-purple-bg)' : 'transparent',
+                          color: selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--text-primary)',
+                          border: `1px solid ${selectedTaskType === 'life' ? 'var(--accent-purple)' : 'var(--border-default)'}`
                         }}
                       >
                         生活
@@ -572,9 +582,9 @@ export default function App() {
                         statusFilter !== 'all' ? 'ring-blue-300' : ''
                       }`}
                       style={{ 
-                        backgroundColor: statusFilter !== 'all' ? 'var(--info-bg)' : 'transparent',
-                        color: statusFilter !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
-                        border: `1px solid ${statusFilter !== 'all' ? 'var(--info)' : 'transparent'}`
+                        backgroundColor: 'transparent',
+                        color: statusFilter !== 'all' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
                       }}
                     >
                       <span>{getStatusDisplayText(statusFilter)}</span>
@@ -592,8 +602,8 @@ export default function App() {
                         }`}
                         style={{ 
                           backgroundColor: statusFilter === 'all' ? 'var(--primary)' : 'transparent',
-                          color: statusFilter === 'all' ? 'white' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                          color: statusFilter === 'all' ? 'white' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'all' ? 'var(--primary)' : 'var(--border-default)'}`
                         }}
                       >
                         全部
@@ -602,13 +612,13 @@ export default function App() {
                         onClick={() => handleFilter('status', 'pending')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'pending' 
-                            ? 'bg-gray-100 text-gray-800 border-gray-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
-                          backgroundColor: statusFilter === 'pending' ? 'var(--background-secondary)' : 'transparent',
-                          color: statusFilter === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'pending' ? 'var(--border-default)' : 'var(--border-light)'}`
+                          backgroundColor: 'transparent',
+                          color: statusFilter === 'pending' ? 'var(--text-primary)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'pending' ? 'var(--border-default)' : 'var(--border-default)'}`
                         }}
                       >
                         待办
@@ -617,13 +627,13 @@ export default function App() {
                         onClick={() => handleFilter('status', 'active')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'active' 
-                            ? 'bg-blue-100 text-blue-800 border-blue-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: statusFilter === 'active' ? 'var(--info-bg)' : 'transparent',
-                          color: statusFilter === 'active' ? 'var(--info)' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'active' ? 'var(--info)' : 'var(--border-light)'}`
+                          color: statusFilter === 'active' ? 'var(--info)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'active' ? 'var(--info)' : 'var(--border-default)'}`
                         }}
                       >
                         进行中
@@ -632,13 +642,13 @@ export default function App() {
                         onClick={() => handleFilter('status', 'completed')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'completed' 
-                            ? 'bg-green-100 text-green-800 border-green-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: statusFilter === 'completed' ? 'var(--success-bg)' : 'transparent',
-                          color: statusFilter === 'completed' ? 'var(--success)' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'completed' ? 'var(--success)' : 'var(--border-light)'}`
+                          color: statusFilter === 'completed' ? 'var(--success)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'completed' ? 'var(--success)' : 'var(--border-default)'}`
                         }}
                       >
                         已完成
@@ -647,13 +657,13 @@ export default function App() {
                         onClick={() => handleFilter('status', 'paused')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'paused' 
-                            ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: statusFilter === 'paused' ? 'var(--warning-bg)' : 'transparent',
-                          color: statusFilter === 'paused' ? 'var(--warning)' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'paused' ? 'var(--warning)' : 'var(--border-light)'}`
+                          color: statusFilter === 'paused' ? 'var(--warning)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'paused' ? 'var(--warning)' : 'var(--border-default)'}`
                         }}
                       >
                         暂停
@@ -662,13 +672,13 @@ export default function App() {
                         onClick={() => handleFilter('status', 'cancelled')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'cancelled' 
-                            ? 'bg-red-100 text-red-800 border-red-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: statusFilter === 'cancelled' ? 'var(--error-bg)' : 'transparent',
-                          color: statusFilter === 'cancelled' ? 'var(--error)' : 'var(--text-secondary)',
-                          border: `1px solid ${statusFilter === 'cancelled' ? 'var(--error)' : 'var(--border-light)'}`
+                          color: statusFilter === 'cancelled' ? 'var(--error)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'cancelled' ? 'var(--error)' : 'var(--border-default)'}`
                         }}
                       >
                         已取消
@@ -687,9 +697,9 @@ export default function App() {
                         priorityFilter !== 'all' ? 'ring-blue-300' : ''
                       }`}
                       style={{ 
-                        backgroundColor: priorityFilter !== 'all' ? 'var(--info-bg)' : 'transparent',
-                        color: priorityFilter !== 'all' ? 'var(--info)' : 'var(--text-secondary)',
-                        border: `1px solid ${priorityFilter !== 'all' ? 'var(--info)' : 'transparent'}`
+                        backgroundColor: 'transparent',
+                        color: priorityFilter !== 'all' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
                       }}
                     >
                       <span>{getPriorityDisplayText(priorityFilter)}</span>
@@ -707,8 +717,8 @@ export default function App() {
                         }`}
                         style={{ 
                           backgroundColor: priorityFilter === 'all' ? 'var(--primary)' : 'transparent',
-                          color: priorityFilter === 'all' ? 'white' : 'var(--text-secondary)',
-                          border: `1px solid ${priorityFilter === 'all' ? 'var(--primary)' : 'var(--border-light)'}`
+                          color: priorityFilter === 'all' ? 'white' : 'var(--text-primary)',
+                          border: `1px solid ${priorityFilter === 'all' ? 'var(--primary)' : 'var(--border-default)'}`
                         }}
                       >
                         全部
@@ -717,13 +727,13 @@ export default function App() {
                         onClick={() => handleFilter('priority', 'urgent')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           priorityFilter === 'urgent' 
-                            ? 'bg-red-100 text-red-800 border-red-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: priorityFilter === 'urgent' ? 'var(--error-bg)' : 'transparent',
-                          color: priorityFilter === 'urgent' ? 'var(--error)' : 'var(--text-secondary)',
-                          border: `1px solid ${priorityFilter === 'urgent' ? 'var(--error)' : 'var(--border-light)'}`
+                          color: priorityFilter === 'urgent' ? 'var(--error)' : 'var(--text-primary)',
+                          border: `1px solid ${priorityFilter === 'urgent' ? 'var(--error)' : 'var(--border-default)'}`
                         }}
                       >
                         紧急
@@ -732,13 +742,13 @@ export default function App() {
                         onClick={() => handleFilter('priority', 'high')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           priorityFilter === 'high' 
-                            ? 'bg-orange-100 text-orange-800 border-orange-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
-                          backgroundColor: priorityFilter === 'high' ? 'var(--warning-bg)' : 'transparent',
-                          color: priorityFilter === 'high' ? 'var(--accent-amber)' : 'var(--text-secondary)',
-                          border: `1px solid ${priorityFilter === 'high' ? 'var(--accent-amber)' : 'var(--border-light)'}`
+                          backgroundColor: priorityFilter === 'high' ? 'var(--error-bg)' : 'transparent',
+                          color: priorityFilter === 'high' ? 'var(--error)' : 'var(--text-primary)',
+                          border: `1px solid ${priorityFilter === 'high' ? 'var(--error)' : 'var(--border-default)'}`
                         }}
                       >
                         高
@@ -747,13 +757,13 @@ export default function App() {
                         onClick={() => handleFilter('priority', 'medium')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           priorityFilter === 'medium' 
-                            ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
                           backgroundColor: priorityFilter === 'medium' ? 'var(--warning-bg)' : 'transparent',
-                          color: priorityFilter === 'medium' ? 'var(--warning)' : 'var(--text-secondary)',
-                          border: `1px solid ${priorityFilter === 'medium' ? 'var(--warning)' : 'var(--border-light)'}`
+                          color: priorityFilter === 'medium' ? 'var(--warning)' : 'var(--text-primary)',
+                          border: `1px solid ${priorityFilter === 'medium' ? 'var(--warning)' : 'var(--border-default)'}`
                         }}
                       >
                         中
@@ -762,13 +772,13 @@ export default function App() {
                         onClick={() => handleFilter('priority', 'low')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           priorityFilter === 'low' 
-                            ? 'bg-gray-100 text-gray-800 border-gray-200' 
+                            ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
-                          backgroundColor: priorityFilter === 'low' ? 'var(--background-secondary)' : 'transparent',
-                          color: priorityFilter === 'low' ? 'var(--text-muted)' : 'var(--text-secondary)',
-                          border: `1px solid ${priorityFilter === 'low' ? 'var(--border-default)' : 'var(--border-light)'}`
+                          backgroundColor: 'transparent',
+                          color: priorityFilter === 'low' ? 'var(--text-muted)' : 'var(--text-primary)',
+                          border: `1px solid ${priorityFilter === 'low' ? 'var(--border-default)' : 'var(--border-default)'}`
                         }}
                       >
                         低
@@ -788,8 +798,8 @@ export default function App() {
                     }`}
                     style={{ 
                       backgroundColor: showAllLevels ? 'var(--info)' : 'transparent',
-                      color: showAllLevels ? 'white' : 'var(--text-secondary)',
-                      border: `1px solid ${showAllLevels ? 'var(--info)' : 'var(--border-light)'}`
+                      color: showAllLevels ? 'white' : 'var(--text-primary)',
+                      border: `1px solid ${showAllLevels ? 'var(--info)' : 'var(--border-default)'}`
                     }}
                     title={showAllLevels ? '隐藏子任务' : '显示子任务'}
                   >
@@ -808,8 +818,8 @@ export default function App() {
                     }`}
                     style={{ 
                       backgroundColor: isSubtaskCollapsed ? 'var(--primary)' : 'transparent',
-                      color: isSubtaskCollapsed ? 'white' : 'var(--text-secondary)',
-                      border: `1px solid ${isSubtaskCollapsed ? 'var(--primary)' : 'var(--border-light)'}`
+                      color: isSubtaskCollapsed ? 'white' : 'var(--text-primary)',
+                      border: `1px solid ${isSubtaskCollapsed ? 'var(--primary)' : 'var(--border-default)'}`
                     }}
                   >
                     {'折叠'}

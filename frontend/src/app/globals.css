@@ -26,6 +26,8 @@
   --accent-emerald: #047857;     /* 6.8:1 contrast on white */
   --accent-amber: #d97706;       /* 4.7:1 contrast on white */
   --accent-red: #dc2626;         /* 5.8:1 contrast on white */
+  --accent-purple: #7c3aed;      /* 6.8:1 contrast on white */
+  --accent-purple-bg: #f3f0ff;
   
   /* Semantic Colors */
   --success: #065f46;            /* 8.2:1 contrast */
@@ -85,6 +87,7 @@
     --accent-amber: #f0b72f;
     --accent-red: #f85149;
     --accent-purple: #a5a3ff;
+    --accent-purple-bg: rgba(165, 163, 255, 0.15);
     
     /* Dark Mode Semantic Colors */
     --success: #56d364;            /* 7.2:1 contrast on dark */

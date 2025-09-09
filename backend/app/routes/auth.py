@@ -31,7 +31,8 @@ def token_required(f):
         
         try:
             # 验证token
-            payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+            secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             current_user = User.find_by_id(payload['user_id'])
             
             if not current_user:
@@ -44,9 +45,9 @@ def token_required(f):
             if current_user.is_account_locked():
                 return jsonify({'error': '账户已锁定，请稍后重试'}), 401
                 
-        except jwt.ExpiredSignatureError:
+        except jwt.exceptions.ExpiredSignatureError:
             return jsonify({'error': 'Token已过期'}), 401
-        except jwt.InvalidTokenError:
+        except jwt.exceptions.InvalidTokenError:
             return jsonify({'error': '无效的Token'}), 401
         
         return f(current_user, *args, **kwargs)
@@ -176,7 +177,7 @@ def login():
             'access_token': access_token,
             'refresh_token': refresh_token,
             'token_type': 'Bearer',
-            'expires_in': 900,  # 15分钟
+            'expires_in': 3600,  # 1小时
             'user': user.to_dict()
         }), 200
         
@@ -195,16 +196,12 @@ def refresh_token():
             return jsonify({'error': '刷新Token缺失'}), 400
         
         try:
-            # 验证刷新Token
-            payload = jwt.decode(refresh_token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
-            
-            if payload.get('type') != 'refresh':
-                return jsonify({'error': '无效的Token类型'}), 401
-            
-            user = User.find_by_id(payload['user_id'])
+            # 查找拥有此刷新Token的用户
+            user = User.query.filter_by(refresh_token=refresh_token).first()
             if not user:
-                return jsonify({'error': '用户不存在'}), 401
+                return jsonify({'error': '无效的刷新Token'}), 401
             
+            # 检查刷新Token是否有效
             if not user.is_refresh_token_valid():
                 return jsonify({'error': '刷新Token已过期'}), 401
             
@@ -218,13 +215,12 @@ def refresh_token():
             return jsonify({
                 'access_token': new_access_token,
                 'token_type': 'Bearer',
-                'expires_in': 900
+                'expires_in': 3600
             }), 200
             
-        except jwt.ExpiredSignatureError:
-            return jsonify({'error': '刷新Token已过期'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'error': '无效的刷新Token'}), 401
+        except Exception as e:
+            current_app.logger.error(f"刷新Token验证失败: {e}")
+            return jsonify({'error': '刷新Token验证失败'}), 401
             
     except Exception as e:
         current_app.logger.error(f"刷新Token失败: {e}")
@@ -332,7 +328,8 @@ def verify_email():
         
         try:
             # 验证Token
-            payload = jwt.decode(token, current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here'), algorithms=['HS256'])
+            secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             
             user = User.find_by_id(payload['user_id'])
             if not user:
@@ -347,9 +344,9 @@ def verify_email():
             
             return jsonify({'message': '邮箱验证成功'}), 200
             
-        except jwt.ExpiredSignatureError:
+        except jwt.exceptions.ExpiredSignatureError:
             return jsonify({'error': '验证Token已过期'}), 400
-        except jwt.InvalidTokenError:
+        except jwt.exceptions.InvalidTokenError:
             return jsonify({'error': '无效的验证Token'}), 400
             
     except Exception as e:

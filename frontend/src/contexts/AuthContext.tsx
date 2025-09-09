@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiGet, apiPost, apiPostPublic } from '@/utils/api';
+import { apiGetWithAuth } from '@/utils/apiWithAuth';
 
 // 用户数据接口
 interface User {
@@ -60,23 +61,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const initializeAuth = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (token) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (token && refreshToken) {
         // 验证Token有效性
         const isValid = await verifyToken(token);
         if (isValid) {
-          // 获取用户信息
-          const user = await fetchUserInfo();
-          setAuthState(prev => ({
-            ...prev,
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          }));
+          // Token有效，获取用户信息
+          try {
+            const user = await fetchUserInfo();
+            setAuthState(prev => ({
+              ...prev,
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            }));
+          } catch (error) {
+            console.log('获取用户信息失败，尝试刷新token:', error);
+            // 获取用户信息失败，可能是token已过期，尝试刷新
+            try {
+              await refreshAccessToken();
+            } catch (refreshError) {
+              console.log('刷新token失败:', refreshError);
+              // 刷新失败，清除token并设置为未认证状态
+              clearTokens();
+              setAuthState(prev => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              }));
+            }
+          }
         } else {
           // Token无效，尝试刷新
           try {
             await refreshAccessToken();
           } catch (error) {
+            console.log('刷新token失败:', error);
             // 刷新失败，清除token并设置为未认证状态
             clearTokens();
             setAuthState(prev => ({
@@ -123,11 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // 获取用户信息
   const fetchUserInfo = async (): Promise<User> => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      throw new Error('没有访问Token');
-    }
-    const response = await apiGet('/api/auth/user', '获取用户信息', token);
+    const response = await apiGetWithAuth('/api/auth/user', '获取用户信息');
     const data = await response.json();
     return data.user;
   };

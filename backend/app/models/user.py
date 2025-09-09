@@ -49,17 +49,26 @@ class User(db.Model):
         """验证密码"""
         return check_password_hash(self.password_hash, password)
     
-    def generate_access_token(self, expires_in: int = 900) -> str:
-        """生成访问Token (默认15分钟)"""
+    def generate_access_token(self, expires_in: int = 3600) -> str:
+        """生成访问Token (默认1小时)"""
+        import time
+        now = datetime.utcnow()
+        exp_time = now + timedelta(seconds=expires_in)
+        
+        # 使用当前时间戳确保时间一致性
+        current_timestamp = int(time.time())
+        exp_timestamp = current_timestamp + expires_in
+        
         payload = {
             'user_id': self.id,
             'username': self.username,
             'email': self.email,
-            'exp': datetime.utcnow() + timedelta(seconds=expires_in),
-            'iat': datetime.utcnow(),
+            'exp': exp_timestamp,
+            'iat': current_timestamp,
             'type': 'access'
         }
-        return jwt.encode(payload, self._get_secret_key(), algorithm='HS256')
+        secret_key = self._get_secret_key()
+        return jwt.encode(payload, secret_key, algorithm='HS256')
     
     def generate_refresh_token(self, expires_in: int = 604800) -> str:
         """生成刷新Token (默认7天)"""
@@ -71,7 +80,8 @@ class User(db.Model):
     def verify_token(self, token: str, token_type: str = 'access') -> Optional[Dict[str, Any]]:
         """验证Token"""
         try:
-            payload = jwt.decode(token, self._get_secret_key(), algorithms=['HS256'])
+            secret_key = self._get_secret_key()
+            payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             
             # 验证Token类型
             if payload.get('type') != token_type:
@@ -82,9 +92,9 @@ class User(db.Model):
                 return None
                 
             return payload
-        except jwt.ExpiredSignatureError:
+        except jwt.exceptions.ExpiredSignatureError:
             return None
-        except jwt.InvalidTokenError:
+        except jwt.exceptions.InvalidTokenError:
             return None
     
     def is_account_locked(self) -> bool:
