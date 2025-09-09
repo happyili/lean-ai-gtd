@@ -3,6 +3,7 @@ from app.models.record import Record, db
 from app.models.user import User
 from app.services.ai_intelligence import ai_intelligence_service
 from app.routes.auth import token_required
+from app.utils.auth_helpers import get_user_for_record_access
 from datetime import datetime
 import traceback
 
@@ -40,25 +41,8 @@ def create_record():
         if category not in ['idea', 'task', 'note', 'general']:
             category = 'general'
         
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
         
         # 创建记录
         parent_id = data.get('parent_id')
@@ -111,31 +95,18 @@ def get_records():
         priority = request.args.get('priority', '')
         task_type = request.args.get('task_type', '')
         
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 构建查询
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以查看所有记录
             query = Record.query
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能查看自己的记录（不再显示公共记录）
             query = Record.query.filter(Record.user_id == current_user.id)
         else:
@@ -192,31 +163,18 @@ def get_records():
 def delete_record(record_id):
     """删除记录（软删除）"""
     try:
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 查找记录，根据用户权限确定删除权限
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以删除任何记录
             record = Record.query.get_or_404(record_id)
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能删除自己的记录
             record = Record.query.filter_by(id=record_id, user_id=current_user.id).first()
             if not record:
@@ -246,34 +204,21 @@ def search_records():
         if not query:
             return jsonify({'records': []}), 200
         
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 搜索记录内容
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以搜索所有记录
             records = Record.query.filter(
                 Record.status == 'active',
                 Record.content.contains(query)
             ).order_by(Record.created_at.desc()).limit(50).all()
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能搜索自己的记录
             records = Record.query.filter(
                 Record.user_id == current_user.id,
@@ -327,31 +272,18 @@ def get_subtasks(current_user, record_id):
 def create_subtask(record_id):
     """为指定任务创建子任务"""
     try:
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 查找父任务，根据用户权限确定操作权限
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以为任何任务创建子任务
             parent_record = Record.query.get_or_404(record_id)
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能为自己的任务创建子任务
             parent_record = Record.query.filter_by(id=record_id, user_id=current_user.id).first()
             if not parent_record:
@@ -402,31 +334,18 @@ def create_subtask(record_id):
 def get_record(record_id):
     """获取单个记录的详细信息（包含子任务）"""
     try:
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 查找记录
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以查看任何记录
             record = Record.query.get_or_404(record_id)
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能查看自己的记录
             record = Record.query.filter(
                 Record.id == record_id,
@@ -456,31 +375,18 @@ def get_record(record_id):
 def update_record(record_id):
     """更新记录"""
     try:
-        # 检查是否有认证token
-        current_user = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            try:
-                # 尝试解析token获取用户信息
-                token = auth_header.split(' ')[1] if ' ' in auth_header else auth_header
-                from flask import current_app
-                import jwt
-                from jwt.jwk import OctetJWK
-                secret_key = current_app.config.get('JWT_SECRET_KEY', 'your-secret-key-here')
-                jwk = OctetJWK(secret_key.encode('utf-8'))
-                jwt_instance = jwt.JWT()
-                payload = jwt_instance.decode(token, jwk)
-                current_user = User.find_by_id(payload['user_id'])
-            except Exception as e:
-                # token无效，继续作为匿名用户处理
-                current_app.logger.debug(f"Token解析失败: {e}")
-                current_user = None
+        # 获取当前用户
+        current_user, access_level, auth_error = get_user_for_record_access()
+        
+        # 如果有认证错误（无效token），返回401
+        if auth_error and access_level == 'guest':
+            return jsonify({'error': f'认证失败: {auth_error}'}), 401
         
         # 查找记录，根据用户权限确定更新权限
-        if current_user and current_user.is_admin:
+        if access_level == 'admin':
             # 管理员可以更新任何记录
             record = Record.query.get_or_404(record_id)
-        elif current_user:
+        elif access_level == 'user':
             # 登录用户只能更新自己的记录
             record = Record.query.filter_by(id=record_id, user_id=current_user.id).first()
             if not record:
