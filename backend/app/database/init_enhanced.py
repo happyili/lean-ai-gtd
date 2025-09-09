@@ -9,10 +9,6 @@ def init_database_enhanced(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "../../../data/aigtd.db")}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # 确保数据目录存在
-    data_dir = os.path.join(basedir, "../../../data")
-    os.makedirs(data_dir, exist_ok=True)
-    
     # 初始化数据库
     db.init_app(app)
     
@@ -47,7 +43,7 @@ def init_database_enhanced(app):
                 admin_user = User.create_user(
                     username='admin',
                     email='admin@aigtd.com',
-                    password='admin123',
+                    password='admin123!',
                     first_name='系统',
                     last_name='管理员',
                     is_admin=True,

@@ -4,9 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToRegister?: () => void;
+  onForgotPassword?: () => void;
 }
 
-export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
+export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
+  // 暂时忽略未使用的参数
+  void onForgotPassword;
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     username: '',

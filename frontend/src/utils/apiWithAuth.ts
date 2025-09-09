@@ -2,7 +2,7 @@
  * 带认证的API工具类 - 自动处理token刷新
  */
 
-import { apiFetch, handleApiError } from './api';
+import { apiFetch } from './api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050';
 

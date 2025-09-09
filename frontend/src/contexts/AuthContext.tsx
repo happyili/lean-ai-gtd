@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiGet, apiPost, apiPostPublic } from '@/utils/api';
+import { apiPost, apiPostPublic } from '@/utils/api';
 import { apiGetWithAuth } from '@/utils/apiWithAuth';
 
 // 用户数据接口

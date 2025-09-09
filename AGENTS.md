@@ -8,7 +8,7 @@
 - Root test utilities: `test_*.py` target the Flask app; additional frontend tests under `frontend/tests/`.
 
 ## Build, Test, and Development Commands
-- Backend (Python ≥3.8)
+- Backend (Python ≥3.12.0)
   - Setup: `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
   - Run API: `python backend/app.py` (listens on `http://localhost:5050`).
   - Migrations/utilities: `python backend/migrate_database.py`
