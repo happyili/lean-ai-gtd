@@ -8,6 +8,7 @@ def init_database(app):
     
     # 配置数据库连接
     database_url = os.getenv('DATABASE_URL')
+
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     print("🔗 使用数据库连接 (Supabase或本地数据库): ", database_url)

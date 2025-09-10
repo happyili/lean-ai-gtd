@@ -26,11 +26,15 @@ records_bp = Blueprint('records', __name__)
 @records_bp.route('/api/records', methods=['POST'])
 def create_record():
     """创建新记录"""
+    from api.index import debug_log
+    debug_log("🔍 POST /api/records - 开始处理请求")
     try:
         data = request.get_json()
+        debug_log("📊 请求数据", data)
         
         # 验证输入
         if not data or not data.get('content'):
+            debug_log("❌ 验证失败: 记录内容为空")
             return jsonify({'error': '记录内容不能为空'}), 400
         
         content = data.get('content', '').strip()
@@ -86,6 +90,8 @@ def create_record():
 @records_bp.route('/api/records', methods=['GET'])
 def get_records():
     """获取记录列表"""
+    from api.index import debug_log
+    debug_log("🔍 GET /api/records - 开始处理请求")
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
