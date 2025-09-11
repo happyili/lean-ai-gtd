@@ -254,47 +254,84 @@ export default function AISuggestions({
           {analysis && (
             <>
               {/* 上下文编辑和重新生成控制 */}
-              <div className="mb-6 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div
+                className="mb-6 flex items-center justify-between p-4 rounded-xl"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)'
+                }}
+              >
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={() => setShowContextEditor(!showContextEditor)}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                    className="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1 btn-secondary"
                   >
                     <span>⚙️</span>
                     <span>{showContextEditor ? '隐藏设置' : '高级设置'}</span>
                   </button>
                   <button
                     onClick={handleRegenerate}
-                    className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                    className="px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-1"
+                    style={{
+                      backgroundColor: 'var(--primary-light)',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary)'
+                    }}
                   >
                     <span>🔄</span>
                     <span>重新生成</span>
                   </button>
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                   当前模式: {mode === 'strategy' ? '策略建议' : '完整分析'}
                 </div>
               </div>
 
               {/* 上下文编辑器/显示 */}
               {showContextEditor && (
-                <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+                <div
+                  className="mb-6 p-4 rounded-xl space-y-4"
+                  style={{
+                    backgroundColor: 'var(--background-secondary)',
+                    border: '1px solid var(--border-light)'
+                  }}
+                >
                   {/* 显示当前设置 */}
                   {(contextInput || customPrompt) && (
-                    <div className="space-y-3 p-3 bg-white rounded-lg border border-slate-200">
-                      <div className="text-sm font-medium text-slate-700">当前设置:</div>
+                    <div
+                      className="space-y-3 p-3 rounded-lg"
+                      style={{
+                        backgroundColor: 'var(--card-background)',
+                        border: '1px solid var(--border-light)'
+                      }}
+                    >
+                      <div className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>当前设置:</div>
                       {contextInput && (
                         <div>
-                          <div className="text-xs text-slate-500 mb-1">上下文信息:</div>
-                          <div className="text-sm text-slate-700 bg-slate-50 p-2 rounded border max-h-20 overflow-y-auto">
+                          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>上下文信息:</div>
+                          <div
+                            className="text-sm p-2 rounded border max-h-20 overflow-y-auto"
+                            style={{
+                              color: 'var(--text-secondary)',
+                              backgroundColor: 'var(--background-secondary)',
+                              border: '1px solid var(--border-light)'
+                            }}
+                          >
                             {contextInput}
                           </div>
                         </div>
                       )}
                       {customPrompt && (
                         <div>
-                          <div className="text-xs text-slate-500 mb-1">自定义提示词:</div>
-                          <div className="text-sm text-slate-700 bg-slate-50 p-2 rounded border max-h-20 overflow-y-auto">
+                          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>自定义提示词:</div>
+                          <div
+                            className="text-sm p-2 rounded border max-h-20 overflow-y-auto"
+                            style={{
+                              color: 'var(--text-secondary)',
+                              backgroundColor: 'var(--background-secondary)',
+                              border: '1px solid var(--border-light)'
+                            }}
+                          >
                             {customPrompt}
                           </div>
                         </div>
@@ -303,41 +340,49 @@ export default function AISuggestions({
                   )}
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                       额外上下文信息:
                     </label>
                     <textarea
                       value={contextInput}
                       onChange={(e) => setContextInput(e.target.value)}
                       placeholder="添加任务背景、目标、约束条件等额外信息..."
-                      className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 rounded-lg text-sm form-input"
                       rows={3}
+                      style={{
+                        backgroundColor: 'var(--card-background)',
+                        color: 'var(--text-primary)'
+                      }}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
                       自定义提示词 (可选):
                     </label>
                     <textarea
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
                       placeholder="输入自定义的AI分析提示词..."
-                      className="w-full p-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 rounded-lg text-sm form-input"
                       rows={3}
+                      style={{
+                        backgroundColor: 'var(--card-background)',
+                        color: 'var(--text-primary)'
+                      }}
                     />
                   </div>
                   
                   <div className="flex justify-end space-x-2">
                     <button
                       onClick={() => setShowContextEditor(false)}
-                      className="px-3 py-2 text-slate-600 border border-slate-300 rounded-lg text-sm hover:bg-slate-50"
+                      className="px-3 py-2 rounded-lg text-sm btn-secondary"
                     >
                       关闭
                     </button>
                     <button
                       onClick={handleSaveContext}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                      className="px-3 py-2 rounded-lg text-sm btn-primary"
                     >
                       保存并重新分析
                     </button>
@@ -349,25 +394,45 @@ export default function AISuggestions({
                 
                 {/* 当前任务上下文信息 */}
                 {mode === 'strategy' && (
-                  <div className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div
+                    className="mb-6 p-4 rounded-xl"
+                    style={{
+                      backgroundColor: 'var(--info-bg)',
+                      border: '1px solid var(--info)'
+                    }}
+                  >
                     <div className="flex items-center space-x-2 mb-3">
                       <span className="text-lg">📋</span>
-                      <h3 className="text-lg font-bold text-blue-800">
+                      <h3 className="text-lg font-bold" style={{ color: 'var(--info)' }}>
                         当前任务信息
                       </h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-blue-700">任务内容:</span>
-                        <div className="mt-1 text-blue-900 bg-white p-2 rounded border">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                        <span className="font-medium" style={{ color: 'var(--info)' }}>任务内容:</span>
+                        <div
+                          className="mt-1 p-2 rounded border"
+                          style={{
+                            color: 'var(--text-primary)',
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-light)'
+                          }}
+                        >
                           {/* 这里可以显示任务内容，需要从props传入 */}
                           任务ID: {taskId}
                         </div>
                       </div>
                       {contextInput && (
                         <div>
-                          <span className="font-medium text-blue-700">额外上下文:</span>
-                          <div className="mt-1 text-blue-900 bg-white p-2 rounded border max-h-20 overflow-y-auto">
+                          <span className="font-medium" style={{ color: 'var(--info)' }}>额外上下文:</span>
+                          <div
+                            className="mt-1 p-2 rounded border max-h-20 overflow-y-auto"
+                            style={{
+                              color: 'var(--text-primary)',
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)'
+                            }}
+                          >
                             {contextInput}
                           </div>
                         </div>
@@ -579,7 +644,7 @@ export default function AISuggestions({
               {(contextInput || customPrompt) && (
                 <button
                   onClick={() => setShowContextEditor(!showContextEditor)}
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors"
+                  className="px-3 py-2 rounded-lg text-sm font-medium transition-colors btn-secondary"
                 >
                   📋 {showContextEditor ? '隐藏设置' : '查看当前设置'}
                 </button>
