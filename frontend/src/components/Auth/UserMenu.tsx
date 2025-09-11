@@ -1,16 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { exportTasksToExcel, importTasksFromExcel } from '@/utils/exportTasks';
 
 /**
  * 用户菜单组件
  * 显示当前用户信息，提供用户相关操作
  */
 export default function UserMenu() {
-  const { user, logout, isLoading, isAuthenticated } = useAuth();
+  const { user, logout, isLoading, isAuthenticated, accessToken } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 点击外部关闭下拉菜单
   useEffect(() => {
@@ -25,6 +29,91 @@ export default function UserMenu() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // 处理导入任务
+  const handleImportTasks = () => {
+    setIsOpen(false);
+    fileInputRef.current?.click();
+  };
+
+  // 处理文件选择
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      alert('请选择Excel文件（.xlsx或.xls格式）');
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const result = await importTasksFromExcel(file, accessToken || undefined);
+      
+      // 构建结果消息
+      let message = `导入完成！\n`;
+      message += `成功导入: ${result.success} 个任务\n`;
+      message += `跳过重复: ${result.skipped} 个任务\n`;
+      
+      if (result.errors.length > 0) {
+        message += `导入失败: ${result.errors.length} 个任务\n\n`;
+        message += '错误详情:\n' + result.errors.slice(0, 5).join('\n');
+        if (result.errors.length > 5) {
+          message += `\n... 还有 ${result.errors.length - 5} 个错误`;
+        }
+      }
+
+      // 显示详情（可选）
+      if (result.details.length > 0) {
+        const showDetails = confirm(message + '\n\n是否查看详细导入信息？');
+        if (showDetails) {
+          const detailMessage = '导入详情:\n' + result.details.slice(0, 20).join('\n');
+          if (result.details.length > 20) {
+            alert(detailMessage + `\n... 还有 ${result.details.length - 20} 条记录`);
+          } else {
+            alert(detailMessage);
+          }
+        }
+      } else {
+        alert(message);
+      }
+
+      // 刷新页面以显示新导入的任务
+      if (result.success > 0) {
+        window.location.reload();
+      }
+
+    } catch (error) {
+      console.error('导入任务失败:', error);
+      alert(`导入失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsImporting(false);
+      // 清空文件输入
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // 处理导出任务
+  const handleExportTasks = async () => {
+    setIsExporting(true);
+    setIsOpen(false);
+    
+    try {
+      await exportTasksToExcel(accessToken || undefined);
+      // 这里可以添加成功通知，但由于没有通知系统，暂时用console.log
+      console.log('任务导出成功！');
+    } catch (error) {
+      console.error('导出任务失败:', error);
+      // 这里可以添加错误通知
+      alert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // 处理登出
   const handleLogout = async () => {
@@ -253,6 +342,61 @@ export default function UserMenu() {
               <span className="w-4 h-4 flex items-center justify-center">👤</span>
               <span>个人资料</span>
             </button>
+
+            <button
+              onClick={handleExportTasks}
+              disabled={isExporting}
+              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              style={{ 
+                color: isExporting ? 'var(--text-disabled)' : 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                if (!isExporting) {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <span className="w-4 h-4 flex items-center justify-center">
+                {isExporting ? '⏳' : '📊'}
+              </span>
+              <span>{isExporting ? '导出中...' : '导出任务'}</span>
+            </button>
+
+            <button
+              onClick={handleImportTasks}
+              disabled={isImporting}
+              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              style={{ 
+                color: isImporting ? 'var(--text-disabled)' : 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                if (!isImporting) {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <span className="w-4 h-4 flex items-center justify-center">
+                {isImporting ? '⏳' : '📥'}
+              </span>
+              <span>{isImporting ? '导入中...' : '导入任务'}</span>
+            </button>
+
+            {/* 隐藏的文件输入 */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+              onChange={handleFileSelect}
+            />
 
             <button
               onClick={() => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiPost } from '@/utils/api';
 
 interface AIAnalysis {
@@ -27,6 +27,8 @@ interface AISuggestionsProps {
   isVisible: boolean;
   onClose: () => void;
   mode?: 'strategy' | 'full'; // 模式：strategy 只显示策略建议，full 显示完整分析
+  autoStart?: boolean; // 自动开始分析，跳过确认对话框
+  accessToken?: string; // 认证token
 }
 
 export default function AISuggestions({ 
@@ -34,7 +36,9 @@ export default function AISuggestions({
   onCreateSubtasks, 
   isVisible, 
   onClose,
-  mode = 'full' // 默认显示完整分析
+  mode = 'full', // 默认显示完整分析
+  autoStart = false, // 默认不自动开始
+  accessToken // 认证token
 }: AISuggestionsProps) {
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +47,13 @@ export default function AISuggestions({
   const [contextInput, setContextInput] = useState('');
   const [showContextEditor, setShowContextEditor] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
+
+  // 自动开始分析
+  useEffect(() => {
+    if (isVisible && autoStart && !analysis && !isLoading && !error) {
+      handleAnalyzeTask();
+    }
+  }, [isVisible, autoStart, analysis, isLoading, error]);
 
   const handleAnalyzeTask = async () => {
     setIsLoading(true);
@@ -69,7 +80,8 @@ export default function AISuggestions({
       const response = await apiPost(
         `/api/records/${taskId}/ai-analysis`,
         payload,
-        'AI分析'
+        'AI分析',
+        accessToken
       );
 
       const data = await response.json();
@@ -118,7 +130,8 @@ export default function AISuggestions({
         {
           subtask_suggestions: selectedSuggestions
         },
-        '创建AI建议的子任务'
+        '创建AI建议的子任务',
+        accessToken
       );
 
       onCreateSubtasks(selectedSuggestions);

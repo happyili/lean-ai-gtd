@@ -66,7 +66,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [deleteSubtaskConfirm, setDeleteSubtaskConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
-  const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskContent, setNewTaskContent] = useState('');
   const [progressNotesCache, setProgressNotesCache] = useState<{[key: number]: string}>({});
   const [progressNotesHistory, setProgressNotesHistory] = useState<{[key: number]: string[]}>({});
@@ -432,7 +431,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         
         await apiDelete(
           `/api/records/${subtaskId}`,
-          '删除子任务'
+          '删除子任务',
+          accessToken || undefined
         );
 
         // 更新任务列表，移除子任务
@@ -768,7 +768,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         
         await apiDelete(
           `/api/records/${id}`,
-          '删除任务'
+          '删除任务',
+          accessToken || undefined
         );
 
         // 重新获取任务列表
@@ -794,8 +795,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
     try {
       await onSave(content, 'task');
-      setNewTaskContent('');
-      setIsAddingTask(false);
+      setNewTaskContent(''); // 保存成功后清空输入框
       showNotification('任务创建成功！', 'success');
       // 重新获取任务列表
       await fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
@@ -807,11 +807,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
   // 处理筛选器变化 - 任务类型筛选现在由父组件处理
 
-  // 取消添加任务
-  const handleCancelAddTask = () => {
-    setNewTaskContent('');
-    setIsAddingTask(false);
-  };
 
   // 计算任务统计数据
   const calculateTaskStats = () => {
@@ -1063,24 +1058,13 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             </div>
 
             <button
-              onClick={() => setIsAddingTask(true)}
-              className="px-3 py-2 rounded-xl text-body-small font-semibold btn-primary transition-all"
-              style={{ 
-                background: 'var(--primary)', 
-                color: 'white',
-                border: '1px solid var(--primary)'
-              }}
-            >
-              + 任务
-            </button>
-            <button
               onClick={() => setShowAIChatSidebar(true)}
-              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
+              className="px-4 py-1 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
               style={{ 
                 backgroundColor: 'var(--card-background)',
                 color: 'var(--text-secondary)',
-                border: '1px solid var(--border-light)',
-                boxShadow: '0 1px 2px 0 var(--shadow-light)'
+                border: '1px solid var(--primary)',
+                boxShadow: '0 0px 0px 0 var(--shadow-light)'
               }}
               title="AI助手聊天"
             >
@@ -1088,16 +1072,15 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             </button>
             <button
               onClick={() => setShowAIPomodoroTimer(true)}
-              className="px-4 py-2 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
+              className="px-3 py-1  text-body-small btn-primary transition-all"
               style={{ 
-                backgroundColor: 'var(--card-background)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-light)',
-                boxShadow: '0 1px 2px 0 var(--shadow-light)'
+                background: 'var(--primary)', 
+                color: 'white',
+                border: '1px solid var(--primary)'
               }}
               title="AI番茄时钟"
             >
-              AI番茄时钟
+              番茄时钟
             </button>
           </div>
         </div>
@@ -1105,56 +1088,44 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
 
       {/* 任务列表 */}
       <div className="flex-1 overflow-y-auto">
-        {/* inline添加任务 */}
-        {isAddingTask && (
-          <div className="p-4 border-b" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--background-secondary)' }}>
-            <div className="flex items-center space-x-3">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>▶</span>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={newTaskContent}
-                  onChange={(e) => setNewTaskContent(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddTask();
-                    } else if (e.key === 'Escape') {
-                      handleCancelAddTask();
-                    }
-                  }}
-                  placeholder="输入新任务内容..."
-                  className="w-full px-3 py-2 rounded-lg form-input text-body"
-                  style={{
-                    backgroundColor: 'var(--card-background)',
-                    border: '1px solid var(--border-light)',
-                    color: 'var(--text-primary)'
-                  }}
-                  autoFocus
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleAddTask}
-                  disabled={!newTaskContent.trim()}
-                  className="px-3 py-2 rounded-lg btn-primary text-xs font-medium"
-                  style={{ 
-                    background: newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)',
-                    color: 'white',
-                    border: `1px solid ${newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)'}`
-                  }}
-                >
-                  保存
-                </button>
-                <button
-                  onClick={handleCancelAddTask}
-                  className="px-3 py-2 rounded-lg btn-secondary text-xs font-medium"
-                >
-                  取消
-                </button>
-              </div>
+        {/* 始终显示的任务输入框 */}
+        <div className="p-2 border-b" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--background-secondary)' }}>
+          <div className="flex items-center space-x-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={newTaskContent}
+                onChange={(e) => setNewTaskContent(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddTask();
+                  }
+                }}
+                placeholder="▶ 输入新任务内容..."
+                className="w-full px-2 py-1 rounded-lg form-input text-body"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleAddTask}
+                disabled={!newTaskContent.trim()}
+                className="px-2 py-1 rounded-lg btn-primary text-xs font-medium"
+                style={{ 
+                  background: newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)',
+                  color: 'white',
+                  border: `1px solid ${newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)'}`
+                }}
+              >
+                + 任务
+              </button>
             </div>
           </div>
-        )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center h-32">
@@ -1981,6 +1952,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           // 重新获取任务列表以显示新创建的子任务
           fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
         }}
+        autoStart={true}
+        accessToken={accessToken || undefined}
       />
       
       {/* AI策略建议弹窗 */}
@@ -1993,6 +1966,8 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
           fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, currentPage);
         }}
         mode="strategy"
+        autoStart={true}
+        accessToken={accessToken || undefined}
       />
       
       {/* AI聊天侧边栏 */}
