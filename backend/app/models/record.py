@@ -18,8 +18,12 @@ class Record(db.Model):
     status = db.Column(db.String(20), default='active')  # active/completed/paused/cancelled/archived/deleted
     task_type = db.Column(db.String(20), default='work')  # work/hobby/life - 工作/业余/生活
     
-    # 关系定义
-    parent = db.relationship('Record', remote_side=[id], backref=db.backref('subtasks', lazy='dynamic'))
+    # 关系定义：为支持预加载（selectinload），不要使用 dynamic 集合
+    parent = db.relationship(
+        'Record',
+        remote_side=[id],
+        backref=db.backref('subtasks', lazy='selectin')
+    )
     
     def to_dict(self, include_subtasks=False):
         """转换为字典格式"""
@@ -39,12 +43,15 @@ class Record(db.Model):
         }
         
         if include_subtasks:
-            # 获取活跃的子任务
-            active_subtasks = self.subtasks.filter_by(status='active').all()
+            # 仅返回活跃子任务；如已预加载则内存过滤，否则将触发一次加载
+            loaded_subtasks = list(self.subtasks)
+            active_subtasks = [s for s in loaded_subtasks if s.status == 'active']
             result['subtasks'] = [subtask.to_dict() for subtask in active_subtasks]
             result['subtask_count'] = len(active_subtasks)
         else:
-            result['subtask_count'] = self.subtasks.filter_by(status='active').count()
+            # 只统计数量；此处会触发一次加载（与原先 .count() 的一次查询等价）
+            loaded_subtasks = list(self.subtasks)
+            result['subtask_count'] = sum(1 for s in loaded_subtasks if s.status == 'active')
             
         return result
     
@@ -63,11 +70,13 @@ class Record(db.Model):
         return None
     
     def get_subtasks(self, include_inactive=False):
-        """获取子任务列表"""
-        query = self.subtasks
-        if not include_inactive:
-            query = query.filter_by(status='active')
-        return query.all()
+        """获取子任务列表
+        当 include_inactive=True 时返回所有状态；否则仅返回 active。
+        使用显式查询避免 dynamic 依赖，兼容预加载策略。
+        """
+        if include_inactive:
+            return Record.query.filter_by(parent_id=self.id).all()
+        return Record.query.filter_by(parent_id=self.id, status='active').all()
     
     def can_have_subtasks(self):
         """判断是否可以拥有子任务（只有任务类型可以）"""

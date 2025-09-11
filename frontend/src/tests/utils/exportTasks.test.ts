@@ -61,6 +61,7 @@ describe('exportTasks', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual({
+        任务ID: '1',
         任务内容: 'Test Task 1',
         任务类型: '工作',
         优先级: '高',
@@ -128,15 +129,18 @@ describe('exportTasks', () => {
       expect(result[0].任务内容).toBe('Parent Task');
       expect(result[0].父任务ID).toBe('');
       expect(result[0].子任务数量).toBe(2);
+      expect(result[0].任务ID).toBe('1');
 
       // Check child tasks
       expect(result[1].任务内容).toBe('Child Task 1');
       expect(result[1].父任务ID).toBe('1');
       expect(result[1].子任务数量).toBe(0);
+      expect(result[1].任务ID).toBe('2');
 
       expect(result[2].任务内容).toBe('Child Task 2');
       expect(result[2].父任务ID).toBe('1');
       expect(result[2].子任务数量).toBe(0);
+      expect(result[2].任务ID).toBe('3');
     });
 
     it('should handle tasks with default values', () => {
@@ -154,6 +158,7 @@ describe('exportTasks', () => {
       const result = convertTasksToExportFormat(tasks);
 
       expect(result[0]).toEqual({
+        任务ID: '1',
         任务内容: 'Minimal Task',
         任务类型: '工作', // default
         优先级: '中', // default from empty priority

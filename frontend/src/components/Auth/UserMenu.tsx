@@ -212,6 +212,14 @@ export default function UserMenu() {
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* 永久挂载的隐藏文件输入，用于导入任务，避免下拉关闭时卸载导致 onChange 丢失 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+      />
       {/* 用户头像和名称按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -389,14 +397,7 @@ export default function UserMenu() {
               <span>{isImporting ? '导入中...' : '导入任务'}</span>
             </button>
 
-            {/* 隐藏的文件输入 */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              style={{ display: 'none' }}
-              onChange={handleFileSelect}
-            />
+            {/* 文件输入已移至外层，保持常驻挂载 */}
 
             <button
               onClick={() => {

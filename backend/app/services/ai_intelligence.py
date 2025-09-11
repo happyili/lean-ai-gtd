@@ -20,7 +20,7 @@ class AIIntelligenceService:
     def __init__(self):
         self.model = "google/gemini-2.5-flash"
     
-    def analyze_task_progress(self, task_data: Dict) -> Dict:
+    def analyze_task_progress(self, task_data: Dict, override_prompt: Optional[str] = None, extra_context: Optional[str] = None) -> Dict:
         """
         基于任务数据进行智能分析
         
@@ -32,9 +32,17 @@ class AIIntelligenceService:
             - execution_strategy: 执行策略建议
             - opportunities: 潜在机会发掘  
             - subtask_suggestions: 子任务拆分建议
+            - prompt_used: 实际使用的提示词内容
         """
         
-        prompt = self._build_analysis_prompt(task_data)
+        # 构建上下文块（包含任务标题、详情、已完成与未完成子任务、以及用户提供的附加上下文）
+        context_block = self._build_context_block(task_data, extra_context)
+
+        # 使用覆盖提示词（带有 {{CONTEXT}} 宏变量）或默认提示词
+        if override_prompt:
+            prompt = override_prompt.replace('{{CONTEXT}}', context_block)
+        else:
+            prompt = self._build_analysis_prompt(task_data, context_block)
         
         try:
             response = query_openrounter(
@@ -44,50 +52,25 @@ class AIIntelligenceService:
             
             # 解析AI响应
             analysis_result = self._parse_ai_response(response)
+            # 添加实际使用的提示词
+            analysis_result['prompt_used'] = prompt
             return analysis_result
             
         except Exception as e:
             print(f"AI分析服务调用失败: {str(e)}")
-            return self._get_fallback_response()
+            fallback_result = self._get_fallback_response()
+            # 即使失败也返回提示词
+            fallback_result['prompt_used'] = prompt
+            return fallback_result
     
-    def _build_analysis_prompt(self, task_data: Dict) -> str:
-        """构建AI分析提示词"""
-        
-        task_content = task_data.get('content', '')
-        progress_notes = task_data.get('progress_notes', '无进展记录')
-        status = task_data.get('status', 'active')
-        priority = task_data.get('priority', 'medium')
-        subtasks = task_data.get('subtasks', [])
-        
-        status_map = {
-            'active': '进行中',
-            'completed': '已完成',
-            'paused': '暂停',
-            'cancelled': '已取消'
-        }
-        
-        priority_map = {
-            'low': '低',
-            'medium': '中',
-            'high': '高', 
-            'urgent': '紧急'
-        }
-        
-        subtask_info = ""
-        if subtasks:
-            subtask_info = f"\n现有子任务({len(subtasks)}个):\n"
-            for i, subtask in enumerate(subtasks, 1):
-                subtask_info += f"{i}. {subtask.get('content', '')} - {status_map.get(subtask.get('status', 'active'), '未知状态')}\n"
-        
-        prompt = f"""
-你是一个专业的任务管理和项目分析专家。请基于以下任务信息，提供详细的智能分析建议。
+    def _build_analysis_prompt(self, task_data: Dict, context_block: str) -> str:
+        """构建AI分析提示词（默认模板，包含上下文宏展开结果）"""
 
-## 任务信息
-**任务内容:** {task_content}
-**当前状态:** {status_map.get(status, '未知')}
-**优先级:** {priority_map.get(priority, '未知')}
-**进展记录:** {progress_notes}
-{subtask_info}
+        prompt = f"""
+你是一个专业的任务管理和项目分析专家。请基于以下任务上下文信息，提供详细的智能分析建议。
+
+## 任务上下文
+{context_block}
 
 ## 分析要求
 请从以下三个维度进行深入分析，并以JSON格式输出结果：
@@ -162,6 +145,30 @@ class AIIntelligenceService:
 """
         
         return prompt
+
+    def _build_context_block(self, task_data: Dict, extra_context: Optional[str]) -> str:
+        """构建统一的上下文文字块，供提示词宏 {{CONTEXT}} 使用"""
+        title = task_data.get('content', '') or ''
+        details = task_data.get('progress_notes', '') or '（无）'
+        subtasks: List[Dict] = task_data.get('subtasks', []) or []
+
+        completed = [s for s in subtasks if s.get('status') == 'completed']
+        incomplete = [s for s in subtasks if s.get('status') != 'completed']
+
+        def fmt_list(items: List[Dict]) -> str:
+            if not items:
+                return '（无）'
+            return '\n'.join([f"- {i+1}. {it.get('content', '')}" for i, it in enumerate(items)])
+
+        parts = [
+            f"任务标题: {title}",
+            f"任务详情: {details}",
+            f"已完成子任务({len(completed)}):\n{fmt_list(completed)}",
+            f"未完成子任务({len(incomplete)}):\n{fmt_list(incomplete)}",
+        ]
+        if extra_context and extra_context.strip():
+            parts.append(f"补充上下文: {extra_context.strip()}")
+        return '\n\n'.join(parts)
     
     def _parse_ai_response(self, response: str) -> Dict:
         """解析AI响应内容"""

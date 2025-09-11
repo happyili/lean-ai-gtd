@@ -739,27 +739,17 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
     }
   };
 
-  // 初始化时获取任务
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  // 监听认证状态变化，重新获取任务列表
-  useEffect(() => {
-    setCurrentPage(1); // 重置到第一页
-    fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, 1);
-  }, [isAuthenticated, accessToken]);
-
-  // 防抖搜索
+  // 统一防抖获取任务列表（合并初始化、认证变化、筛选变化）
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentPage(1); // 搜索时重置到第一页
+      setCurrentPage(1);
       fetchTasks(searchQuery, statusFilter, priorityFilter, taskTypeFilter, 1);
       onSearch(searchQuery);
     }, 300);
-    
+
     return () => clearTimeout(timer);
-  }, [searchQuery, statusFilter, priorityFilter, taskTypeFilter]);
+    // 当认证状态、token、搜索和筛选变化时触发
+  }, [isAuthenticated, accessToken, searchQuery, statusFilter, priorityFilter, taskTypeFilter]);
 
   const handleDelete = async (id: number) => {
     if (deleteConfirm === id) {

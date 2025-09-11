@@ -75,6 +75,21 @@ def create_record():
             user_id=current_user.id if current_user else None  # 设置用户ID，匿名用户为None
         )
         
+        # 可选字段：进展记录/优先级/状态
+        progress_notes = data.get('progress_notes')
+        if isinstance(progress_notes, str):
+            if len(progress_notes) > 10000:
+                return jsonify({'error': '进展记录不能超过10000字符'}), 400
+            record.progress_notes = progress_notes
+        
+        priority = data.get('priority')
+        if priority in ['low', 'medium', 'high', 'urgent']:
+            record.priority = priority
+        
+        status = data.get('status')
+        if status in ['pending', 'active', 'completed', 'paused', 'cancelled', 'archived', 'deleted']:
+            record.status = status
+        
         db.session.add(record)
         db.session.commit()
         
@@ -145,10 +160,18 @@ def get_records():
         if not include_subtasks:
             query = query.filter(Record.parent_id.is_(None))
         
-        # 分页查询
-        records = query.order_by(Record.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        # 分页查询 - 优化N+1查询问题
+        if include_subtasks:
+            # 如果需要子任务，使用 selectinload 预加载
+            from sqlalchemy.orm import selectinload
+            records = query.options(selectinload(Record.subtasks)).order_by(Record.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+        else:
+            # 如果不需要子任务，正常查询
+            records = query.order_by(Record.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
         
         return jsonify({
             'records': [record.to_dict(include_subtasks=include_subtasks) for record in records.items],
@@ -263,7 +286,9 @@ def get_subtasks(current_user, record_id):
         if not parent_record.is_task():
             return jsonify({'error': '只有任务类型才能查看子任务'}), 400
         
-        subtasks = parent_record.get_subtasks()
+        # 是否包含非active子任务（用于复盘/上下文构建）
+        include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+        subtasks = parent_record.get_subtasks(include_inactive=include_inactive)
         
         return jsonify({
             'parent_task': parent_record.to_dict(),
@@ -323,6 +348,21 @@ def create_subtask(record_id):
         # 创建子任务
         subtask = parent_record.add_subtask(content, category, task_type)
         subtask.user_id = current_user.id if current_user else None  # 设置子任务的用户ID，匿名用户为None
+        
+        # 可选字段：进展记录/优先级/状态
+        progress_notes = data.get('progress_notes')
+        if isinstance(progress_notes, str):
+            if len(progress_notes) > 10000:
+                return jsonify({'error': '进展记录不能超过10000字符'}), 400
+            subtask.progress_notes = progress_notes
+        
+        priority = data.get('priority')
+        if priority in ['low', 'medium', 'high', 'urgent']:
+            subtask.priority = priority
+        
+        status = data.get('status')
+        if status in ['pending', 'active', 'completed', 'paused', 'cancelled', 'archived', 'deleted']:
+            subtask.status = status
         db.session.add(subtask)
         db.session.commit()
         
@@ -462,7 +502,11 @@ def update_record(record_id):
 @records_bp.route('/api/records/<int:record_id>/ai-analysis', methods=['POST'])
 @token_required
 def analyze_task_with_ai(current_user, record_id):
-    """使用AI分析任务进展并提供智能建议"""
+    """使用AI分析任务进展并提供智能建议
+
+    支持通过请求体参数 include_inactive_subtasks (bool) 控制是否包含非 active 子任务
+    （例如 completed/paused 等）用于复盘与策略分析。
+    """
     try:
         # 查找记录，管理员可以分析任何任务，普通用户只能分析自己的任务
         if current_user.is_admin:
@@ -476,8 +520,14 @@ def analyze_task_with_ai(current_user, record_id):
         if not record.is_task():
             return jsonify({'error': '只能对任务类型进行AI分析'}), 400
         
-        # 获取子任务信息
-        subtasks = record.get_subtasks()
+        # 读取配置，决定是否包含非 active 子任务
+        data = request.get_json(silent=True) or {}
+        include_inactive = bool(data.get('include_inactive_subtasks') or data.get('include_completed_subtasks'))
+        user_extra_context = data.get('context')
+        user_custom_prompt = data.get('customPrompt')
+
+        # 获取子任务信息（默认仅 active，如需复盘则包含所有状态）
+        subtasks = record.get_subtasks(include_inactive=include_inactive)
         
         # 构建任务数据
         task_data = {
@@ -495,7 +545,11 @@ def analyze_task_with_ai(current_user, record_id):
         }
         
         # 调用AI分析服务
-        analysis_result = ai_intelligence_service.analyze_task_progress(task_data)
+        analysis_result = ai_intelligence_service.analyze_task_progress(
+            task_data,
+            override_prompt=user_custom_prompt,
+            extra_context=user_extra_context
+        )
         
         return jsonify({
             'message': 'AI分析完成',

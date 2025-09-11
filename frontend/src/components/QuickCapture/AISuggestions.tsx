@@ -19,6 +19,7 @@ interface AIAnalysis {
     estimated_time: string;
     dependencies: string[];
   }>;
+  prompt_used?: string;
 }
 
 interface AISuggestionsProps {
@@ -44,9 +45,52 @@ export default function AISuggestions({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSubtasks, setSelectedSubtasks] = useState<Set<number>>(new Set());
-  const [contextInput, setContextInput] = useState('');
+  const [contextInput, setContextInput] = useState(''); // 上下文信息
   const [showContextEditor, setShowContextEditor] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState('');
+  const defaultPrompt = `你是一个专业的任务管理和项目分析专家。请基于以下任务上下文信息，提供详细的智能分析建议。\n\n## 任务上下文\n{{CONTEXT}}\n\n## 分析要求\n请从以下三个维度进行深入分析，并以JSON格式输出结果：\n\n1. **执行策略建议(execution_strategy)**\n   - 分析当前任务的执行情况和瓶颈\n   - 提供具体的执行方法和步骤建议\n   - 建议优化的执行顺序和重点关注领域\n   - 给出时间管理和资源分配建议\n\n2. **潜在机会发掘(opportunities)**\n   - 识别任务中的潜在价值和机会点\n   - 发现可能的延伸方向和拓展空间\n   - 分析任务完成后的后续机会\n   - 提供创新思路和增值建议\n\n3. **子任务拆分建议(subtask_suggestions)**\n   - 将主任务分解为具体的可执行子任务\n   - 每个子任务应该具体、可衡量、可在合理时间内完成\n   - 考虑子任务之间的依赖关系和执行顺序\n   - 提供3-8个具体的子任务建议\n\n## 输出格式\n请严格按照以下JSON格式输出，确保内容实用且具体：\n\n{\n  "execution_strategy": {\n    "summary": "执行策略总结（50字以内）",\n    "key_points": ["要点1", "要点2", "要点3"],\n    "recommendations": ["建议1", "建议2"]\n  },\n  "opportunities": {\n    "summary": "机会发掘总结（50字以内）",\n    "potential_areas": ["机会1", "机会2"],\n    "value_propositions": ["价值1", "价值2"]\n  },\n  "subtask_suggestions": [\n    {"title": "子任务1", "description": "描述", "priority": "high/medium/low", "estimated_time": "预估时间", "dependencies": []}\n  ]\n}`;
+  const [promptTemplate, setPromptTemplate] = useState(defaultPrompt);
+
+  // 加载任务上下文（标题、详情、子任务）
+  useEffect(() => {
+    const loadContext = async () => {
+      if (!isVisible || !taskId) return;
+      try {
+        const headers: HeadersInit = {};
+        if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+        // 获取任务详情
+        const recordRes = await fetch(`/api/records/${taskId}`, { headers });
+        const recordData = await recordRes.json();
+        const record = recordData?.record || {};
+
+        // 获取所有子任务（包含完成与未完成）
+        const subtasksRes = await fetch(`/api/records/${taskId}/subtasks?include_inactive=true`, { headers });
+        const subtasksData = await subtasksRes.json();
+        const subtasks = (subtasksData?.subtasks || []) as any[];
+
+        const completed = subtasks.filter(s => s.status === 'completed');
+        const incomplete = subtasks.filter(s => s.status !== 'completed');
+
+        const fmtList = (items: any[]) => {
+          if (!items || items.length === 0) return '（无）';
+          return items.map((it: any, idx: number) => `- ${idx + 1}. ${it.content}`).join('\n');
+        };
+
+        const ctx = [
+          `任务标题: ${record.content || ''}`,
+          `任务详情: ${record.progress_notes || '（无）'}`,
+          `已完成子任务(${completed.length}):\n${fmtList(completed)}`,
+          `未完成子任务(${incomplete.length}):\n${fmtList(incomplete)}`,
+        ].join('\n\n');
+
+        setContextInput(ctx);
+      } catch (e) {
+        // 忽略上下文加载错误
+      }
+    };
+
+    loadContext();
+  }, [isVisible, taskId, accessToken]);
 
   // 自动开始分析
   useEffect(() => {
@@ -67,9 +111,9 @@ export default function AISuggestions({
         payload.context = contextInput.trim();
       }
       
-      // 添加自定义提示词
-      if (customPrompt.trim()) {
-        payload.customPrompt = customPrompt.trim();
+      // 添加提示词模板
+      if (promptTemplate.trim()) {
+        payload.customPrompt = promptTemplate.trim();
       }
       
       // 添加模式信息
@@ -77,15 +121,22 @@ export default function AISuggestions({
         payload.mode = 'strategy';
       }
       
+      // 默认让 AI 分析包含已完成/暂停等非 active 子任务，以便复盘与策略
       const response = await apiPost(
         `/api/records/${taskId}/ai-analysis`,
-        payload,
+        { include_inactive_subtasks: true, ...payload },
         'AI分析',
         accessToken
       );
 
       const data = await response.json();
+      if (!data || !data.analysis) {
+        throw new Error('AI 分析结果格式错误');
+      }
       setAnalysis(data.analysis);
+
+      // 自动展开设置，便于用户查看/编辑
+      setShowContextEditor(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'AI分析失败');
     } finally {
@@ -253,39 +304,6 @@ export default function AISuggestions({
 
           {analysis && (
             <>
-              {/* 上下文编辑和重新生成控制 */}
-              <div
-                className="mb-6 flex items-center justify-between p-4 rounded-xl"
-                style={{
-                  backgroundColor: 'var(--background-secondary)',
-                  border: '1px solid var(--border-light)'
-                }}
-              >
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => setShowContextEditor(!showContextEditor)}
-                    className="px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1 btn-secondary"
-                  >
-                    <span>⚙️</span>
-                    <span>{showContextEditor ? '隐藏设置' : '高级设置'}</span>
-                  </button>
-                  <button
-                    onClick={handleRegenerate}
-                    className="px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center space-x-1"
-                    style={{
-                      backgroundColor: 'var(--primary-light)',
-                      color: 'var(--primary)',
-                      border: '1px solid var(--primary)'
-                    }}
-                  >
-                    <span>🔄</span>
-                    <span>重新生成</span>
-                  </button>
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  当前模式: {mode === 'strategy' ? '策略建议' : '完整分析'}
-                </div>
-              </div>
 
               {/* 上下文编辑器/显示 */}
               {showContextEditor && (
@@ -296,82 +314,45 @@ export default function AISuggestions({
                     border: '1px solid var(--border-light)'
                   }}
                 >
-                  {/* 显示当前设置 */}
-                  {(contextInput || customPrompt) && (
-                    <div
-                      className="space-y-3 p-3 rounded-lg"
-                      style={{
-                        backgroundColor: 'var(--card-background)',
-                        border: '1px solid var(--border-light)'
-                      }}
-                    >
-                      <div className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>当前设置:</div>
-                      {contextInput && (
-                        <div>
-                          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>上下文信息:</div>
-                          <div
-                            className="text-sm p-2 rounded border max-h-20 overflow-y-auto"
-                            style={{
-                              color: 'var(--text-secondary)',
-                              backgroundColor: 'var(--background-secondary)',
-                              border: '1px solid var(--border-light)'
-                            }}
-                          >
-                            {contextInput}
-                          </div>
-                        </div>
-                      )}
-                      {customPrompt && (
-                        <div>
-                          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>自定义提示词:</div>
-                          <div
-                            className="text-sm p-2 rounded border max-h-20 overflow-y-auto"
-                            style={{
-                              color: 'var(--text-secondary)',
-                              backgroundColor: 'var(--background-secondary)',
-                              border: '1px solid var(--border-light)'
-                            }}
-                          >
-                            {customPrompt}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                   
-                  <div>
+                   <div 
+                    className="mb-6 p-4 rounded-xl"
+                    style={{
+                      backgroundColor: 'var(--info-bg)',
+                      border: '1px solid var(--info)'
+                    }}>
+                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                      上下文信息:
+                     </label>
+                     <textarea
+                       value={contextInput}
+                       onChange={(e) => setContextInput(e.target.value)}
+                       placeholder="系统已生成任务标题、详情、子任务等上下文，可在此补充或修改..."
+                       className="w-full p-3 rounded-lg text-sm form-input"
+                      rows={6}
+                       style={{
+                         backgroundColor: 'var(--card-background)',
+                         color: 'var(--text-primary)'
+                       }}
+                     />
+                   </div>
+                   
+                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      额外上下文信息:
+                      提示词（支持使用 {'{'}{'{'}CONTEXT{'}'}{'}'} 宏变量）:
                     </label>
-                    <textarea
-                      value={contextInput}
-                      onChange={(e) => setContextInput(e.target.value)}
-                      placeholder="添加任务背景、目标、约束条件等额外信息..."
-                      className="w-full p-3 rounded-lg text-sm form-input"
-                      rows={3}
-                      style={{
-                        backgroundColor: 'var(--card-background)',
-                        color: 'var(--text-primary)'
-                      }}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                      自定义提示词 (可选):
-                    </label>
-                    <textarea
-                      value={customPrompt}
-                      onChange={(e) => setCustomPrompt(e.target.value)}
-                      placeholder="输入自定义的AI分析提示词..."
-                      className="w-full p-3 rounded-lg text-sm form-input"
-                      rows={3}
-                      style={{
-                        backgroundColor: 'var(--card-background)',
-                        color: 'var(--text-primary)'
-                      }}
-                    />
-                  </div>
+                     <textarea
+                       value={promptTemplate}
+                       onChange={(e) => setPromptTemplate(e.target.value)}
+                       placeholder="输入自定义的AI分析提示词，使用 {{CONTEXT}} 引用上方的上下文信息..."
+                       className="w-full p-3 rounded-lg text-sm form-input"
+                      rows={10}
+                       style={{
+                         backgroundColor: 'var(--card-background)',
+                         color: 'var(--text-primary)'
+                       }}
+                     />
+                   </div>
                   
                   <div className="flex justify-end space-x-2">
                     <button
@@ -392,54 +373,6 @@ export default function AISuggestions({
 
               <div className="space-y-8">
                 
-                {/* 当前任务上下文信息 */}
-                {mode === 'strategy' && (
-                  <div
-                    className="mb-6 p-4 rounded-xl"
-                    style={{
-                      backgroundColor: 'var(--info-bg)',
-                      border: '1px solid var(--info)'
-                    }}
-                  >
-                    <div className="flex items-center space-x-2 mb-3">
-                      <span className="text-lg">📋</span>
-                      <h3 className="text-lg font-bold" style={{ color: 'var(--info)' }}>
-                        当前任务信息
-                      </h3>
-                    </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                        <span className="font-medium" style={{ color: 'var(--info)' }}>任务内容:</span>
-                        <div
-                          className="mt-1 p-2 rounded border"
-                          style={{
-                            color: 'var(--text-primary)',
-                            backgroundColor: 'var(--card-background)',
-                            border: '1px solid var(--border-light)'
-                          }}
-                        >
-                          {/* 这里可以显示任务内容，需要从props传入 */}
-                          任务ID: {taskId}
-                        </div>
-                      </div>
-                      {contextInput && (
-                        <div>
-                          <span className="font-medium" style={{ color: 'var(--info)' }}>额外上下文:</span>
-                          <div
-                            className="mt-1 p-2 rounded border max-h-20 overflow-y-auto"
-                            style={{
-                              color: 'var(--text-primary)',
-                              backgroundColor: 'var(--card-background)',
-                              border: '1px solid var(--border-light)'
-                            }}
-                          >
-                            {contextInput}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               {/* 执行策略建议 */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -641,7 +574,7 @@ export default function AISuggestions({
               >
                 🔄 重新分析
               </button>
-              {(contextInput || customPrompt) && (
+              {(contextInput || promptTemplate) && (
                 <button
                   onClick={() => setShowContextEditor(!showContextEditor)}
                   className="px-3 py-2 rounded-lg text-sm font-medium transition-colors btn-secondary"

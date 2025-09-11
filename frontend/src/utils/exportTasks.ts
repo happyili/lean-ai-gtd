@@ -22,6 +22,7 @@ export interface TaskRecord {
 
 // 导出数据格式
 export interface ExportTaskData {
+  任务ID: string;
   任务内容: string;
   任务类型: string;
   优先级: string;
@@ -94,6 +95,7 @@ export const convertTasksToExportFormat = (tasks: TaskRecord[]): ExportTaskData[
 
   const processTask = (task: TaskRecord) => {
     const exportData: ExportTaskData = {
+      任务ID: task.id?.toString() || '',
       任务内容: task.content,
       任务类型: taskTypeMap[task.task_type || ''] || task.task_type || '工作',
       优先级: priorityMap[task.priority || ''] || task.priority || '中',
@@ -140,6 +142,7 @@ export const exportTasksToExcel = async (accessToken?: string): Promise<void> =>
 
     // 设置列宽
     const columnWidths = [
+      { wch: 10 }, // 任务ID
       { wch: 30 }, // 任务内容
       { wch: 10 }, // 任务类型
       { wch: 8 },  // 优先级
@@ -218,6 +221,9 @@ export const importTasksFromExcel = async (file: File, accessToken?: string): Pr
     const existingTasks = await fetchAllTasks(accessToken);
     const existingTaskContents = new Set(existingTasks.map(task => task.content.trim().toLowerCase()));
 
+    // 检测是否包含“任务ID”列，用于跨库还原父子关系
+    const hasOriginalId = !!(jsonData[0] as any)['任务ID'];
+
     // 转换并导入数据
     const results = {
       success: 0,
@@ -226,33 +232,87 @@ export const importTasksFromExcel = async (file: File, accessToken?: string): Pr
       details: [] as string[]
     };
 
-    for (let i = 0; i < jsonData.length; i++) {
-      const row = jsonData[i] as any;
-      const rowNumber = i + 2; // Excel行号从2开始（跳过标题行）
-
-      try {
-        // 转换数据格式
-        const importData = convertImportRowToTaskData(row);
-        
-        // 检查重复
-        const contentToCheck = importData.content.trim().toLowerCase();
-        if (existingTaskContents.has(contentToCheck)) {
-          results.skipped++;
-          results.details.push(`第${rowNumber}行: "${importData.content}" 已存在，跳过`);
-          continue;
+    if (!hasOriginalId) {
+      // 兼容旧版：逐行直接使用父任务ID作为现有数据库ID
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i] as any;
+        const rowNumber = i + 2;
+        try {
+          const importData = convertImportRowToTaskData(row);
+          const contentToCheck = importData.content.trim().toLowerCase();
+          if (existingTaskContents.has(contentToCheck)) {
+            results.skipped++;
+            results.details.push(`第${rowNumber}行: "${importData.content}" 已存在，跳过`);
+            continue;
+          }
+          await createTaskFromImport(importData, accessToken);
+          existingTaskContents.add(contentToCheck);
+          results.success++;
+          results.details.push(`第${rowNumber}行: "${importData.content}" 导入成功`);
+        } catch (error) {
+          results.errors.push(`第${rowNumber}行导入失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
+      }
+    } else {
+      // 新版：使用“任务ID/父任务ID”为原始ID，构建 parent 映射后再导入
+      type PendingRow = { row: any; rowNumber: number; importData: ReturnType<typeof convertImportRowToTaskData>; originalId?: number; parentOriginalId?: number };
+      const rows: PendingRow[] = jsonData.map((row: any, idx: number) => {
+        const originalId = row['任务ID'] ? parseInt(String(row['任务ID'])) : undefined;
+        const parentOriginalId = row['父任务ID'] ? parseInt(String(row['父任务ID'])) : undefined;
+        return { row, rowNumber: idx + 2, importData: convertImportRowToTaskData(row), originalId, parentOriginalId };
+      });
 
-        // 创建任务
-        await createTaskFromImport(importData, accessToken);
-        
-        // 添加到已存在任务集合中，避免同一批次中的重复
-        existingTaskContents.add(contentToCheck);
-        
-        results.success++;
-        results.details.push(`第${rowNumber}行: "${importData.content}" 导入成功`);
+      const idMap = new Map<number, number>(); // 原始ID -> 新ID
+      const imported = new Set<number>();
 
-      } catch (error) {
-        results.errors.push(`第${rowNumber}行导入失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      let progress = true;
+      let passes = 0;
+      while (progress && imported.size < rows.length && passes < rows.length + 2) {
+        progress = false;
+        passes++;
+
+        for (const item of rows) {
+          if (item.originalId && imported.has(item.originalId)) continue;
+
+          try {
+            const contentToCheck = item.importData.content.trim().toLowerCase();
+            if (existingTaskContents.has(contentToCheck)) {
+              // 标记为已处理（跳过）
+              if (item.originalId) imported.add(item.originalId);
+              results.skipped++;
+              results.details.push(`第${item.rowNumber}行: "${item.importData.content}" 已存在，跳过`);
+              progress = true;
+              continue;
+            }
+
+            // 判断是否可创建（无父任务，或父任务已映射）
+            const canCreate = !item.parentOriginalId || idMap.has(item.parentOriginalId);
+            if (!canCreate) continue;
+
+            // 根据是否有父任务创建
+            const parentNewId = item.parentOriginalId ? idMap.get(item.parentOriginalId) : undefined;
+            const createdId = await createTaskFromImportWithParent(item.importData, parentNewId, accessToken);
+
+            // 记录映射和结果
+            existingTaskContents.add(contentToCheck);
+            if (item.originalId) {
+              idMap.set(item.originalId, createdId);
+              imported.add(item.originalId);
+            }
+            results.success++;
+            results.details.push(`第${item.rowNumber}行: "${item.importData.content}" 导入成功`);
+            progress = true;
+          } catch (error) {
+            // 暂不记录错误，等待后续pass再尝试（父任务可能未创建）
+            continue;
+          }
+        }
+      }
+
+      // 对仍未导入的行记录错误
+      for (const item of rows) {
+        if (!item.originalId || imported.has(item.originalId)) continue;
+        results.errors.push(`第${item.rowNumber}行导入失败: 未能解析父任务或创建失败`);
       }
     }
 
@@ -321,7 +381,7 @@ export const convertImportRowToTaskData = (row: any): ImportTaskData => {
 };
 
 // 创建导入的任务
-const createTaskFromImport = async (taskData: ImportTaskData, accessToken?: string): Promise<void> => {
+const createTaskFromImport = async (taskData: ImportTaskData, accessToken?: string): Promise<number> => {
   try {
     const url = taskData.parent_id 
       ? `/api/records/${taskData.parent_id}/subtasks`
@@ -345,7 +405,47 @@ const createTaskFromImport = async (taskData: ImportTaskData, accessToken?: stri
       const errorText = await response.text();
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
+    const data = await response.json();
+    const createdId = data?.record?.id || data?.subtask?.id;
+    return createdId;
+  } catch (error) {
+    console.error('创建任务失败:', error);
+    throw error;
+  }
+};
 
+// 支持指定新父任务ID的创建（用于基于原始ID映射后的导入）
+const createTaskFromImportWithParent = async (taskData: ImportTaskData, parentNewId?: number, accessToken?: string): Promise<number> => {
+  const payload: ImportTaskData = { ...taskData };
+  // 在指定父任务时，不再直接使用原始 parent_id
+  if (parentNewId) {
+    payload.parent_id = undefined; // 避免误用旧ID
+  }
+  
+  try {
+    const url = parentNewId 
+      ? `/api/records/${parentNewId}/subtasks`
+      : '/api/records';
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+    const response = await fetch(buildUrl(url, {}), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const createdId = data?.record?.id || data?.subtask?.id;
+    return createdId;
   } catch (error) {
     console.error('创建任务失败:', error);
     throw error;
