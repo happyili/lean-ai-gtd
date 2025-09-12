@@ -1,4 +1,5 @@
 from app.database import db
+from app.utils.random_id import RandomIDGenerator
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
@@ -6,10 +7,10 @@ import secrets
 from typing import Optional, Dict, Any
 
 class User(db.Model):
-    """用户数据模型"""
+    """用户数据模型 - 使用随机ID以提高数据安全性"""
     __tablename__ = 'users'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True)  # 使用BigInteger支持大随机数
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -40,6 +41,13 @@ class User(db.Model):
     
     # 关系定义
     records = db.relationship('Record', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __init__(self, **kwargs):
+        """初始化用户，自动生成随机ID"""
+        # 如果没有提供ID，生成随机ID
+        if 'id' not in kwargs or kwargs['id'] is None:
+            kwargs['id'] = RandomIDGenerator.generate_user_id()
+        super(User, self).__init__(**kwargs)
     
     def set_password(self, password: str) -> None:
         """设置密码哈希"""
@@ -204,20 +212,39 @@ class User(db.Model):
     
     @classmethod
     def find_by_id(cls, user_id: int) -> Optional['User']:
-        """根据ID查找用户"""
+        """根据ID查找用户 - 支持随机ID"""
         return cls.query.get(user_id)
     
     @classmethod
     def create_user(cls, username: str, email: str, password: str, **kwargs) -> 'User':
-        """创建新用户"""
+        """创建新用户 - 自动分配随机ID"""
+        # 确保不传入ID，让__init__自动生成
+        if 'id' in kwargs:
+            del kwargs['id']
+            
         user = cls(
             username=username,
             email=email,
             **kwargs
         )
         user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
+        
+        # 处理ID冲突（极小概率）
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                db.session.add(user)
+                db.session.commit()
+                return user
+            except Exception as e:
+                db.session.rollback()
+                if 'UNIQUE constraint failed' in str(e) or 'duplicate key' in str(e):
+                    # ID冲突，重新生成
+                    user.id = RandomIDGenerator.generate_user_id()
+                    if attempt < max_retries - 1:
+                        continue
+                raise e
+                
         return user
     
     def __repr__(self) -> str:
