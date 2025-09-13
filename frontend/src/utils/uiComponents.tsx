@@ -128,6 +128,7 @@ export const getStatusStyle = (colorType: string) => {
 
 // 统一的时间格式化函数
 export const formatDate = (dateString: string) => {
+  // 确保正确解析UTC时间
   const date = new Date(dateString);
   const now = new Date();
   const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
@@ -151,7 +152,8 @@ export const formatDetailedDate = (dateString: string) => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Asia/Shanghai' // 明确指定时区
   });
 };
 

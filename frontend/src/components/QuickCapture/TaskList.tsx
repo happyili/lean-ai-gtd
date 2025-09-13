@@ -69,7 +69,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [newTaskContent, setNewTaskContent] = useState('');
   const [progressNotesCache, setProgressNotesCache] = useState<{[key: number]: string}>({});
   const [progressNotesHistory, setProgressNotesHistory] = useState<{[key: number]: string[]}>({});
-  const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: number}>({});
+  const [saveTimeouts, setSaveTimeouts] = useState<{[key: number]: NodeJS.Timeout}>({});
   const [newSubtaskContent, setNewSubtaskContent] = useState<{[key: number]: string}>({});
   const [isAddingSubtask, setIsAddingSubtask] = useState<number | null>(null);
   const [editingSubtask, setEditingSubtask] = useState<number | null>(null);

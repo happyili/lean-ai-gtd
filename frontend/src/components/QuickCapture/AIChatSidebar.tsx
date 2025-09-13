@@ -93,7 +93,8 @@ export default function AIChatSidebar({ isOpen, onClose, tasks = [] }: AIChatSid
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('zh-CN', { 
       hour: '2-digit', 
-      minute: '2-digit' 
+      minute: '2-digit',
+      timeZone: 'Asia/Shanghai' // 明确指定时区
     });
   };
 

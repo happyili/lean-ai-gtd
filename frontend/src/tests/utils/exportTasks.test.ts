@@ -6,9 +6,7 @@ import {
   validateImportData,
   fetchAllTasks,
   importTasksFromExcel,
-  TaskRecord,
-  ExportTaskData,
-  ImportTaskData
+  TaskRecord
 } from '../../utils/exportTasks';
 
 // Mock dependencies
@@ -399,7 +397,7 @@ describe('exportTasks', () => {
     });
 
     it('should fetch tasks without authentication for guest users', async () => {
-      const mockTasks = [];
+      const mockTasks: TaskRecord[] = [];
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
