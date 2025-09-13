@@ -128,33 +128,65 @@ export const getStatusStyle = (colorType: string) => {
 
 // 统一的时间格式化函数
 export const formatDate = (dateString: string) => {
-  // 确保正确解析UTC时间
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+  if (!dateString) {
+    return '未知时间';
+  }
   
-  if (diffInHours < 1) {
-    return '刚刚';
-  } else if (diffInHours < 24) {
-    return `${Math.floor(diffInHours)}小时前`;
-  } else if (diffInHours < 24 * 7) {
-    return `${Math.floor(diffInHours / 24)}天前`;
-  } else {
-    return date.toLocaleDateString('zh-CN');
+  try {
+    // 确保正确解析UTC时间
+    const date = new Date(dateString);
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return '时间格式错误';
+    }
+    
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return '刚刚';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}小时前`;
+    } else if (diffInHours < 24 * 7) {
+      return `${Math.floor(diffInHours / 24)}天前`;
+    } else {
+      return date.toLocaleDateString('zh-CN');
+    }
+  } catch (error) {
+    console.error('Date formatting error:', error, 'for date:', dateString);
+    return '时间格式错误';
   }
 };
 
 // 详细时间格式化函数（用于详情页面）
 export const formatDetailedDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Shanghai' // 明确指定时区
-  });
+  if (!dateString) {
+    return '未知时间';
+  }
+  
+  try {
+    const date = new Date(dateString);
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date string:', dateString);
+      return '时间格式错误';
+    }
+    
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Shanghai' // 明确指定时区
+    });
+  } catch (error) {
+    console.error('Detailed date formatting error:', error, 'for date:', dateString);
+    return '时间格式错误';
+  }
 };
 
 // 统一的标签组件样式

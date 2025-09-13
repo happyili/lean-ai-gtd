@@ -1154,17 +1154,23 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                 <div key={task.id} className="group" style={{ borderColor: 'var(--border-light)' }}>
                   {/* 任务单行显示 */}
                   <div 
-                    className="flex items-center justify-between p-3 hover:bg-opacity-50 cursor-pointer transition-all"
+                    className="flex items-center justify-between p-3 hover:bg-opacity-50 transition-all"
                     style={{ 
                       backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
                       paddingLeft: isSubtask ? '2rem' : '1rem', // 子任务增加左侧缩进
                       paddingRight: 0
                     }}
-                    onClick={() => handleTaskClick(task)}
                   >
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
                       {/* 展开/收缩指示器 */}
-                      <button className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <button 
+                        className="text-xs cursor-pointer hover:opacity-70 transition-opacity" 
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTaskClick(task);
+                        }}
+                      >
                         {isExpanded ? '▼' : '▶'}
                       </button>
                       
@@ -1337,7 +1343,12 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       
                       {/* 进展概要 */}
                       {task.progress_notes && (
-                        <div className="flex items-center space-x-2 flex-shrink-0 max-w-32">
+                        <div className="flex items-center space-x-2 flex-shrink-0 max-w-32" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTaskClick(task);
+                        }}
+                        >
                           <span className="text-body-small font-medium truncate" style={{ color: 'var(--text-secondary)' }} title={task.progress_notes}>
                             📝 {task.progress_notes}
                           </span>
