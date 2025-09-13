@@ -100,7 +100,12 @@ class User(db.Model):
     def is_account_locked(self) -> bool:
         """检查账户是否被锁定"""
         if self.account_locked_until:
-            return datetime.now(timezone.utc) < self.account_locked_until
+            # 确保比较的datetime对象都有时区信息
+            now = datetime.now(timezone.utc)
+            locked_until = self.account_locked_until
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
+            return now < locked_until
         return False
     
     def lock_account(self, duration_minutes: int = 30) -> None:
@@ -131,7 +136,12 @@ class User(db.Model):
         """检查刷新Token是否有效"""
         if not self.refresh_token or not self.refresh_token_expires_at:
             return False
-        return datetime.now(timezone.utc) < self.refresh_token_expires_at
+        # 确保比较的datetime对象都有时区信息
+        now = datetime.now(timezone.utc)
+        expires_at = self.refresh_token_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return now < expires_at
     
     def revoke_refresh_token(self) -> None:
         """撤销刷新Token"""
