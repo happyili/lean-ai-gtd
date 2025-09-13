@@ -1,4 +1,4 @@
--- Complete Schema Migration for AIGTD Database (PostgreSQL/Supabase)
+-- Complete Schema Migration for AIGTD Database (Supabase Compatible)
 -- This migration creates the complete schema based on current models
 -- Date: 2025-09-10
 -- Description: Complete schema setup for records and users tables
@@ -8,7 +8,9 @@
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    -- If using Random ID, use:  id BIGINT PRIMARY KEY NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- SERIAL PRIMARY KEY 
+    
     username VARCHAR(80) UNIQUE NOT NULL,
     email VARCHAR(120) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -43,7 +45,8 @@ CREATE TABLE IF NOT EXISTS users (
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS records (
-    id SERIAL PRIMARY KEY,   -- id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    -- random id:  id BIGINT PRIMARY KEY NOT NULL,
     content TEXT NOT NULL,
     category VARCHAR(20) DEFAULT 'general',
     parent_id INTEGER REFERENCES records(id),
