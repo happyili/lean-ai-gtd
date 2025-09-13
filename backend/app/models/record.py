@@ -1,5 +1,5 @@
 from app.database import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Record(db.Model):
     """记录数据模型"""
@@ -13,8 +13,8 @@ class Record(db.Model):
     priority = db.Column(db.String(20), default='medium')  # low/medium/high/urgent
     progress = db.Column(db.Integer, default=0)  # 进度百分比 0-100
     progress_notes = db.Column(db.Text, nullable=True)  # 进展记录和问题描述
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='active')  # active/completed/paused/cancelled/archived/deleted
     task_type = db.Column(db.String(20), default='work')  # work/hobby/life - 工作/业余/生活
     
@@ -27,6 +27,15 @@ class Record(db.Model):
     
     def to_dict(self, include_subtasks=False):
         """转换为字典格式"""
+        def safe_isoformat(dt):
+            """安全地格式化datetime为ISO字符串"""
+            if dt is None:
+                return None
+            # 确保datetime对象有时区信息
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.isoformat()
+        
         result = {
             'id': self.id,
             'content': self.content,
@@ -35,8 +44,8 @@ class Record(db.Model):
             'priority': self.priority,
             'progress': self.progress,
             'progress_notes': self.progress_notes,
-            'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() + 'Z' if self.updated_at else None,
+            'created_at': safe_isoformat(self.created_at),
+            'updated_at': safe_isoformat(self.updated_at),
             'status': self.status,
             'task_type': self.task_type,
             'user_id': self.user_id

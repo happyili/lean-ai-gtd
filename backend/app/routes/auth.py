@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 import re
 from functools import wraps
@@ -359,7 +359,7 @@ def health():
     return jsonify({
         'status': 'healthy',
         'service': 'auth',
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     }), 200
 
 # 工具函数

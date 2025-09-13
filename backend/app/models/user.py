@@ -1,6 +1,6 @@
 from app.database import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 import secrets
 from typing import Optional, Dict, Any
@@ -34,8 +34,8 @@ class User(db.Model):
     refresh_token_expires_at = db.Column(db.DateTime, nullable=True)
     
     # 时间戳
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login_at = db.Column(db.DateTime, nullable=True)
     
     # 关系定义
@@ -52,7 +52,7 @@ class User(db.Model):
     def generate_access_token(self, expires_in: int = 3600) -> str:
         """生成访问Token (默认1小时)"""
         import time
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         exp_time = now + timedelta(seconds=expires_in)
         
         # 使用当前时间戳确保时间一致性
@@ -74,7 +74,7 @@ class User(db.Model):
         """生成刷新Token (默认7天)"""
         token = secrets.token_urlsafe(32)
         self.refresh_token = token
-        self.refresh_token_expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
+        self.refresh_token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
         return token
     
     def verify_token(self, token: str, token_type: str = 'access') -> Optional[Dict[str, Any]]:
@@ -100,12 +100,12 @@ class User(db.Model):
     def is_account_locked(self) -> bool:
         """检查账户是否被锁定"""
         if self.account_locked_until:
-            return datetime.utcnow() < self.account_locked_until
+            return datetime.now(timezone.utc) < self.account_locked_until
         return False
     
     def lock_account(self, duration_minutes: int = 30) -> None:
         """锁定账户"""
-        self.account_locked_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+        self.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
     
     def unlock_account(self) -> None:
         """解锁账户"""
@@ -115,7 +115,7 @@ class User(db.Model):
     def record_failed_login(self) -> None:
         """记录失败登录"""
         self.failed_login_attempts += 1
-        self.last_failed_login = datetime.utcnow()
+        self.last_failed_login = datetime.now(timezone.utc)
         
         # 5次失败后锁定账户30分钟
         if self.failed_login_attempts >= 5:
@@ -123,7 +123,7 @@ class User(db.Model):
     
     def record_successful_login(self) -> None:
         """记录成功登录"""
-        self.last_login_at = datetime.utcnow()
+        self.last_login_at = datetime.now(timezone.utc)
         self.failed_login_attempts = 0
         self.last_failed_login = None
     
@@ -131,7 +131,7 @@ class User(db.Model):
         """检查刷新Token是否有效"""
         if not self.refresh_token or not self.refresh_token_expires_at:
             return False
-        return datetime.utcnow() < self.refresh_token_expires_at
+        return datetime.now(timezone.utc) < self.refresh_token_expires_at
     
     def revoke_refresh_token(self) -> None:
         """撤销刷新Token"""
@@ -151,6 +151,15 @@ class User(db.Model):
     
     def to_dict(self, include_sensitive: bool = False) -> Dict[str, Any]:
         """转换为字典"""
+        def safe_isoformat(dt):
+            """安全地格式化datetime为ISO字符串"""
+            if dt is None:
+                return None
+            # 确保datetime对象有时区信息
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.isoformat()
+        
         data = {
             'id': self.id,
             'username': self.username,
@@ -161,15 +170,15 @@ class User(db.Model):
             'is_active': self.is_active,
             'is_verified': self.is_verified,
             'is_admin': self.is_admin,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
+            'created_at': safe_isoformat(self.created_at),
+            'updated_at': safe_isoformat(self.updated_at),
+            'last_login_at': safe_isoformat(self.last_login_at),
         }
         
         if include_sensitive:
             data.update({
                 'failed_login_attempts': self.failed_login_attempts,
-                'account_locked_until': self.account_locked_until.isoformat() if self.account_locked_until else None,
+                'account_locked_until': safe_isoformat(self.account_locked_until),
             })
         
         return data

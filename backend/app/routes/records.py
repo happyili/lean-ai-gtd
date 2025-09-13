@@ -4,7 +4,7 @@ from app.models.user import User
 from app.services.ai_intelligence import ai_intelligence_service
 from app.routes.auth import token_required
 from app.utils.auth_helpers import get_user_for_record_access
-from datetime import datetime
+from datetime import datetime, timezone
 import traceback
 
 def create_error_response(error_message, error_code, details=None, status_code=500):
@@ -215,7 +215,7 @@ def delete_record(record_id):
                 return jsonify({'error': '记录不存在或无权限删除'}), 404
         
         record.status = 'deleted'
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         
@@ -487,7 +487,7 @@ def update_record(record_id):
                 return jsonify({'error': '无效的任务类型'}), 400
             record.task_type = task_type
         
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(timezone.utc)
         db.session.commit()
         
         return jsonify({
