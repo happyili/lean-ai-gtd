@@ -5,7 +5,7 @@ class Record(db.Model):
     """记录数据模型"""
     __tablename__ = 'records'
     
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     content = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(20), default='general')  # idea/task/note/general
     parent_id = db.Column(db.BigInteger, db.ForeignKey('records.id'), nullable=True)  # 父任务ID，支持子任务
