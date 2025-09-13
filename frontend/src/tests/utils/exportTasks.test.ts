@@ -366,7 +366,7 @@ describe('exportTasks', () => {
 
   describe('fetchAllTasks', () => {
     it('should fetch tasks with proper authentication', async () => {
-      const mockTasks = [
+      const mockTasks: TaskRecord[] = [
         {
           id: 1,
           content: 'Test Task',
