@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
@@ -8,6 +9,7 @@ import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
 import PomodoroManager from '@/components/PomodoroManager';
 import RemindersList from '@/components/Reminders/RemindersList';
 import ReminderBanner from '@/components/Reminders/ReminderBanner';
+import PomodoroBannerPanel from '@/components/Pomodoro/PomodoroBannerPanel';
 import InfoResourceList from '@/components/InfoResources/InfoResourceList';
 import InfoResourceDetail from '@/components/InfoResources/InfoResourceDetail';
 import { apiPost, apiDelete } from '@/utils/api';
@@ -78,7 +80,7 @@ export default function App() {
   const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
   const [currentView, setCurrentView] = useState<'tasks' | 'pomodoro'>('tasks'); // 新增：控制当前视图
   const [isTaskManagementDropdownOpen, setIsTaskManagementDropdownOpen] = useState(false); // 任务管理下拉菜单状态
-  const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders'>('tasks'); // 选中的任务管理模式
+  const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders' | 'ai-pomodoro'>('tasks'); // 选中的任务管理模式
   const [selectedInfoResource, setSelectedInfoResource] = useState<InfoResource | null>(null); // 选中的信息资源
   
   // 信息资源筛选状态
@@ -88,6 +90,7 @@ export default function App() {
   const [isInfoResourceSearchExpanded, setIsInfoResourceSearchExpanded] = useState(false);
   const [isInfoResourceStatusFilterExpanded, setIsInfoResourceStatusFilterExpanded] = useState(false);
   const [isInfoResourceTypeFilterExpanded, setIsInfoResourceTypeFilterExpanded] = useState(false);
+  const [isPomodoroPanelExpanded, setIsPomodoroPanelExpanded] = useState(false); // 番茄面板展开状态
 
   // 点击外部关闭搜索框和下拉菜单
   useEffect(() => {
@@ -586,7 +589,8 @@ export default function App() {
                   >
                     {selectedTaskManagementMode === 'tasks' ? '任务管理' : 
                      selectedTaskManagementMode === 'resources' ? '信息资源' : 
-                     selectedTaskManagementMode === 'reminders' ? '定时提醒' : '任务管理'}
+                     selectedTaskManagementMode === 'reminders' ? '定时提醒' : 
+                     selectedTaskManagementMode === 'ai-pomodoro' ? 'AI番茄钟' : '任务管理'}
                     <svg 
                       className={`ml-1 w-4 h-4 transform transition-transform ${isTaskManagementDropdownOpen ? 'rotate-180' : ''}`}
                       fill="none" 
@@ -634,24 +638,21 @@ export default function App() {
                         >
                           定时提醒
                         </button>
+                        <button
+                          onClick={() => {
+                            setSelectedTaskManagementMode('ai-pomodoro');
+                            setIsTaskManagementDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
+                            selectedTaskManagementMode === 'ai-pomodoro' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          AI番茄钟
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => setCurrentView('pomodoro')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    currentView === 'pomodoro' 
-                      ? 'text-white' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                  style={{ 
-                    backgroundColor: currentView === 'pomodoro' ? 'var(--primary)' : 'transparent',
-                    color: currentView === 'pomodoro' ? 'white' : 'var(--text-primary)'
-                  }}
-                >
-                  AI番茄钟
-                </button>
               </nav>
               
               {/* 筛选菜单 - 只在任务管理视图显示 */}
@@ -1259,8 +1260,21 @@ export default function App() {
               )}
             </div>
 
-            {/* 右侧：用户菜单 */}
-            <div className="flex items-center">
+            {/* 右侧：番茄按钮 + 用户菜单 */}
+            <div className="flex items-center space-x-3">
+              {/* 番茄icon按钮 */}
+              <button
+                onClick={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
+                className={`p-2 rounded-lg transition-all duration-200 ${
+                  isPomodoroPanelExpanded 
+                    ? 'bg-red-100 text-red-600' 
+                    : 'hover:bg-gray-100 text-gray-600 hover:text-red-600'
+                }`}
+                title={isPomodoroPanelExpanded ? '折叠番茄任务' : '展开番茄任务'}
+              >
+                <Clock className="w-5 h-5" />
+              </button>
+              
               <UserMenu />
             </div>
           </div>
@@ -1269,6 +1283,12 @@ export default function App() {
 
       {/* 到期提醒条 - 紧贴banner下方 */}
       <ReminderBanner accessToken={accessToken} />
+
+      {/* 番茄任务面板 */}
+      <PomodoroBannerPanel 
+        accessToken={accessToken} 
+        isExpanded={isPomodoroPanelExpanded}
+      />
 
       {/* 主要内容区域 */}
       <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-128px)] mt-[80px]' : 'h-[calc(100vh-48px)]'}`}>
@@ -1303,6 +1323,11 @@ export default function App() {
             {/* 定时提醒模式 */}
             {selectedTaskManagementMode === 'reminders' && (
               <RemindersList accessToken={accessToken} />
+            )}
+
+            {/* AI番茄钟模式 */}
+            {selectedTaskManagementMode === 'ai-pomodoro' && (
+              <PomodoroManager accessToken={accessToken} />
             )}
           </main>
         ) : (

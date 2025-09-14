@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Clock, Play, Pause, SkipForward, RefreshCw, CheckCircle, AlertCircle, BarChart3, RotateCcw } from 'lucide-react';
+import { Clock, Play, Pause, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
 import { apiPost, apiGet } from '@/utils/api';
+import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
 
 interface PomodoroTask {
   id: number;
@@ -246,25 +247,6 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getPriorityColor = (score: number) => {
-    if (score >= 80) return 'text-red-600 bg-red-50';
-    if (score >= 60) return 'text-orange-600 bg-orange-50';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-50';
-    return 'text-green-600 bg-green-50';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'active':
-        return <Play className="w-5 h-5 text-blue-600" />;
-      case 'skipped':
-        return <SkipForward className="w-5 h-5 text-gray-600" />;
-      default:
-        return <Clock className="w-5 h-5 text-gray-400" />;
-    }
-  };
 
   if (!accessToken) {
     return (
@@ -356,128 +338,21 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
       {tasks.length > 0 && (
         <div className="mb-6">
           <div className="flex flex-wrap gap-2 justify-start">
-            {tasks.slice(0, 6).map((task, index) => {
-              const progressPercent = Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100);
-              return (
-                <div
-                  key={task.id}
-                  className={`relative overflow-hidden rounded-lg border transition-all cursor-pointer hover:shadow-sm max-w-[600px] flex-1 min-w-[300px] ${
-                    task.status === 'completed' 
-                      ? 'border-green-200' 
-                      : task.status === 'active'
-                      ? 'border-blue-200'
-                      : task.status === 'skipped'
-                      ? 'border-gray-200'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => task.status === 'pending' && !activeTaskId ? startTask(task.id) : null}
-                  style={{ height: '60px' }} // 减少高度
-                >
-                  {/* 背景进度条 */}
-                  <div 
-                    className={`absolute inset-0 transition-all duration-300 ${
-                      task.status === 'completed'
-                        ? 'bg-gradient-to-r from-green-50 to-green-100'
-                        : task.status === 'active'
-                        ? 'bg-gradient-to-r from-blue-50 to-blue-100'
-                        : task.status === 'skipped'
-                        ? 'bg-gradient-to-r from-gray-50 to-gray-100'
-                        : 'bg-gradient-to-r from-gray-50 to-white'
-                    }`}
-                    style={{
-                      background: task.status === 'pending' 
-                        ? `linear-gradient(to right, #f9fafb 0%, #f9fafb ${progressPercent}%, #ffffff ${progressPercent}%, #ffffff 100%)`
-                        : undefined
-                    }}
-                  />
-                  
-                  {/* 内容层 */}
-                  <div className="relative z-10 p-3 h-full flex items-center justify-between">
-                    <div className="flex-1 min-w-0 flex items-center">
-                      <span className="text-sm font-bold text-gray-400 mr-2">#{index + 1}</span>
-                      {getStatusIcon(task.status)}
-                      <div className="ml-2 flex-1 min-w-0">
-                        <h4 className="text-sm font-semibold text-gray-900 truncate leading-tight">{task.title}</h4>
-                        <div className="flex items-center text-xs text-gray-500 space-x-3">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority_score)}`}>
-                            {task.priority_score}
-                          </span>
-                          <span>{task.estimated_pomodoros}🍅</span>
-                          <span>{task.pomodoros_completed}/{task.estimated_pomodoros}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* 按钮区域 - 只显示图标 */}
-                    <div className="flex items-center space-x-2 ml-3">
-                      {task.status === 'pending' && !activeTaskId && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startTask(task.id);
-                          }}
-                          className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                          title="开始任务"
-                        >
-                          <Play className="w-4 h-4" />
-                        </button>
-                      )}
-                      
-                      {task.status === 'active' && activeTaskId === task.id && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsTimerRunning(!isTimerRunning);
-                            }}
-                            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                            title={isTimerRunning ? '暂停' : '继续'}
-                          >
-                            {isTimerRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              completeTask(task.id);
-                            }}
-                            className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            title="完成任务"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      
-                      {task.status !== 'completed' && task.status !== 'skipped' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            skipTask(task.id);
-                          }}
-                          className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                          title="跳过任务"
-                        >
-                          <SkipForward className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {task.status !== 'pending' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            resetTask(task.id);
-                          }}
-                          className="p-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                          title="重置为未开始"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {tasks.slice(0, 6).map((task, index) => (
+              <PomodoroTaskCard
+                key={task.id}
+                task={task}
+                index={index}
+                activeTaskId={activeTaskId}
+                isTimerRunning={isTimerRunning}
+                onStartTask={startTask}
+                onCompleteTask={completeTask}
+                onSkipTask={skipTask}
+                onResetTask={resetTask}
+                onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
+                compact={true}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -537,97 +412,20 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
               <span className="text-sm text-gray-500">{tasks.length} 个任务</span>
             </div>
             {tasks.map((task, index) => (
-            <div
-              key={task.id}
-              className={`rounded-lg border-2 p-6 transition-all ${
-                task.status === 'completed' 
-                  ? 'border-green-200 bg-green-50' 
-                  : task.status === 'active'
-                  ? 'border-blue-200 bg-blue-50'
-                  : task.status === 'skipped'
-                  ? 'border-gray-200 bg-gray-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <span className="text-2xl font-bold text-gray-400 mr-3">#{index + 1}</span>
-                    {getStatusIcon(task.status)}
-                    <h3 className="text-lg font-semibold text-gray-900 ml-2">{task.title}</h3>
-                    <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority_score)}`}>
-                      优先级 {task.priority_score}
-                    </span>
-                  </div>
-                  
-                  <p className="text-gray-600 mb-3">{task.description}</p>
-                  
-                  {task.ai_reasoning && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-3">
-                      <p className="text-sm text-yellow-800">
-                        <strong>AI建议：</strong> {task.ai_reasoning}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center text-sm text-gray-500 space-x-4">
-                    <span>预估 {task.estimated_pomodoros} 个番茄钟</span>
-                    <span>已完成 {task.pomodoros_completed} 个</span>
-                    <span>专注时间 {task.total_focus_time} 分钟</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col space-y-2 ml-4">
-                  {task.status === 'pending' && (
-                    <button
-                      onClick={() => startTask(task.id)}
-                      disabled={activeTaskId !== null}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center"
-                    >
-                      <Play className="w-4 h-4 mr-1" />
-                      开始
-                    </button>
-                  )}
-                  
-                  {task.status !== 'completed' && task.status !== 'skipped' && (
-                    <button
-                      onClick={() => skipTask(task.id)}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center"
-                    >
-                      <SkipForward className="w-4 h-4 mr-1" />
-                      跳过
-                    </button>
-                  )}
-
-                  {task.status !== 'pending' && (
-                    <button
-                      onClick={() => resetTask(task.id)}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-1" />
-                      重置
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              {/* 进度条 */}
-              <div className="mt-4">
-                <div className="flex justify-between text-sm text-gray-600 mb-1">
-                  <span>完成进度</span>
-                  <span>{Math.round((task.pomodoros_completed / task.estimated_pomodoros) * 100)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100)}%`
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+              <PomodoroTaskCard
+                key={task.id}
+                task={task}
+                index={index}
+                activeTaskId={activeTaskId}
+                isTimerRunning={isTimerRunning}
+                onStartTask={startTask}
+                onCompleteTask={completeTask}
+                onSkipTask={skipTask}
+                onResetTask={resetTask}
+                onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
+                compact={false}
+              />
+            ))}
           </div>
         )}
       </div>
