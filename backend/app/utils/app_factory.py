@@ -191,8 +191,8 @@ def create_base_app():
     
     # JWT配置
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
-    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 900  # 15分钟
-    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 604800  # 7天
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1小时
+    app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 15552000  # 6个月 (180天)
     debug_log.info("✅ JWT配置完成")
     
     # 设置统一的请求日志记录

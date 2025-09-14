@@ -51,10 +51,12 @@ interface TaskListProps {
   showNotification: (message: string, type: 'success' | 'error') => void;
   isCollapsed?: boolean;
   showAllLevels?: boolean;
+  onToggleShowAllLevels?: () => void;
+  onToggleCollapse?: () => void;
 }
 
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification, isCollapsed = false, showAllLevels = false }: TaskListProps) {
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification, isCollapsed = false, showAllLevels = false, onToggleShowAllLevels, onToggleCollapse }: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -901,7 +903,47 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
       {/* 头部 */}
       <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--border-light)' }}>
         <div className="flex items-center justify-between">
-          <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
+          <div className="flex items-center space-x-3">
+            <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>任务管理</h2>
+            {/* 看子任务按钮 */}
+            {onToggleShowAllLevels && (
+              <button
+                onClick={onToggleShowAllLevels}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  showAllLevels 
+                    ? 'text-white' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: showAllLevels ? 'var(--info)' : 'transparent',
+                  color: showAllLevels ? 'white' : 'var(--text-primary)',
+                  border: `1px solid ${showAllLevels ? 'var(--info)' : 'var(--border-default)'}`
+                }}
+                title={showAllLevels ? '隐藏子任务' : '显示子任务'}
+              >
+                看子任务
+              </button>
+            )}
+            {/* 折叠按钮 */}
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  isCollapsed 
+                    ? 'text-white' 
+                    : 'hover:btn-secondary'
+                }`}
+                style={{ 
+                  backgroundColor: isCollapsed ? 'var(--primary)' : 'transparent',
+                  color: isCollapsed ? 'white' : 'var(--text-primary)',
+                  border: `1px solid ${isCollapsed ? 'var(--primary)' : 'var(--border-default)'}`
+                }}
+                title={isCollapsed ? '展开子任务' : '折叠子任务'}
+              >
+                折叠
+              </button>
+            )}
+          </div>
           <div className="flex items-center space-x-3">
             {/* 详细进展统计 */}
             <div className="relative">
@@ -1128,7 +1170,7 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             <div className="text-body-small mt-1">点击上方"+ 任务"开始工作</div>
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
+          <div className="divide-y" style={{ borderColor: 'var(--border-light)', borderBottom:'1px solid var(--border-light)' }}>
             {tasks
               .filter(task => showAllLevels || !task.parent_id) // 根据筛选条件显示任务
               .sort((a, b) => {

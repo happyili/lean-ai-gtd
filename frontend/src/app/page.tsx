@@ -80,6 +80,14 @@ export default function App() {
   const [isTaskManagementDropdownOpen, setIsTaskManagementDropdownOpen] = useState(false); // 任务管理下拉菜单状态
   const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders'>('tasks'); // 选中的任务管理模式
   const [selectedInfoResource, setSelectedInfoResource] = useState<InfoResource | null>(null); // 选中的信息资源
+  
+  // 信息资源筛选状态
+  const [infoResourceSearchQuery, setInfoResourceSearchQuery] = useState('');
+  const [infoResourceStatusFilter, setInfoResourceStatusFilter] = useState('all');
+  const [infoResourceTypeFilter, setInfoResourceTypeFilter] = useState('all');
+  const [isInfoResourceSearchExpanded, setIsInfoResourceSearchExpanded] = useState(false);
+  const [isInfoResourceStatusFilterExpanded, setIsInfoResourceStatusFilterExpanded] = useState(false);
+  const [isInfoResourceTypeFilterExpanded, setIsInfoResourceTypeFilterExpanded] = useState(false);
 
   // 点击外部关闭搜索框和下拉菜单
   useEffect(() => {
@@ -91,16 +99,27 @@ export default function App() {
       if (isTaskManagementDropdownOpen && !target.closest('.task-management-dropdown')) {
         setIsTaskManagementDropdownOpen(false);
       }
+      if (isInfoResourceSearchExpanded && !target.closest('.info-resource-search-container')) {
+        setIsInfoResourceSearchExpanded(false);
+      }
+      if (isInfoResourceStatusFilterExpanded && !target.closest('.info-resource-status-filter-container')) {
+        setIsInfoResourceStatusFilterExpanded(false);
+      }
+      if (isInfoResourceTypeFilterExpanded && !target.closest('.info-resource-type-filter-container')) {
+        setIsInfoResourceTypeFilterExpanded(false);
+      }
     };
 
-    if (isSearchExpanded || isTaskManagementDropdownOpen) {
+    if (isSearchExpanded || isTaskManagementDropdownOpen || isInfoResourceSearchExpanded || 
+        isInfoResourceStatusFilterExpanded || isInfoResourceTypeFilterExpanded) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSearchExpanded, isTaskManagementDropdownOpen]);
+  }, [isSearchExpanded, isTaskManagementDropdownOpen, isInfoResourceSearchExpanded, 
+      isInfoResourceStatusFilterExpanded, isInfoResourceTypeFilterExpanded]);
 
   // 如果正在加载认证状态，显示加载状态
   if (authLoading) {
@@ -277,6 +296,40 @@ export default function App() {
     return query.length > 10 ? query.substring(0, 10) + '...' : query;
   };
 
+  // 获取信息资源状态显示文本
+  const getInfoResourceStatusDisplayText = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'all': '状态',
+      'active': '活跃',
+      'archived': '已归档',
+      'deleted': '已删除'
+    };
+    return statusMap[status] || '状态';
+  };
+
+  // 获取信息资源类型显示文本
+  const getInfoResourceTypeDisplayText = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'all': '类型',
+      'general': '通用',
+      'article': '文章',
+      'bookmark': '书签',
+      'note': '笔记',
+      'reference': '参考',
+      'tutorial': '教程',
+      'other': '其他'
+    };
+    return typeMap[type] || '类型';
+  };
+
+  // 获取信息资源搜索显示文本
+  const getInfoResourceSearchDisplayText = (query: string) => {
+    if (!query || query.trim() === '') {
+      return '搜索';
+    }
+    return query.length > 10 ? query.substring(0, 10) + '...' : query;
+  };
+
   // 处理筛选
   const handleFilter = (type: string, value: string) => {
     if (type === 'status') {
@@ -299,6 +352,32 @@ export default function App() {
       detail: { type, value } 
     });
     window.dispatchEvent(filterEvent);
+  };
+
+  // 处理信息资源筛选
+  const handleInfoResourceFilter = (type: string, value: string) => {
+    if (type === 'status') {
+      setInfoResourceStatusFilter(value);
+      setIsInfoResourceStatusFilterExpanded(false);
+    } else if (type === 'resourceType') {
+      setInfoResourceTypeFilter(value);
+      setIsInfoResourceTypeFilterExpanded(false);
+    }
+    
+    const filterEvent = new CustomEvent('infoResourceFilter', { 
+      detail: { type, value } 
+    });
+    window.dispatchEvent(filterEvent);
+  };
+
+  // 处理信息资源搜索
+  const handleInfoResourceSearch = (query: string) => {
+    setInfoResourceSearchQuery(query);
+    
+    const searchEvent = new CustomEvent('infoResourceSearch', { 
+      detail: { query } 
+    });
+    window.dispatchEvent(searchEvent);
   };
 
 
@@ -583,7 +662,7 @@ export default function App() {
               </nav>
               
               {/* 筛选菜单 - 只在任务管理视图显示 */}
-              {currentView === 'tasks' && (
+              {currentView === 'tasks' && selectedTaskManagementMode === 'tasks' && (
               <nav className="flex items-center space-x-1 relative">
                 {/* 搜索筛选 - 可折叠 */}
                 <div className="flex items-center space-x-1 search-container">
@@ -953,43 +1032,279 @@ export default function App() {
                   )}
                 </div>
 
-                {/* 看子任务按钮 */}
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => handleFilter('showAllLevels', (!showAllLevels).toString())}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      showAllLevels 
-                        ? 'text-white' 
-                        : 'hover:btn-secondary'
-                    }`}
-                    style={{ 
-                      backgroundColor: showAllLevels ? 'var(--info)' : 'transparent',
-                      color: showAllLevels ? 'white' : 'var(--text-primary)',
-                      border: `1px solid ${showAllLevels ? 'var(--info)' : 'var(--border-default)'}`
-                    }}
-                    title={showAllLevels ? '隐藏子任务' : '显示子任务'}
-                  >
-                    看子任务
-                  </button>
+
+              </nav>
+              )}
+
+              {/* 筛选菜单 - 只在信息资源视图显示 */}
+              {currentView === 'tasks' && selectedTaskManagementMode === 'resources' && (
+              <nav className="flex items-center space-x-1 relative">
+                {/* 信息资源搜索筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1 info-resource-search-container">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isInfoResourceSearchExpanded ? (
+                    <button
+                      onClick={() => setIsInfoResourceSearchExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        infoResourceSearchQuery && infoResourceSearchQuery.trim() !== '' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        color: infoResourceSearchQuery && infoResourceSearchQuery.trim() !== '' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
+                      }}
+                    >
+                      <span>{getInfoResourceSearchDisplayText(infoResourceSearchQuery)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的搜索框 */
+                    <div className="flex items-center space-x-1">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={infoResourceSearchQuery}
+                          placeholder="搜索资源..."
+                          className="px-3 py-1 rounded-lg text-xs font-medium form-input"
+                          style={{ 
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-light)',
+                            color: 'var(--text-primary)',
+                            minWidth: '100px',
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                          }}
+                          onChange={(e) => {
+                            setInfoResourceSearchQuery(e.target.value);
+                            handleInfoResourceSearch(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              setIsInfoResourceSearchExpanded(false);
+                            }
+                            if (e.key === 'Escape') {
+                              setIsInfoResourceSearchExpanded(false);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          setInfoResourceSearchQuery('');
+                          handleInfoResourceSearch('');
+                          setIsInfoResourceSearchExpanded(false);
+                        }}
+                        className="px-2 py-1 rounded text-xs font-medium transition-all hover:btn-secondary"
+                        style={{ 
+                          backgroundColor: 'transparent',
+                          color: 'var(--text-muted)'
+                        }}
+                        title="清除搜索"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* 信息资源状态筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1 info-resource-status-filter-container">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isInfoResourceStatusFilterExpanded ? (
+                    <button
+                      onClick={() => setIsInfoResourceStatusFilterExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        infoResourceStatusFilter !== 'all' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        color: infoResourceStatusFilter !== 'all' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
+                      }}
+                    >
+                      <span>{getInfoResourceStatusDisplayText(infoResourceStatusFilter)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的所有按钮 */
+                    <>
+                      <button
+                        onClick={() => handleInfoResourceFilter('status', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceStatusFilter === 'all' 
+                            ? 'text-white' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceStatusFilter === 'all' ? 'var(--primary)' : 'transparent',
+                          color: infoResourceStatusFilter === 'all' ? 'white' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceStatusFilter === 'all' ? 'var(--primary)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        全部
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('status', 'active')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceStatusFilter === 'active' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceStatusFilter === 'active' ? 'var(--success-bg)' : 'transparent',
+                          color: infoResourceStatusFilter === 'active' ? 'var(--success)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceStatusFilter === 'active' ? 'var(--success)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        活跃
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('status', 'archived')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceStatusFilter === 'archived' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceStatusFilter === 'archived' ? 'var(--warning-bg)' : 'transparent',
+                          color: infoResourceStatusFilter === 'archived' ? 'var(--warning)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceStatusFilter === 'archived' ? 'var(--warning)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        已归档
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                {/* 折叠子任务按钮 */}
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => setIsSubtaskCollapsed(!isSubtaskCollapsed)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      isSubtaskCollapsed 
-                        ? 'text-white' 
-                        : 'hover:btn-secondary'
-                    }`}
-                    style={{ 
-                      backgroundColor: isSubtaskCollapsed ? 'var(--primary)' : 'transparent',
-                      color: isSubtaskCollapsed ? 'white' : 'var(--text-primary)',
-                      border: `1px solid ${isSubtaskCollapsed ? 'var(--primary)' : 'var(--border-default)'}`
-                    }}
-                  >
-                    {'折叠'}
-                  </button>
+                {/* 信息资源类型筛选 - 可折叠 */}
+                <div className="flex items-center space-x-1 info-resource-type-filter-container">
+                  {/* 折叠状态下的主按钮 */}
+                  {!isInfoResourceTypeFilterExpanded ? (
+                    <button
+                      onClick={() => setIsInfoResourceTypeFilterExpanded(true)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary flex items-center space-x-1 ${
+                        infoResourceTypeFilter !== 'all' ? 'ring-blue-300' : ''
+                      }`}
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        color: infoResourceTypeFilter !== 'all' ? 'var(--info)' : 'var(--text-primary)',
+                        border: 'none'
+                      }}
+                    >
+                      <span>{getInfoResourceTypeDisplayText(infoResourceTypeFilter)}</span>
+                      <span className="text-xs">▶</span>
+                    </button>
+                  ) : (
+                    /* 展开状态下的所有按钮 */
+                    <>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'all')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'all' 
+                            ? 'text-white' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'all' ? 'var(--primary)' : 'transparent',
+                          color: infoResourceTypeFilter === 'all' ? 'white' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'all' ? 'var(--primary)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        全部
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'general')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'general' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'general' ? 'var(--primary-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'general' ? 'var(--primary)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'general' ? 'var(--primary)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        通用
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'article')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'article' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'article' ? 'var(--info-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'article' ? 'var(--info)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'article' ? 'var(--info)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        文章
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'bookmark')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'bookmark' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'bookmark' ? 'var(--success-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'bookmark' ? 'var(--success)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'bookmark' ? 'var(--success)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        书签
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'note')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'note' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'note' ? 'var(--warning-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'note' ? 'var(--warning)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'note' ? 'var(--warning)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        笔记
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'reference')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'reference' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'reference' ? 'var(--accent-purple-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'reference' ? 'var(--accent-purple)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'reference' ? 'var(--accent-purple)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        参考
+                      </button>
+                      <button
+                        onClick={() => handleInfoResourceFilter('resourceType', 'tutorial')}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          infoResourceTypeFilter === 'tutorial' 
+                            ? '' 
+                            : 'hover:btn-secondary'
+                        }`}
+                        style={{ 
+                          backgroundColor: infoResourceTypeFilter === 'tutorial' ? 'var(--accent-amber-bg)' : 'transparent',
+                          color: infoResourceTypeFilter === 'tutorial' ? 'var(--accent-amber)' : 'var(--text-primary)',
+                          border: `1px solid ${infoResourceTypeFilter === 'tutorial' ? 'var(--accent-amber)' : 'var(--border-default)'}`
+                        }}
+                      >
+                        教程
+                      </button>
+                    </>
+                  )}
                 </div>
               </nav>
               )}
@@ -1023,6 +1338,8 @@ export default function App() {
                 showNotification={showNotification}
                 isCollapsed={isSubtaskCollapsed}
                 showAllLevels={showAllLevels}
+                onToggleShowAllLevels={() => handleFilter('showAllLevels', (!showAllLevels).toString())}
+                onToggleCollapse={() => setIsSubtaskCollapsed(!isSubtaskCollapsed)}
               />
             )}
 
@@ -1031,7 +1348,6 @@ export default function App() {
               <InfoResourceList
                 onViewDetail={handleViewInfoResourceDetail}
                 onDelete={handleDeleteInfoResource}
-                onSearch={handleSearch}
                 showNotification={showNotification}
               />
             )}

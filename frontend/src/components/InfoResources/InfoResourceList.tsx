@@ -22,7 +22,6 @@ interface InfoResource {
 interface InfoResourceListProps {
   onViewDetail?: (resource: InfoResource) => void;
   onDelete?: (resourceId: number) => void;
-  onSearch?: (query: string) => void;
   showNotification?: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -68,7 +67,6 @@ const getStatusStyle = (color: string) => {
 export default function InfoResourceList({ 
   onViewDetail: _onViewDetail, 
   onDelete: _onDelete, 
-  onSearch, 
   showNotification 
 }: InfoResourceListProps) {
   const { isAuthenticated, accessToken } = useAuth();
@@ -91,6 +89,51 @@ export default function InfoResourceList({
   const [totalResources, setTotalResources] = useState(0);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<number | null>(null);
   const [resourceTypeDropdownOpen, setResourceTypeDropdownOpen] = useState<number | null>(null);
+  const [expandedResource, setExpandedResource] = useState<number | null>(null);
+  const [showStatsDetail, setShowStatsDetail] = useState(false);
+
+  // 计算信息资源统计数据
+  const calculateResourceStats = () => {
+    const totalResources = resources.length;
+    
+    // 获取本周开始时间
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // 统计各种状态的资源
+    const activeResources = resources.filter(resource => resource.status === 'active').length;
+    const archivedResources = resources.filter(resource => resource.status === 'archived').length;
+    
+    // 本周新增的资源
+    const thisWeekNew = resources.filter(resource => {
+      return new Date(resource.created_at) >= startOfWeek;
+    }).length;
+    
+    // 按类型统计
+    const generalResources = resources.filter(resource => resource.resource_type === 'general').length;
+    const articleResources = resources.filter(resource => resource.resource_type === 'article').length;
+    const bookmarkResources = resources.filter(resource => resource.resource_type === 'bookmark').length;
+    const noteResources = resources.filter(resource => resource.resource_type === 'note').length;
+    const referenceResources = resources.filter(resource => resource.resource_type === 'reference').length;
+    const tutorialResources = resources.filter(resource => resource.resource_type === 'tutorial').length;
+    
+    return {
+      totalResources,
+      activeResources,
+      archivedResources,
+      thisWeekNew,
+      generalResources,
+      articleResources,
+      bookmarkResources,
+      noteResources,
+      referenceResources,
+      tutorialResources
+    };
+  };
+
+  const stats = calculateResourceStats();
 
   // 获取信息资源列表
   const fetchResources = async (page = 1) => {
@@ -132,8 +175,8 @@ export default function InfoResourceList({
 
   // 创建新信息资源
   const createResource = async () => {
-    if (!newResourceTitle.trim() || !newResourceContent.trim()) {
-      showNotification?.('标题和内容不能为空', 'error');
+    if (!newResourceTitle.trim()) {
+      showNotification?.('标题不能为空', 'error');
       return;
     }
 
@@ -148,7 +191,7 @@ export default function InfoResourceList({
         },
         body: JSON.stringify({
           title: newResourceTitle.trim(),
-          content: newResourceContent.trim(),
+          content: newResourceContent.trim() || '',
           resource_type: newResourceType
         })
       });
@@ -182,8 +225,8 @@ export default function InfoResourceList({
     const content = editingResourceContent[resourceId];
     const resourceType = editingResourceType[resourceId];
 
-    if (!title?.trim() || !content?.trim()) {
-      showNotification?.('标题和内容不能为空', 'error');
+    if (!title?.trim()) {
+      showNotification?.('标题不能为空', 'error');
       return;
     }
 
@@ -198,7 +241,7 @@ export default function InfoResourceList({
         },
         body: JSON.stringify({
           title: title.trim(),
-          content: content.trim(),
+          content: content?.trim() || '',
           resource_type: resourceType
         })
       });
@@ -318,16 +361,29 @@ export default function InfoResourceList({
     }
   };
 
-  // 搜索处理
-  const handleSearch = () => {
-    onSearch?.(searchQuery);
-    fetchResources(1);
-  };
 
-  // 筛选处理
-  const handleFilterChange = () => {
-    fetchResources(1);
-  };
+  // 监听来自banner的搜索和筛选事件
+  useEffect(() => {
+    const handleSearch = (e: any) => {
+      setSearchQuery(e.detail.query);
+    };
+
+    const handleFilter = (e: any) => {
+      if (e.detail.type === 'status') {
+        setStatusFilter(e.detail.value);
+      } else if (e.detail.type === 'resourceType') {
+        setResourceTypeFilter(e.detail.value);
+      }
+    };
+
+    window.addEventListener('infoResourceSearch', handleSearch);
+    window.addEventListener('infoResourceFilter', handleFilter);
+
+    return () => {
+      window.removeEventListener('infoResourceSearch', handleSearch);
+      window.removeEventListener('infoResourceFilter', handleFilter);
+    };
+  }, []);
 
   // 初始化加载和筛选变化时重新加载 - 合并为一个useEffect避免重复调用
   useEffect(() => {
@@ -365,9 +421,8 @@ export default function InfoResourceList({
   // 保存编辑
   const saveEdit = async (resourceId: number) => {
     const title = editingResourceTitle[resourceId]?.trim();
-    const content = editingResourceContent[resourceId]?.trim();
     
-    if (!title || !content) return;
+    if (!title) return;
 
     try {
       await updateResource(resourceId);
@@ -389,6 +444,15 @@ export default function InfoResourceList({
       });
     } catch (error) {
       console.error('保存编辑失败:', error);
+    }
+  };
+
+  // 处理资源点击展开/收起
+  const handleResourceClick = (resource: InfoResource) => {
+    if (expandedResource === resource.id) {
+      setExpandedResource(null);
+    } else {
+      setExpandedResource(resource.id);
     }
   };
 
@@ -449,6 +513,110 @@ export default function InfoResourceList({
         <div className="flex items-center justify-between">
           <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>信息资源</h2>
           <div className="flex items-center space-x-3">
+            {/* 详细统计 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStatsDetail(!showStatsDetail)}
+                className="px-4 py-1 rounded-xl cursor-pointer hover:shadow-sm transition-all flex items-center space-x-2"
+                style={{ 
+                  backgroundColor: 'var(--card-background)',
+                }}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--text-primary)' }}>
+                      {stats.totalResources}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      总资源
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--success)' }}>
+                      {stats.activeResources}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      活跃
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-body-small font-bold" style={{ color: 'var(--primary)' }}>
+                      {stats.thisWeekNew}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      本周新增
+                    </div>
+                  </div>
+                </div>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {showStatsDetail ? '▲' : '▼'}
+                </span>
+              </button>
+              
+              {/* 展开的详细统计 */}
+              {showStatsDetail && (
+                <div 
+                  className="absolute top-full right-0 mt-2 p-4 card shadow-lg z-50 w-80"
+                  style={{ 
+                    backgroundColor: 'var(--card-background)',
+                    border: '1px solid var(--border-light)'
+                  }}
+                >
+                  <div className="space-y-3">
+                    {/* 资源状态分布 */}
+                    <div>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        资源状态分布
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-center">
+                        <div className="p-2 rounded" style={{ backgroundColor: 'var(--success-bg)' }}>
+                          <div className="text-sm font-bold" style={{ color: 'var(--success)' }}>{stats.activeResources}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>活跃</div>
+                        </div>
+                        <div className="p-2 rounded" style={{ backgroundColor: 'var(--warning-bg)' }}>
+                          <div className="text-sm font-bold" style={{ color: 'var(--warning)' }}>{stats.archivedResources}</div>
+                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>已归档</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 资源类型分布 */}
+                    <div>
+                      <h4 className="text-body-small font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        资源类型分布
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--primary)' }}></div>
+                          <span>通用: {stats.generalResources}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--info)' }}></div>
+                          <span>文章: {stats.articleResources}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--success)' }}></div>
+                          <span>书签: {stats.bookmarkResources}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--warning)' }}></div>
+                          <span>笔记: {stats.noteResources}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--accent-purple)' }}></div>
+                          <span>参考: {stats.referenceResources}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 rounded" style={{ backgroundColor: 'var(--accent-amber)' }}></div>
+                          <span>教程: {stats.tutorialResources}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setIsAddingResource(true)}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -459,59 +627,6 @@ export default function InfoResourceList({
         </div>
       </div>
 
-      {/* 搜索和筛选 */}
-      <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border-light)' }}>
-        <div className="flex flex-wrap gap-4 items-center">
-          {/* 搜索框 */}
-          <div className="flex-1 min-w-64">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="搜索信息资源..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                onClick={handleSearch}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                🔍
-              </button>
-            </div>
-          </div>
-
-          {/* 状态筛选 */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              handleFilterChange();
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">所有状态</option>
-            <option value="active">活跃</option>
-            <option value="archived">已归档</option>
-          </select>
-
-          {/* 资源类型筛选 */}
-          <select
-            value={resourceTypeFilter}
-            onChange={(e) => {
-              setResourceTypeFilter(e.target.value);
-              handleFilterChange();
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">所有类型</option>
-            {Object.entries(resourceTypeMap).map(([value, info]) => (
-              <option key={value} value={value}>{info.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
       {/* 添加新资源表单 */}
       {isAddingResource && (
@@ -624,19 +739,36 @@ export default function InfoResourceList({
             {resources.map((resource) => {
               const resourceTypeInfo = resourceTypeMap[resource.resource_type as keyof typeof resourceTypeMap] || resourceTypeMap.general;
               const statusInfo = statusMap[resource.status as keyof typeof statusMap] || statusMap.active;
+              const isExpanded = expandedResource === resource.id;
               
               return (
-                <div key={resource.id} className="group" style={{ borderColor: 'var(--border-light)' }}>
+                <div key={resource.id} className="group" 
+                  style={{ 
+                    borderColor: 'var(--border-light)',
+                    borderBottom: '1px solid var(--border-light)'
+                  }}>
                   {/* 资源单行显示 */}
                   <div 
                     className="flex items-center justify-between p-3 hover:bg-opacity-50 transition-all"
                     style={{ 
-                      backgroundColor: 'transparent',
+                      backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
                       paddingLeft: '1rem',
                       paddingRight: 0
                     }}
                   >
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      {/* 展开/收缩指示器 */}
+                      <button 
+                        className="text-xs cursor-pointer hover:opacity-70 transition-opacity" 
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResourceClick(resource);
+                        }}
+                      >
+                        {isExpanded ? '▼' : '▶'}
+                      </button>
+                      
                       {/* 资源内容 */}
                       <div className="flex-1 min-w-0">
                         {editingResource === resource.id ? (
@@ -775,6 +907,62 @@ export default function InfoResourceList({
                       </div>
                     </div>
                   </div>
+
+                  {/* 展开区域 - 显示详细内容编辑 */}
+                  {isExpanded && (
+                    <div className="pl-12 pr-6 py-4" style={{ backgroundColor: 'var(--background-secondary)', borderTop: '1px solid var(--border-light)' }}>
+                      <div className="space-y-4">
+                        {/* 内容编辑区域 */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-body-small font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                              📝 内容编辑：
+                            </label>
+                          </div>
+                          <textarea
+                            value={editingResourceContent[resource.id] || resource.content}
+                            onChange={(e) => setEditingResourceContent({ ...editingResourceContent, [resource.id]: e.target.value })}
+                            placeholder="输入资源内容..."
+                            className="w-full p-4 rounded-lg form-input text-body-small resize-none"
+                            rows={5}
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: 'var(--text-primary)',
+                              minHeight: '120px'
+                            }}
+                          />
+                        </div>
+
+                        {/* 操作按钮区域 */}
+                        <div className="flex items-center justify-between" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                saveEdit(resource.id);
+                              }}
+                              className="text-xs px-3 py-1 rounded btn-primary"
+                            >
+                              💾 保存更改
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelEditing();
+                              }}
+                              className="text-xs px-3 py-1 rounded btn-secondary"
+                            >
+                              ❌ 取消编辑
+                            </button>
+                          </div>
+                          <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                            {(editingResourceContent[resource.id] || resource.content).length} 字符
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

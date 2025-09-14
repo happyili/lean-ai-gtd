@@ -70,8 +70,8 @@ class User(db.Model):
         secret_key = self._get_secret_key()
         return jwt.encode(payload, secret_key, algorithm='HS256')
     
-    def generate_refresh_token(self, expires_in: int = 604800) -> str:
-        """生成刷新Token (默认7天)"""
+    def generate_refresh_token(self, expires_in: int = 15552000) -> str:
+        """生成刷新Token (默认6个月)"""
         token = secrets.token_urlsafe(32)
         self.refresh_token = token
         self.refresh_token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)

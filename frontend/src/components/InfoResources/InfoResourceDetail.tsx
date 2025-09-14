@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
-import { apiGet, apiPost, apiDelete } from '@/utils/api';
+import { useState } from 'react';
+import { infoResourcesApi } from '@/utils/api';
 import { 
-  formatDetailedDate,
-  DeleteButton
+  formatDetailedDate
 } from '@/utils/uiComponents';
 
 interface InfoResource {
@@ -84,28 +83,18 @@ export default function InfoResourceDetail({
 
   // 更新资源
   const handleUpdate = async () => {
-    if (!editedTitle.trim() || !editedContent.trim()) {
-      showNotification('标题和内容不能为空', 'error');
+    if (!editedTitle.trim()) {
+      showNotification('标题不能为空', 'error');
       return;
     }
 
     try {
-      const response = await fetch(`${process.env.VITE_API_BASE_URL || 'http://localhost:5050'}/api/info-resources/${resource.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: editedTitle.trim(),
-          content: editedContent.trim(),
-          resource_type: editedResourceType,
-          status: status
-        })
+      const response = await infoResourcesApi.update(resource.id, {
+        title: editedTitle.trim(),
+        content: editedContent.trim(),
+        resource_type: editedResourceType,
+        status: status
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
 
       const data = await response.json();
       showNotification('信息资源更新成功', 'success');
@@ -120,16 +109,7 @@ export default function InfoResourceDetail({
   // 删除资源
   const handleDelete = async () => {
     try {
-      const response = await fetch(`${process.env.VITE_API_BASE_URL || 'http://localhost:5050'}/api/info-resources/${resource.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      await infoResourcesApi.delete(resource.id);
 
       showNotification('信息资源删除成功', 'success');
       onDelete(resource.id);
@@ -143,16 +123,7 @@ export default function InfoResourceDetail({
   // 归档资源
   const handleArchive = async () => {
     try {
-      const response = await fetch(`/api/info-resources/${resource.id}/archive`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = await infoResourcesApi.archive(resource.id);
 
       const data = await response.json();
       showNotification('信息资源归档成功', 'success');
@@ -166,16 +137,7 @@ export default function InfoResourceDetail({
   // 恢复资源
   const handleRestore = async () => {
     try {
-      const response = await fetch(`/api/info-resources/${resource.id}/restore`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = await infoResourcesApi.restore(resource.id);
 
       const data = await response.json();
       showNotification('信息资源恢复成功', 'success');

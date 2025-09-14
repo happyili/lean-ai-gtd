@@ -183,6 +183,9 @@ def login():
         access_token = user.generate_access_token()
         refresh_token = user.generate_refresh_token()
         
+        # 提交refresh token到数据库
+        db.session.commit()
+        
         return jsonify({
             'message': '登录成功',
             'access_token': access_token,

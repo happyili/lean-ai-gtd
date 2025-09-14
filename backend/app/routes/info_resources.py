@@ -44,13 +44,7 @@ def create_info_resource():
             )
         
         content = data.get('content', '').strip()
-        if not content:
-            return create_error_response(
-                ErrorCodes.MISSING_REQUIRED_FIELD,
-                'content字段是必需的',
-                method='POST',
-                endpoint='/api/info-resources'
-            )
+        # 允许content为空，如果为空则使用空字符串
         
         if len(content) > 10000:
             return create_error_response(

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮移动测试 - 看子任务 + 折叠</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #faf8f5;
+            color: #1a1d23;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+
+        .test-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a1d23;
+            margin: 0;
+        }
+
+        .test-buttons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .test-button {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #d1d5db;
+            background: transparent;
+            color: #1a1d23;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .test-button:hover {
+            background: #f3f4f6;
+        }
+
+        .test-button.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .test-button.info-active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .instructions {
+            background: #f0f9ff;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #2563eb;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #f0fdf4;
+            border-left-color: #10b981;
+            color: #065f46;
+        }
+
+        .warning {
+            background: #fffbeb;
+            border-left-color: #f59e0b;
+            color: #92400e;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .before, .after {
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+
+        .before {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+
+        .after {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+
+        .before h4 {
+            color: #dc2626;
+            margin-top: 0;
+        }
+
+        .after h4 {
+            color: #16a34a;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="instructions success">
+            <h3>✅ 测试完成</h3>
+            <p><strong>"看子任务"和"折叠"按钮已成功移动到"任务管理"标题后！</strong></p>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h2 class="test-title">任务管理</h2>
+                    <div class="test-buttons">
+                        <button class="test-button info-active" onclick="toggleSubtask()">
+                            看子任务
+                        </button>
+                        <button class="test-button active" onclick="toggleCollapse()">
+                            折叠
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 12px; color: #6b7280;">📊 统计</span>
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <div class="before">
+                    <h4>❌ 修改前</h4>
+                    <ul>
+                        <li>"看子任务"按钮在banner筛选器区域</li>
+                        <li>"折叠"按钮在banner筛选器区域</li>
+                        <li>按钮分散在不同位置</li>
+                        <li>用户需要在不同区域寻找按钮</li>
+                    </ul>
+                </div>
+                <div class="after">
+                    <h4>✅ 修改后</h4>
+                    <ul>
+                        <li>"看子任务"按钮在"任务管理"标题后</li>
+                        <li>"折叠"按钮在"任务管理"标题后</li>
+                        <li>按钮集中在一起</li>
+                        <li>用户可以在同一位置找到所有相关按钮</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="instructions">
+                <h4>🔧 修改内容：</h4>
+                <ul>
+                    <li>✅ 从 <code>page.tsx</code> 的筛选器区域移除了"看子任务"按钮</li>
+                    <li>✅ 从 <code>page.tsx</code> 的筛选器区域移除了"折叠"按钮</li>
+                    <li>✅ 在 <code>TaskList.tsx</code> 的"任务管理"标题后添加了两个按钮</li>
+                    <li>✅ 添加了 <code>onToggleShowAllLevels</code> 和 <code>onToggleCollapse</code> 回调函数</li>
+                    <li>✅ 保持了原有的样式和功能</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="instructions warning">
+                <h4>🔍 验证步骤：</h4>
+                <ol>
+                    <li>打开 <a href="http://localhost:3001" target="_blank">http://localhost:3001</a></li>
+                    <li>登录到应用</li>
+                    <li>进入"任务管理"页面</li>
+                    <li>查看"任务管理"标题右侧是否有两个按钮："看子任务"和"折叠"</li>
+                    <li>分别点击两个按钮测试功能是否正常</li>
+                    <li>确认按钮样式和交互效果正确</li>
+                    <li>确认banner区域不再有这两个按钮</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 技术细节</h3>
+            <div style="background: #f8fafc; padding: 16px; border-radius: 6px; font-family: monospace; font-size: 14px;">
+                <div><strong>修改的文件：</strong></div>
+                <div>• frontend/src/app/page.tsx (移除两个按钮)</div>
+                <div>• frontend/src/components/QuickCapture/TaskList.tsx (添加两个按钮)</div>
+                <br>
+                <div><strong>新增的Props：</strong></div>
+                <div>• onToggleShowAllLevels?: () => void</div>
+                <div>• onToggleCollapse?: () => void</div>
+                <br>
+                <div><strong>按钮位置：</strong></div>
+                <div>• 从：banner筛选器区域</div>
+                <div>• 到：任务管理标题右侧（并排显示）</div>
+                <br>
+                <div><strong>按钮样式：</strong></div>
+                <div>• "看子任务"：激活时蓝色背景 (var(--info))</div>
+                <div>• "折叠"：激活时蓝色背景 (var(--primary))</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSubtask() {
+            const button = document.querySelector('.test-button.info-active');
+            button.classList.toggle('info-active');
+            const isActive = button.classList.contains('info-active');
+            button.textContent = isActive ? '看子任务' : '隐藏子任务';
+            button.title = isActive ? '隐藏子任务' : '显示子任务';
+        }
+
+        function toggleCollapse() {
+            const button = document.querySelector('.test-button.active');
+            button.classList.toggle('active');
+            const isActive = button.classList.contains('active');
+            button.textContent = isActive ? '折叠' : '展开';
+            button.title = isActive ? '展开子任务' : '折叠子任务';
+        }
+    </script>
+</body>
+</html>

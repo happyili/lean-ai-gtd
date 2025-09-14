@@ -73,7 +73,7 @@ export default function ReminderBanner({ accessToken }: ReminderBannerProps) {
         <div key={r.id}
              className="mx-auto max-w-7xl px-6 py-3 border rounded-lg mb-2 flex items-center justify-between animate-pulse"
              style={{
-               background: 'linear-gradient(90deg, rgba(255,243,230,1) 0%, rgba(255,255,255,1) 100%)',
+               background: 'var(--warning-bg)',
                borderColor: 'var(--warning)'
              }}
         >

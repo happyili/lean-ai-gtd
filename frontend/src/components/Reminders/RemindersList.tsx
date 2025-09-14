@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/utils/api';
+import { formatDate, DeleteButton } from '@/utils/uiComponents';
 
 type Frequency = 'daily' | 'weekly' | 'weekdays';
 
@@ -27,15 +28,19 @@ export default function RemindersList({ accessToken }: RemindersListProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [creating, setCreating] = useState(false);
   const [newItem, setNewItem] = useState<Partial<Reminder>>({
     content: '',
     frequency: 'daily',
     day_of_week: 0,
     remind_time: '09:00',
   });
-  const [editing, setEditing] = useState<Record<number, boolean>>({});
+  const [editingReminder, setEditingReminder] = useState<number | null>(null);
+  const [editingReminderContent, setEditingReminderContent] = useState<{[key: number]: string}>({});
+  const [editingReminderTime, setEditingReminderTime] = useState<{[key: number]: string}>({});
+  const [editingReminderFrequency, setEditingReminderFrequency] = useState<{[key: number]: Frequency}>({});
   const [savingId, setSavingId] = useState<number | 'new' | null>(null);
+  const [expandedReminder, setExpandedReminder] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
   const headersToken = accessToken || undefined;
 
@@ -76,7 +81,6 @@ export default function RemindersList({ accessToken }: RemindersListProps) {
       }, '创建提醒', headersToken);
       const data = await res.json();
       setItems([data.reminder, ...items]);
-      setCreating(false);
       setNewItem({ content: '', frequency: 'daily', day_of_week: 0, remind_time: '09:00' });
     } catch (e) {
       setError(e instanceof Error ? e.message : '创建失败');
@@ -85,18 +89,104 @@ export default function RemindersList({ accessToken }: RemindersListProps) {
     }
   };
 
-  const onUpdate = async (r: Reminder) => {
-    setSavingId(r.id);
+  // 取消编辑提醒
+  const cancelEditingReminder = () => {
+    setEditingReminder(null);
+    setEditingReminderContent({});
+    setEditingReminderTime({});
+    setEditingReminderFrequency({});
+  };
+
+  // 保存提醒内容编辑
+  const saveReminderContentEdit = async (reminderId: number) => {
+    const newContent = editingReminderContent[reminderId]?.trim();
+    if (!newContent) return;
+
+    setSavingId(reminderId);
     try {
-      const res = await apiPut(`/api/reminders/${r.id}`, {
-        content: r.content,
-        frequency: r.frequency,
-        day_of_week: r.frequency === 'weekly' ? r.day_of_week : null,
-        remind_time: r.remind_time,
-      }, '更新提醒', headersToken);
+      const reminder = items.find(it => it.id === reminderId);
+      if (!reminder) return;
+
+      const res = await apiPut(`/api/reminders/${reminderId}`, {
+        content: newContent,
+        frequency: reminder.frequency,
+        day_of_week: reminder.frequency === 'weekly' ? reminder.day_of_week : null,
+        remind_time: reminder.remind_time,
+      }, '更新提醒内容', headersToken);
       const data = await res.json();
-      setItems(items.map(it => it.id === r.id ? data.reminder : it));
-      setEditing({ ...editing, [r.id]: false });
+      setItems(items.map(it => it.id === reminderId ? data.reminder : it));
+
+      // 结束编辑状态
+      setEditingReminder(null);
+      setEditingReminderContent(prev => {
+        const newState = { ...prev };
+        delete newState[reminderId];
+        return newState;
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '更新失败');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // 保存提醒时间编辑
+  const saveReminderTimeEdit = async (reminderId: number) => {
+    const newTime = editingReminderTime[reminderId];
+    if (!newTime) return;
+
+    setSavingId(reminderId);
+    try {
+      const reminder = items.find(it => it.id === reminderId);
+      if (!reminder) return;
+
+      const res = await apiPut(`/api/reminders/${reminderId}`, {
+        content: reminder.content,
+        frequency: reminder.frequency,
+        day_of_week: reminder.frequency === 'weekly' ? reminder.day_of_week : null,
+        remind_time: newTime,
+      }, '更新提醒时间', headersToken);
+      const data = await res.json();
+      setItems(items.map(it => it.id === reminderId ? data.reminder : it));
+
+      // 结束编辑状态
+      setEditingReminderTime(prev => {
+        const newState = { ...prev };
+        delete newState[reminderId];
+        return newState;
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '更新失败');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  // 保存提醒频次编辑
+  const saveReminderFrequencyEdit = async (reminderId: number) => {
+    const newFrequency = editingReminderFrequency[reminderId];
+    if (!newFrequency) return;
+
+    setSavingId(reminderId);
+    try {
+      const reminder = items.find(it => it.id === reminderId);
+      if (!reminder) return;
+
+      const res = await apiPut(`/api/reminders/${reminderId}`, {
+        content: reminder.content,
+        frequency: newFrequency,
+        day_of_week: newFrequency === 'weekly' ? reminder.day_of_week : null,
+        remind_time: reminder.remind_time,
+      }, '更新提醒频次', headersToken);
+      const data = await res.json();
+      setItems(items.map(it => it.id === reminderId ? data.reminder : it));
+
+      // 结束编辑状态
+      setEditingReminderFrequency(prev => {
+        const newState = { ...prev };
+        delete newState[reminderId];
+        return newState;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : '更新失败');
     } finally {
@@ -131,11 +221,11 @@ export default function RemindersList({ accessToken }: RemindersListProps) {
   };
 
   const onDelete = async (id: number) => {
-    if (!confirm('确定删除该提醒吗？')) return;
     setSavingId(id);
     try {
       await apiDelete(`/api/reminders/${id}`, '删除提醒', headersToken);
       setItems(items.filter(it => it.id !== id));
+      setDeleteConfirm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '删除失败');
     } finally {
@@ -143,200 +233,432 @@ export default function RemindersList({ accessToken }: RemindersListProps) {
     }
   };
 
+  const getFrequencyText = (reminder: Reminder) => {
+    switch (reminder.frequency) {
+      case 'daily': return '每日';
+      case 'weekdays': return '工作日';
+      case 'weekly': return `每周${weekdays[reminder.day_of_week ?? 0]}`;
+      default: return '未知';
+    }
+  };
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'active':
+        return {
+          backgroundColor: 'var(--success-bg)',
+          color: 'var(--success)',
+          border: '1px solid var(--success)'
+        };
+      case 'paused':
+        return {
+          backgroundColor: 'var(--warning-bg)',
+          color: 'var(--warning)',
+          border: '1px solid var(--warning)'
+        };
+      default:
+        return {
+          backgroundColor: 'var(--background-secondary)',
+          color: 'var(--text-muted)',
+          border: '1px solid var(--border-default)'
+        };
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>定时提醒</h2>
-        <div className="flex items-center space-x-2">
-          <input
-            placeholder="搜索提醒内容..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="px-3 py-1 rounded-lg text-sm form-input"
-            style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)', color: 'var(--text-primary)' }}
-          />
-          <button
-            onClick={load}
-            className="px-3 py-1 rounded-lg text-sm hover:btn-secondary"
-            style={{ border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
-          >刷新</button>
-          <button
-            onClick={() => setCreating(true)}
-            className="px-4 py-2 rounded-lg text-sm text-white"
-            style={{ backgroundColor: 'var(--primary)' }}
-          >新建提醒</button>
+    <div className="h-full flex flex-col card">
+      {/* 头部 - 参考TaskList风格 */}
+      <div className="px-6 py-3" style={{ borderBottom: '1px solid var(--border-light)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h2 className="text-heading-2" style={{ color: 'var(--text-primary)' }}>定时提醒</h2>
+          </div>
+          <div className="flex items-center space-x-3">
+            {/* 搜索框 */}
+            <div className="relative">
+              <input
+                placeholder="搜索提醒内容..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="px-3 py-1 rounded-lg text-sm form-input"
+                style={{ 
+                  backgroundColor: 'var(--card-background)', 
+                  border: '1px solid var(--border-light)', 
+                  color: 'var(--text-primary)',
+                  width: '200px'
+                }}
+              />
+            </div>
+            {/* 刷新按钮 */}
+            <button
+              onClick={load}
+              className="px-3 py-1 rounded-lg text-xs font-medium transition-all hover:btn-secondary"
+              style={{ border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+              title="刷新提醒列表"
+            >
+              🔄 刷新
+            </button>
+          </div>
         </div>
       </div>
 
-      {error && <div className="px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded mb-3">{error}</div>}
+      {/* 内容区域 */}
+      <div className="flex-1 overflow-y-auto">
+        {error && (
+          <div className="mx-6 mt-4 px-3 py-2 rounded-lg" style={{ 
+            backgroundColor: 'var(--error-bg)', 
+            color: 'var(--error)', 
+            border: '1px solid var(--error)' 
+          }}>
+            {error}
+          </div>
+        )}
 
-      {creating && (
-        <div className="mb-4 p-4 rounded-lg border" style={{ borderColor: 'var(--border-default)', background: 'var(--card-background)' }}>
-          <div className="flex items-center gap-3 flex-wrap">
-            <input
-              placeholder="提醒内容"
-              className="px-3 py-2 rounded-lg text-sm form-input flex-1 min-w-[220px]"
-              value={newItem.content || ''}
-              onChange={e => setNewItem({ ...newItem, content: e.target.value })}
-            />
-            <select
-              className="px-3 py-2 rounded-lg text-sm"
-              value={newItem.frequency as string}
-              onChange={e => setNewItem({ ...newItem, frequency: e.target.value as Frequency })}
-            >
-              <option value="daily">每日</option>
-              <option value="weekdays">每个工作日</option>
-              <option value="weekly">每周</option>
-            </select>
-            {newItem.frequency === 'weekly' && (
+        {/* 始终显示的提醒输入框 */}
+        <div className="p-2 border-b" style={{ borderColor: 'var(--border-light)', backgroundColor: 'var(--background-secondary)' }}>
+          <div className="flex items-center space-x-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={newItem.content || ''}
+                onChange={(e) => setNewItem({ ...newItem, content: e.target.value })}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    onCreate();
+                  }
+                }}
+                placeholder="▶ 输入新提醒内容..."
+                className="w-full px-2 py-1 rounded-lg form-input text-body"
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
               <select
-                className="px-3 py-2 rounded-lg text-sm"
-                value={String(newItem.day_of_week ?? 0)}
-                onChange={e => setNewItem({ ...newItem, day_of_week: Number(e.target.value) })}
+                className="px-2 py-1 rounded text-xs"
+                value={newItem.frequency as string}
+                onChange={e => setNewItem({ ...newItem, frequency: e.target.value as Frequency })}
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
               >
-                {weekdays.map((w, idx) => (
-                  <option key={idx} value={idx}>{w}</option>
-                ))}
+                <option value="daily">每日</option>
+                <option value="weekdays">工作日</option>
+                <option value="weekly">每周</option>
               </select>
-            )}
-            <input
-              type="time"
-              className="px-3 py-2 rounded-lg text-sm"
-              value={newItem.remind_time || '09:00'}
-              onChange={e => setNewItem({ ...newItem, remind_time: e.target.value })}
-            />
-            <button
-              disabled={savingId === 'new'}
-              onClick={onCreate}
-              className="px-4 py-2 rounded-lg text-sm text-white disabled:opacity-50"
-              style={{ backgroundColor: 'var(--success)' }}
-            >保存</button>
-            <button
-              onClick={() => setCreating(false)}
-              className="px-3 py-2 rounded-lg text-sm"
-              style={{ border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
-            >取消</button>
+              {newItem.frequency === 'weekly' && (
+                <select
+                  className="px-2 py-1 rounded text-xs"
+                  value={String(newItem.day_of_week ?? 0)}
+                  onChange={e => setNewItem({ ...newItem, day_of_week: Number(e.target.value) })}
+                  style={{
+                    backgroundColor: 'var(--card-background)',
+                    border: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  {weekdays.map((w, idx) => (
+                    <option key={idx} value={idx}>{w}</option>
+                  ))}
+                </select>
+              )}
+              <input
+                type="time"
+                className="px-2 py-1 rounded text-xs"
+                value={newItem.remind_time || '09:00'}
+                onChange={e => setNewItem({ ...newItem, remind_time: e.target.value })}
+                style={{
+                  backgroundColor: 'var(--card-background)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
+              />
+              <button
+                disabled={savingId === 'new' || !newItem.content?.trim()}
+                onClick={onCreate}
+                className="px-3 py-1 rounded text-xs text-white disabled:opacity-50"
+                style={{ backgroundColor: 'var(--success)' }}
+                title="保存提醒"
+              >
+                保存
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 mt-2">加载中...</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(r => (
-            <div key={r.id} className="p-4 rounded-lg border flex items-center justify-between"
-                 style={{ borderColor: 'var(--border-default)', background: 'var(--card-background)' }}>
-              <div className="flex items-center gap-3 flex-wrap">
-                {!editing[r.id] ? (
-                  <>
-                    <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.content}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {r.frequency === 'daily' && '每日'}
-                      {r.frequency === 'weekdays' && '工作日'}
-                      {r.frequency === 'weekly' && `每周${weekdays[r.day_of_week ?? 0]}`}
-                      <span className="ml-2">{r.remind_time} UTC</span>
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded ${r.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {r.status === 'active' ? '启用' : '暂停'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <input
-                      className="px-3 py-2 rounded-lg text-sm form-input min-w-[220px]"
-                      value={r.content}
-                      onChange={e => setItems(items.map(it => it.id === r.id ? { ...it, content: e.target.value } : it))}
-                    />
-                    <select
-                      className="px-3 py-2 rounded-lg text-sm"
-                      value={r.frequency}
-                      onChange={e => setItems(items.map(it => it.id === r.id ? { ...it, frequency: e.target.value as Frequency } : it))}
-                    >
-                      <option value="daily">每日</option>
-                      <option value="weekdays">每个工作日</option>
-                      <option value="weekly">每周</option>
-                    </select>
-                    {r.frequency === 'weekly' && (
-                      <select
-                        className="px-3 py-2 rounded-lg text-sm"
-                        value={String(r.day_of_week ?? 0)}
-                        onChange={e => setItems(items.map(it => it.id === r.id ? { ...it, day_of_week: Number(e.target.value) } : it))}
+        {/* 提醒列表 */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-32" style={{ color: 'var(--text-muted)' }}>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="text-body-small mt-2">加载中...</div>
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: 'var(--border-light)' }}>
+            {filtered.map((reminder) => {
+              const isExpanded = expandedReminder === reminder.id;
+              const isEditingContent = editingReminder === reminder.id;
+              const isEditingTime = editingReminderTime[reminder.id] !== undefined;
+              const isEditingFrequency = editingReminderFrequency[reminder.id] !== undefined;
+              
+              return (
+                <div key={reminder.id} className="group" 
+                  style={{ 
+                    borderColor: 'var(--border-light)',
+                    borderBottom:'1px solid var(--border-light)'
+                  }}>
+                  {/* 提醒单行显示 */}
+                  <div 
+                    className="flex items-center justify-between p-3 hover:bg-opacity-50 transition-all"
+                    style={{ 
+                      backgroundColor: isExpanded ? 'var(--background-secondary)' : 'transparent',
+                      paddingLeft: '1rem',
+                      paddingRight: 0
+                    }}
+                  >
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      {/* 展开/收缩指示器 */}
+                      <button 
+                        className="text-xs cursor-pointer hover:opacity-70 transition-opacity" 
+                        style={{ color: 'var(--text-muted)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedReminder(isExpanded ? null : reminder.id);
+                        }}
                       >
-                        {weekdays.map((w, idx) => (
-                          <option key={idx} value={idx}>{w}</option>
-                        ))}
-                      </select>
-                    )}
-                    <input
-                      type="time"
-                      className="px-3 py-2 rounded-lg text-sm"
-                      value={r.remind_time}
-                      onChange={e => setItems(items.map(it => it.id === r.id ? { ...it, remind_time: e.target.value } : it))}
-                    />
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {!editing[r.id] ? (
-                  <>
-                    <button
-                      onClick={() => setEditing({ ...editing, [r.id]: true })}
-                      className="px-3 py-1 rounded-lg text-sm hover:btn-secondary"
-                      style={{ border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
-                    >编辑</button>
-                    {r.status === 'active' ? (
-                      <button
-                        disabled={savingId === r.id}
-                        onClick={() => onPause(r.id)}
-                        className="px-3 py-1 rounded-lg text-sm text-white disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--warning)' }}
-                      >暂停</button>
-                    ) : (
-                      <button
-                        disabled={savingId === r.id}
-                        onClick={() => onResume(r.id)}
-                        className="px-3 py-1 rounded-lg text-sm text-white disabled:opacity-50"
-                        style={{ backgroundColor: 'var(--success)' }}
-                      >恢复</button>
-                    )}
-                    <button
-                      disabled={savingId === r.id}
-                      onClick={() => onDelete(r.id)}
-                      className="px-3 py-1 rounded-lg text-sm text-white disabled:opacity-50"
-                      style={{ backgroundColor: 'var(--error)' }}
-                    >删除</button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      disabled={savingId === r.id}
-                      onClick={() => onUpdate(r)}
-                      className="px-3 py-1 rounded-lg text-sm text-white disabled:opacity-50"
-                      style={{ backgroundColor: 'var(--success)' }}
-                    >保存</button>
-                    <button
-                      onClick={() => setEditing({ ...editing, [r.id]: false })}
-                      className="px-3 py-1 rounded-lg text-sm"
-                      style={{ border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
-                    >取消</button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
+                        {isExpanded ? '▼' : '▶'}
+                      </button>
 
-          {filtered.length === 0 && !loading && (
-            <div className="text-center py-10">
-              <div className="text-6xl mb-2">⏰</div>
-              <div className="text-gray-600">暂无提醒，点击右上角“新建提醒”添加一个</div>
-            </div>
-          )}
-        </div>
-      )}
+                      {/* 提醒图标 */}
+                      <span className="text-lg">⏰</span>
+
+                      {/* 提醒内容 */}
+                      <div className="flex-1 min-w-0">
+                        {isEditingContent ? (
+                          <input
+                            type="text"
+                            value={editingReminderContent[reminder.id] || reminder.content}
+                            onChange={(e) => setEditingReminderContent(prev => ({
+                              ...prev,
+                              [reminder.id]: e.target.value
+                            }))}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                saveReminderContentEdit(reminder.id);
+                              } else if (e.key === 'Escape') {
+                                cancelEditingReminder();
+                              }
+                            }}
+                            onBlur={() => saveReminderContentEdit(reminder.id)}
+                            className="w-full px-2 py-1 text-sm font-medium rounded form-input"
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: 'var(--text-primary)'
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="text-sm font-medium cursor-pointer hover:bg-opacity-50 px-2 py-1 rounded transition-colors"
+                            style={{ color: 'var(--text-primary)' }}
+                            onClick={() => {
+                              setEditingReminder(reminder.id);
+                              setEditingReminderContent(prev => ({
+                                ...prev,
+                                [reminder.id]: reminder.content
+                              }));
+                            }}
+                          >
+                            {reminder.content}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 提醒信息 */}
+                      <div className="flex items-center space-x-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {isEditingFrequency ? (
+                          <select
+                            value={editingReminderFrequency[reminder.id] || reminder.frequency}
+                            onChange={(e) => setEditingReminderFrequency(prev => ({
+                              ...prev,
+                              [reminder.id]: e.target.value as Frequency
+                            }))}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                saveReminderFrequencyEdit(reminder.id);
+                              } else if (e.key === 'Escape') {
+                                setEditingReminderFrequency(prev => {
+                                  const newState = { ...prev };
+                                  delete newState[reminder.id];
+                                  return newState;
+                                });
+                              }
+                            }}
+                            onBlur={() => saveReminderFrequencyEdit(reminder.id)}
+                            className="px-2 py-1 rounded text-xs form-input"
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: 'var(--text-primary)'
+                            }}
+                            autoFocus
+                          >
+                            <option value="daily">每日</option>
+                            <option value="weekdays">工作日</option>
+                            <option value="weekly">每周</option>
+                          </select>
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-opacity-50 px-2 py-1 rounded transition-colors"
+                            onClick={() => {
+                              setEditingReminderFrequency(prev => ({
+                                ...prev,
+                                [reminder.id]: reminder.frequency
+                              }));
+                            }}
+                          >
+                            {getFrequencyText(reminder)}
+                          </span>
+                        )}
+                        {isEditingTime ? (
+                          <input
+                            type="time"
+                            value={editingReminderTime[reminder.id] || reminder.remind_time}
+                            onChange={(e) => setEditingReminderTime(prev => ({
+                              ...prev,
+                              [reminder.id]: e.target.value
+                            }))}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                saveReminderTimeEdit(reminder.id);
+                              } else if (e.key === 'Escape') {
+                                setEditingReminderTime(prev => {
+                                  const newState = { ...prev };
+                                  delete newState[reminder.id];
+                                  return newState;
+                                });
+                              }
+                            }}
+                            onBlur={() => saveReminderTimeEdit(reminder.id)}
+                            className="px-2 py-1 rounded text-xs form-input"
+                            style={{
+                              backgroundColor: 'var(--card-background)',
+                              border: '1px solid var(--border-light)',
+                              color: 'var(--text-primary)'
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span
+                            className="cursor-pointer hover:bg-opacity-50 px-2 py-1 rounded transition-colors"
+                            onClick={() => {
+                              setEditingReminderTime(prev => ({
+                                ...prev,
+                                [reminder.id]: reminder.remind_time
+                              }));
+                            }}
+                          >
+                            {reminder.remind_time} UTC
+                          </span>
+                        )}
+                        <span 
+                          className="px-2 py-1 rounded text-xs font-medium"
+                          style={getStatusStyle(reminder.status)}
+                        >
+                          {reminder.status === 'active' ? '启用' : '暂停'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 操作按钮 */}
+                    <div className="flex items-center px-2 space-x-1 transition-opacity">
+                      {reminder.status === 'active' ? (
+                        <button
+                          disabled={savingId === reminder.id}
+                          onClick={() => onPause(reminder.id)}
+                          className="px-3 py-1 rounded-md text-xs text-white disabled:opacity-50"
+                          style={{ backgroundColor: 'var(--warning)' }}
+                          title="暂停提醒"
+                        >
+                          暂停
+                        </button>
+                      ) : (
+                        <button
+                          disabled={savingId === reminder.id}
+                          onClick={() => onResume(reminder.id)}
+                          className="px-3 py-1 rounded-md text-xs text-white disabled:opacity-50"
+                          style={{ backgroundColor: 'var(--success)' }}
+                          title="恢复提醒"
+                        >
+                          恢复
+                        </button>
+                      )}
+                      <DeleteButton
+                        id={reminder.id}
+                        deleteConfirm={deleteConfirm}
+                        onDelete={(id) => {
+                          onDelete(id);
+                        }}
+                        onSetDeleteConfirm={(id) => {
+                          setDeleteConfirm(id);
+                        }}
+                        size="small"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 展开详情区域 */}
+                  {isExpanded && (
+                    <div className="px-6 py-3" style={{ 
+                      backgroundColor: 'var(--background-secondary)',
+                      borderTop: '1px solid var(--border-light)'
+                    }}>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>创建时间：</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            {reminder.created_at ? formatDate(reminder.created_at) : '未知'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>更新时间：</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            {reminder.updated_at ? formatDate(reminder.updated_at) : '未知'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>最后触发：</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>
+                            {reminder.last_triggered_date ? formatDate(reminder.last_triggered_date) : '未触发'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>提醒频率：</span>
+                          <span style={{ color: 'var(--text-tertiary)' }}>{getFrequencyText(reminder)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 空状态 */}
+            {filtered.length === 0 && !loading && (
+              <div className="flex flex-col items-center justify-center h-32" style={{ color: 'var(--text-muted)' }}>
+                <div className="text-4xl mb-3">⏰</div>
+                <div className="text-body-large font-semibold">暂无提醒</div>
+                <div className="text-body-small mt-1">在上方输入框中添加新提醒</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
