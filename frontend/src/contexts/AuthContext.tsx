@@ -54,7 +54,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // 初始化认证状态
   useEffect(() => {
-    initializeAuth();
+    let isMounted = true;
+    
+    const initAuth = async () => {
+      await initializeAuth();
+    };
+    
+    initAuth();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 初始化认证

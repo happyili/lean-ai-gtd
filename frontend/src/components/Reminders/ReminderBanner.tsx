@@ -18,20 +18,37 @@ export default function ReminderBanner({ accessToken }: ReminderBannerProps) {
   const loadDue = async () => {
     // respect snooze
     if (Date.now() < hiddenUntil) return;
+
     try {
       const res = await apiGet('/api/reminders/due', '获取到期提醒', token);
       const data = await res.json();
+
       setDue((data.reminders || []).slice(0, 3));
-    } catch {
-      // ignore
+    } catch (error) {
+
     }
   };
 
   useEffect(() => {
-    loadDue();
-    const t = setInterval(loadDue, 60000);
+    // 只有在 accessToken 存在时才加载
+    if (accessToken) {
+      loadDue();
+    }
+    
+    const t = setInterval(() => {
+      if (accessToken) {
+        loadDue();
+      }
+    }, 60000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  // 单独处理 hiddenUntil 变化，避免重复调用
+  useEffect(() => {
+    if (accessToken && hiddenUntil > 0 && Date.now() >= hiddenUntil) {
+      loadDue();
+    }
   }, [hiddenUntil, accessToken]);
 
   const acknowledge = async (id: number) => {

@@ -329,16 +329,21 @@ export default function InfoResourceList({
     fetchResources(1);
   };
 
-  // 初始化加载
+  // 初始化加载和筛选变化时重新加载 - 合并为一个useEffect避免重复调用
   useEffect(() => {
-    fetchResources(1);
-  }, []);
-
-  // 筛选变化时重新加载
-  useEffect(() => {
-    if (statusFilter !== 'all' || resourceTypeFilter !== 'all') {
-      fetchResources(1);
-    }
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (isMounted) {
+        await fetchResources(1);
+      }
+    };
+    
+    fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [statusFilter, resourceTypeFilter]);
 
   // 开始编辑
