@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { infoResourcesApi } from '@/utils/api';
+import { apiPut, apiDelete, apiPost } from '@/utils/api';
 import { 
   formatDetailedDate
 } from '@/utils/uiComponents';
@@ -89,12 +89,12 @@ export default function InfoResourceDetail({
     }
 
     try {
-      const response = await infoResourcesApi.update(resource.id, {
+      const response = await apiPut(`/api/info-resources/${resource.id}`, {
         title: editedTitle.trim(),
         content: editedContent.trim(),
         resource_type: editedResourceType,
         status: status
-      });
+      }, '更新信息资源');
 
       const data = await response.json();
       showNotification('信息资源更新成功', 'success');
@@ -109,7 +109,7 @@ export default function InfoResourceDetail({
   // 删除资源
   const handleDelete = async () => {
     try {
-      await infoResourcesApi.delete(resource.id);
+      await apiDelete(`/api/info-resources/${resource.id}`, '删除信息资源');
 
       showNotification('信息资源删除成功', 'success');
       onDelete(resource.id);
@@ -123,7 +123,7 @@ export default function InfoResourceDetail({
   // 归档资源
   const handleArchive = async () => {
     try {
-      const response = await infoResourcesApi.archive(resource.id);
+      const response = await apiPost(`/api/info-resources/${resource.id}/archive`, {}, '归档信息资源');
 
       const data = await response.json();
       showNotification('信息资源归档成功', 'success');
@@ -137,7 +137,7 @@ export default function InfoResourceDetail({
   // 恢复资源
   const handleRestore = async () => {
     try {
-      const response = await infoResourcesApi.restore(resource.id);
+      const response = await apiPost(`/api/info-resources/${resource.id}/restore`, {}, '恢复信息资源');
 
       const data = await response.json();
       showNotification('信息资源恢复成功', 'success');

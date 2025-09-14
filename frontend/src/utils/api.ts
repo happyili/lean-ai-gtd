@@ -217,60 +217,6 @@ export const apiDeletePublic = async (url: string, operation: string): Promise<R
   return apiFetch(url, { method: 'DELETE' }, operation);
 };
 
-/**
- * Info Resources API 专用函数
- */
-export const infoResourcesApi = {
-  /**
-   * 获取信息资源列表
-   */
-  getList: async (params: Record<string, string | number | boolean> = {}, token?: string): Promise<Response> => {
-    const url = buildUrl('/api/info-resources', params);
-    return apiGet(url.replace(API_BASE_URL, ''), '获取信息资源列表', token);
-  },
-
-  /**
-   * 获取单个信息资源
-   */
-  getById: async (id: number, token?: string): Promise<Response> => {
-    return apiGet(`/api/info-resources/${id}`, '获取信息资源详情', token);
-  },
-
-  /**
-   * 创建信息资源
-   */
-  create: async (data: any, token?: string): Promise<Response> => {
-    return apiPost('/api/info-resources', data, '创建信息资源', token);
-  },
-
-  /**
-   * 更新信息资源
-   */
-  update: async (id: number, data: any, token?: string): Promise<Response> => {
-    return apiPut(`/api/info-resources/${id}`, data, '更新信息资源', token);
-  },
-
-  /**
-   * 删除信息资源
-   */
-  delete: async (id: number, token?: string): Promise<Response> => {
-    return apiDelete(`/api/info-resources/${id}`, '删除信息资源', token);
-  },
-
-  /**
-   * 归档信息资源
-   */
-  archive: async (id: number, token?: string): Promise<Response> => {
-    return apiPost(`/api/info-resources/${id}/archive`, {}, '归档信息资源', token);
-  },
-
-  /**
-   * 恢复信息资源
-   */
-  restore: async (id: number, token?: string): Promise<Response> => {
-    return apiPost(`/api/info-resources/${id}/restore`, {}, '恢复信息资源', token);
-  }
-};
 
 export default {
   handleApiError,
@@ -283,5 +229,4 @@ export default {
   apiDelete,
   apiDeletePublic,
   buildUrl,
-  infoResourcesApi,
 };
