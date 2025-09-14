@@ -37,7 +37,7 @@ def create_app():
     
     # 添加全局请求日志记录
     @app.before_request
-    def @app.before_request():
+    def before_request():
         from flask import request
         import os
         import json
