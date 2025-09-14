@@ -695,7 +695,8 @@ export default function App() {
                             backgroundColor: 'var(--card-background)',
                             border: '1px solid var(--border-light)',
                             color: 'var(--text-primary)',
-                            minWidth: '100px',
+                            width: '90px',
+                            minWidth: '50px',
                             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                           }}
                           onChange={(e) => {
@@ -869,21 +870,6 @@ export default function App() {
                         待办
                       </button>
                       <button
-                        onClick={() => handleFilter('status', 'active')}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                          statusFilter === 'active' 
-                            ? '' 
-                            : 'hover:btn-secondary'
-                        }`}
-                        style={{ 
-                          backgroundColor: statusFilter === 'active' ? 'var(--info-bg)' : 'transparent',
-                          color: statusFilter === 'active' ? 'var(--info)' : 'var(--text-primary)',
-                          border: `1px solid ${statusFilter === 'active' ? 'var(--info)' : 'var(--border-default)'}`
-                        }}
-                      >
-                        进行中
-                      </button>
-                      <button
                         onClick={() => handleFilter('status', 'completed')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === 'completed' 
@@ -896,37 +882,7 @@ export default function App() {
                           border: `1px solid ${statusFilter === 'completed' ? 'var(--success)' : 'var(--border-default)'}`
                         }}
                       >
-                        已完成
-                      </button>
-                      <button
-                        onClick={() => handleFilter('status', 'paused')}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                          statusFilter === 'paused' 
-                            ? '' 
-                            : 'hover:btn-secondary'
-                        }`}
-                        style={{ 
-                          backgroundColor: statusFilter === 'paused' ? 'var(--warning-bg)' : 'transparent',
-                          color: statusFilter === 'paused' ? 'var(--warning)' : 'var(--text-primary)',
-                          border: `1px solid ${statusFilter === 'paused' ? 'var(--warning)' : 'var(--border-default)'}`
-                        }}
-                      >
-                        暂停
-                      </button>
-                      <button
-                        onClick={() => handleFilter('status', 'cancelled')}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                          statusFilter === 'cancelled' 
-                            ? '' 
-                            : 'hover:btn-secondary'
-                        }`}
-                        style={{ 
-                          backgroundColor: statusFilter === 'cancelled' ? 'var(--error-bg)' : 'transparent',
-                          color: statusFilter === 'cancelled' ? 'var(--error)' : 'var(--text-primary)',
-                          border: `1px solid ${statusFilter === 'cancelled' ? 'var(--error)' : 'var(--border-default)'}`
-                        }}
-                      >
-                        已取消
+                        完成
                       </button>
                     </>
                   )}

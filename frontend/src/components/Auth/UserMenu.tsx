@@ -212,6 +212,52 @@ export default function UserMenu() {
 
   return (
     <div className="relative" ref={dropdownRef}>
+      <style>
+        {`
+          @keyframes gradientShift {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+          
+          @keyframes fadeInScale {
+            0% {
+              opacity: 0;
+              transform: scale(0.9) translateY(-10px);
+              filter: blur(2px);
+            }
+            20% {
+              opacity: 0.8;
+              transform: scale(0.95) translateY(-5px);
+              filter: blur(1px);
+            }
+            100% {
+              opacity: 1;
+              transform: scale(1) translateY(0px);
+              filter: blur(0px);
+            }
+          }
+          
+          @keyframes fadeOutScale {
+            0% {
+              opacity: 1;
+              transform: scale(1) translateY(0px);
+              filter: blur(0px);
+            }
+            100% {
+              opacity: 0;
+              transform: scale(0.9) translateY(-10px);
+              filter: blur(2px);
+            }
+          }
+        `}
+      </style>
       {/* 永久挂载的隐藏文件输入，用于导入任务，避免下拉关闭时卸载导致 onChange 丢失 */}
       <input
         ref={fileInputRef}
@@ -223,7 +269,7 @@ export default function UserMenu() {
       {/* 用户头像和名称按钮 */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-1 text-xs font-medium transition-all rounded-md hover:opacity-80 active:scale-95"
+        className="flex items-center space-x-2 px-3 py-2 text-xs font-medium transition-all rounded-md hover:opacity-80 active:scale-95"
         style={{ 
           color: 'var(--text-secondary)',
           backgroundColor: 'transparent',
@@ -270,105 +316,114 @@ export default function UserMenu() {
       </button>
 
       {/* 下拉菜单 */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 card shadow-lg z-50" style={{ backgroundColor: 'var(--card-background)' }}>
-          {/* 用户信息头部 */}
-          <div className="p-4 border-b" style={{ borderColor: 'var(--border-light)' }}>
-            <div className="flex items-center space-x-3">
-              {/* 大头像 */}
-              {getAvatarUrl() ? (
-                <img
-                  src={getAvatarUrl()}
-                  alt={getDisplayName()}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white text-lg font-medium">
-                    {getInitials()}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                  {getDisplayName()}
-                </div>
-                <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                  {user.email}
-                </div>
-                {user.is_admin && (
-                  <div className="text-xs text-blue-600 font-medium mt-1">
-                    管理员
+        <div 
+          className={`absolute right-0 w-64 shadow-xl rounded-xl z-50 overflow-hidden transition-all duration-200 ease-out ${
+            isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-85 -translate-y-2 pointer-events-none'
+          }`}
+          style={{ 
+            background: 'linear-gradient(135deg, #242424 0%, #333333 25%, #242424 50%, #333333 75%, #242424 100%)',
+            backgroundSize: '200% 200%',
+            animation: isOpen ? 'gradientShift 3s ease-in-out infinite, fadeInScale 0.3s ease-out' : 'none',
+            border: '1px solid #333333'
+          }}
+        >
+            {/* 用户信息头部 */}
+            <div className="p-3" style={{ backgroundColor: 'rgb(36, 36, 36)' }}>
+              <div className="flex items-center space-x-3">
+                {/* 大头像 */}
+                {getAvatarUrl() ? (
+                  <img
+                    src={getAvatarUrl()}
+                    alt={getDisplayName()}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center">
+                    <span className="text-white text-lg font-medium">
+                      {getInitials()}
+                    </span>
                   </div>
                 )}
+                
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate text-white">
+                    {getDisplayName()}
+                  </div>
+                  <div className="text-xs truncate text-gray-300">
+                    {user.email}
+                  </div>
+                  {user.is_admin && (
+                    <div className="text-xs text-purple-400 font-medium mt-1">
+                      管理员
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* 用户统计信息 */}
-          <div className="p-4 border-b" style={{ borderColor: 'var(--border-light)' }}>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {user.created_at ? formatDate(user.created_at) : '-'}
+            {/* 用户统计信息 */}
+            <div className="p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#333333' }}>
+                  <div className="text-lg font-semibold text-white">
+                    {user.created_at ? formatDate(user.created_at) : '-'}
+                  </div>
+                  <div className="text-xs text-gray-200">
+                    注册时间
+                  </div>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  注册时间
-                </div>
-              </div>
-              <div>
-                <div className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {user.last_login_at ? formatDate(user.last_login_at) : '-'}
-                </div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  最后登录
+                <div className="p-3 rounded-lg" style={{ backgroundColor: '#333333' }}>
+                  <div className="text-lg font-semibold text-white">
+                    {user.last_login_at ? formatDate(user.last_login_at) : '-'}
+                  </div>
+                  <div className="text-xs text-gray-200">
+                    最后登录
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
           {/* 菜单选项 */}
-          <div className="py-2">
+          <div className="py-1">
             <button
               onClick={() => {
                 navigate('/profile');
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 rounded-lg mx-2"
               style={{ 
-                color: 'var(--text-secondary)',
+                color: '#d1d5db',
                 backgroundColor: 'transparent'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                e.currentTarget.style.backgroundColor = '#374151';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <span className="w-4 h-4 flex items-center justify-center">👤</span>
+              <span className="w-5 h-5 flex items-center justify-center text-gray-400">👤</span>
               <span>个人资料</span>
             </button>
 
             <button
               onClick={handleExportTasks}
               disabled={isExporting}
-              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 disabled:opacity-50 rounded-lg mx-2"
               style={{ 
-                color: isExporting ? 'var(--text-disabled)' : 'var(--text-secondary)',
+                color: isExporting ? '#6b7280' : '#d1d5db',
                 backgroundColor: 'transparent'
               }}
               onMouseEnter={(e) => {
                 if (!isExporting) {
-                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                  e.currentTarget.style.backgroundColor = '#374151';
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <span className="w-4 h-4 flex items-center justify-center">
+              <span className="w-5 h-5 flex items-center justify-center text-gray-400">
                 {isExporting ? '⏳' : '📊'}
               </span>
               <span>{isExporting ? '导出中...' : '导出任务'}</span>
@@ -377,46 +432,44 @@ export default function UserMenu() {
             <button
               onClick={handleImportTasks}
               disabled={isImporting}
-              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 disabled:opacity-50 rounded-lg mx-2"
               style={{ 
-                color: isImporting ? 'var(--text-disabled)' : 'var(--text-secondary)',
+                color: isImporting ? '#6b7280' : '#d1d5db',
                 backgroundColor: 'transparent'
               }}
               onMouseEnter={(e) => {
                 if (!isImporting) {
-                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                  e.currentTarget.style.backgroundColor = '#374151';
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <span className="w-4 h-4 flex items-center justify-center">
+              <span className="w-5 h-5 flex items-center justify-center text-gray-400">
                 {isImporting ? '⏳' : '📥'}
               </span>
               <span>{isImporting ? '导入中...' : '导入任务'}</span>
             </button>
-
-            {/* 文件输入已移至外层，保持常驻挂载 */}
 
             <button
               onClick={() => {
                 navigate('/settings');
                 setIsOpen(false);
               }}
-              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 rounded-lg mx-2"
               style={{ 
-                color: 'var(--text-secondary)',
+                color: '#d1d5db',
                 backgroundColor: 'transparent'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                e.currentTarget.style.backgroundColor = '#374151';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <span className="w-4 h-4 flex items-center justify-center">⚙️</span>
+              <span className="w-5 h-5 flex items-center justify-center text-gray-400">⚙️</span>
               <span>设置</span>
             </button>
 
@@ -426,45 +479,44 @@ export default function UserMenu() {
                   navigate('/admin');
                   setIsOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+                className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 rounded-lg mx-2"
                 style={{ 
-                  color: 'var(--text-secondary)',
+                  color: '#d1d5db',
                   backgroundColor: 'transparent'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                  e.currentTarget.style.backgroundColor = '#374151';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                <span className="w-4 h-4 flex items-center justify-center">🔧</span>
+                <span className="w-5 h-5 flex items-center justify-center text-gray-400">🔧</span>
                 <span>管理面板</span>
               </button>
             )}
 
-            <hr className="my-2" style={{ borderColor: 'var(--border-light)' }} />
+            <div className="border-t border-gray-700 my-1"></div>
 
             <button
               onClick={handleLogout}
-              className="w-full text-left px-4 py-2 text-sm transition-all flex items-center space-x-3 hover:opacity-80 active:scale-95"
+              className="w-full text-left px-2 py-2 text-sm transition-all flex items-center space-x-3 rounded-lg mx-2"
               style={{ 
-                color: 'var(--error)',
+                color: '#ef4444',
                 backgroundColor: 'transparent'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--error-bg)';
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              <span className="w-4 h-4 flex items-center justify-center">🚪</span>
+              <span className="w-5 h-5 flex items-center justify-center text-red-400">🚪</span>
               <span>退出登录</span>
             </button>
           </div>
         </div>
-      )}
     </div>
   );
 }
