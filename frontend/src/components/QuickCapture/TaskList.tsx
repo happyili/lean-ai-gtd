@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AISuggestions from './AISuggestions';
 import AIChatSidebar from './AIChatSidebar';
-import AIPomodoroTimer from './AIPomodoroTimer';
 import { buildUrl, handleApiError } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -33,21 +32,11 @@ interface Record {
   user_id?: number | null; // 用户ID，null表示guest用户
 }
 
-interface PomodoroTask {
-  id: string;
-  title: string;
-  description: string;
-  estimatedTime: number;
-  priority: 'high' | 'medium' | 'low';
-  category: string;
-}
-
 interface TaskListProps {
   onViewDetail: (record: Record) => void;
   onDelete: (id: number) => void;
   onSearch: (query: string) => void;
   onSave: (content: string, category: string) => Promise<void>;
-  onStartPomodoro?: (task: PomodoroTask) => void;
   showNotification: (message: string, type: 'success' | 'error') => void;
   isCollapsed?: boolean;
   showAllLevels?: boolean;
@@ -56,7 +45,7 @@ interface TaskListProps {
 }
 
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, onStartPomodoro, showNotification, isCollapsed = false, showAllLevels = false, onToggleShowAllLevels, onToggleCollapse }: TaskListProps) {
+export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, showNotification, isCollapsed = false, showAllLevels = false, onToggleShowAllLevels, onToggleCollapse }: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,7 +73,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
   const [showStatsDetail, setShowStatsDetail] = useState(false);
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
-  const [showAIPomodoroTimer, setShowAIPomodoroTimer] = useState(false);
   
   // 翻页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -1102,18 +1090,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
             >
               AI助手
             </button>
-            <button
-              onClick={() => setShowAIPomodoroTimer(true)}
-              className="px-3 py-1  text-body-small btn-primary transition-all"
-              style={{ 
-                background: 'var(--primary)', 
-                color: 'white',
-                border: '1px solid var(--primary)'
-              }}
-              title="AI番茄时钟"
-            >
-              番茄时钟
-            </button>
           </div>
         </div>
       </div>
@@ -2018,18 +1994,6 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
         isOpen={showAIChatSidebar}
         onClose={() => setShowAIChatSidebar(false)}
         tasks={tasks}
-      />
-      
-      {/* AI番茄时钟 */}
-      <AIPomodoroTimer
-        isOpen={showAIPomodoroTimer}
-        onClose={() => setShowAIPomodoroTimer(false)}
-        tasks={tasks}
-        onStartPomodoro={(task) => {
-          // 传递给父组件处理番茄时钟开始
-          onStartPomodoro?.(task);
-          setShowAIPomodoroTimer(false); // 关闭对话框
-        }}
       />
     </div>
   );

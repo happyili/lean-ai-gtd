@@ -202,13 +202,6 @@ export default function App() {
     }
   };
 
-  // 开始番茄时钟
-  const handleStartPomodoro = (task: PomodoroTask) => {
-    setCurrentPomodoroTask(task);
-    setIsPomodoroActive(true);
-    showNotification(`开始专注模式: ${task.title}`, 'success');
-  };
-
   // 番茄时钟完成
   const handlePomodoroComplete = () => {
     showNotification('番茄时钟完成！休息一下吧 🎉', 'success');
@@ -1290,7 +1283,6 @@ export default function App() {
                 onDelete={handleDelete}
                 onSearch={handleSearch}
                 onSave={handleSave}
-                onStartPomodoro={handleStartPomodoro}
                 showNotification={showNotification}
                 isCollapsed={isSubtaskCollapsed}
                 showAllLevels={showAllLevels}

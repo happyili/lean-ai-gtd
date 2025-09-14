@@ -355,7 +355,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
       {/* 扁平化任务显示 - 紧贴banner下方 */}
       {tasks.length > 0 && (
         <div className="mb-6">
-          <div className="flex flex-wrap gap-4 justify-start">
+          <div className="flex flex-wrap gap-2 justify-start">
             {tasks.slice(0, 6).map((task, index) => {
               const progressPercent = Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100);
               return (
@@ -371,7 +371,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
                   onClick={() => task.status === 'pending' && !activeTaskId ? startTask(task.id) : null}
-                  style={{ height: '80px' }} // 减少高度
+                  style={{ height: '60px' }} // 减少高度
                 >
                   {/* 背景进度条 */}
                   <div 
