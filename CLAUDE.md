@@ -216,6 +216,20 @@ OpenRouter/Claude AI → PomodoroTask model → Compressed UI display
 
 ## 6. 部署配置
 
+1. 部署后端到Vercel
+```bash
+cd backend
+vercel --prod --name aigtd-backend
+```
+记录后端URL（https://www.aigtd.xyz）
+
+3. 部署前端到Vercel
+```bash
+vercel --prod --name aigtd-frontend
+```
+部署之后可以在这里验证production发布情况：
+https://www.offload.fit/
+
 ### 环境变量
 - `DATABASE_URL`：数据库连接字符串
 - `JWT_SECRET_KEY`：JWT密钥

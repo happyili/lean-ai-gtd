@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, RefreshCw } from 'lucide-react';
-import { apiGet, apiPost } from '@/utils/api';
+import { apiGet, apiPost, apiDelete } from '@/utils/api';
 import PomodoroTaskCard from './PomodoroTaskCard';
 
 interface PomodoroTask {
@@ -24,12 +24,14 @@ interface PomodoroBannerPanelProps {
   accessToken: string | null;
   isExpanded: boolean;
   onToggleExpanded?: () => void;
+  refreshTrigger?: number; // 用于触发刷新的计数器
 }
 
 export default function PomodoroBannerPanel({ 
   accessToken, 
   isExpanded,
-  onToggleExpanded
+  onToggleExpanded,
+  refreshTrigger
 }: PomodoroBannerPanelProps) {
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -90,6 +92,24 @@ export default function PomodoroBannerPanel({
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
+        
+        // 检查是否有新的活跃任务
+        const activeTask = data.data.tasks.find((task: PomodoroTask) => task.status === 'active');
+        if (activeTask && activeTask.id !== activeTaskId) {
+          // 发现新的活跃任务，自动设置状态
+          setActiveTaskId(activeTask.id);
+          setTimerMinutes(25);
+          setTimerSeconds(0);
+          setIsTimerRunning(true);
+          
+          // 保存状态到localStorage
+          saveStateToStorage(STORAGE_KEYS.ACTIVE_TASK_ID, activeTask.id);
+          saveStateToStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
+          saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
+          saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, true);
+          
+          console.log('检测到新的活跃任务，自动切换到计时器模式:', activeTask.id);
+        }
       }
     } catch (error) {
       console.error('加载番茄任务失败:', error);
@@ -221,6 +241,30 @@ export default function PomodoroBannerPanel({
     }
   };
 
+  // 删除番茄任务
+  const deleteTask = async (taskId: number) => {
+    if (!accessToken) return;
+
+    try {
+      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', accessToken);
+      const data = await response.json();
+      if (data.success) {
+        if (activeTaskId === taskId) {
+          setActiveTaskId(null);
+          setIsTimerRunning(false);
+          setTimerMinutes(25);
+          setTimerSeconds(0);
+          
+          // 清除localStorage中的番茄钟状态
+          clearPomodoroState();
+        }
+        await loadPomodoroTasks();
+      }
+    } catch (error) {
+      console.error('删除任务失败:', error);
+    }
+  };
+
   // 番茄钟计时器
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -283,6 +327,14 @@ export default function PomodoroBannerPanel({
     }
   }, [accessToken]);
 
+  // 监听refreshTrigger变化，刷新任务列表
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0 && accessToken && isExpanded) {
+      console.log('检测到refreshTrigger变化，刷新番茄任务列表');
+      loadPomodoroTasks();
+    }
+  }, [refreshTrigger, accessToken, isExpanded]);
+
   const formatTime = (minutes: number, seconds: number) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
@@ -340,6 +392,7 @@ export default function PomodoroBannerPanel({
                     onCompleteTask={completeTask}
                     onSkipTask={skipTask}
                     onResetTask={resetTask}
+                    onDeleteTask={deleteTask}
                     onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
                     compact={true}
                     />

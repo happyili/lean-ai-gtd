@@ -1,4 +1,4 @@
-import { Play, Pause, SkipForward, CheckCircle, Clock, RotateCcw } from 'lucide-react';
+import { Play, Pause, SkipForward, CheckCircle, Clock, RotateCcw, Trash2 } from 'lucide-react';
 
 interface PomodoroTask {
   id: number;
@@ -26,6 +26,7 @@ interface PomodoroTaskCardProps {
   onCompleteTask: (taskId: number) => void;
   onSkipTask: (taskId: number) => void;
   onResetTask: (taskId: number) => void;
+  onDeleteTask?: (taskId: number) => void; // 改为可选参数
   onToggleTimer: () => void;
   compact?: boolean; // 是否使用紧凑模式
 }
@@ -39,6 +40,7 @@ export default function PomodoroTaskCard({
   onCompleteTask,
   onSkipTask,
   onResetTask,
+  onDeleteTask,
   onToggleTimer,
   compact = false
 }: PomodoroTaskCardProps) {
@@ -190,6 +192,22 @@ export default function PomodoroTaskCard({
                 <RotateCcw className="w-4 h-4" />
               </button>
             )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDeleteTask) {
+                  console.log('删除按钮被点击，taskId:', task.id);
+                  onDeleteTask(task.id);
+                } else {
+                  console.error('onDeleteTask未定义');
+                }
+              }}
+              className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              title="删除任务"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -303,6 +321,21 @@ export default function PomodoroTaskCard({
               重置
             </button>
           )}
+
+          <button
+            onClick={() => {
+              if (onDeleteTask) {
+                console.log('详细模式删除按钮被点击，taskId:', task.id);
+                onDeleteTask(task.id);
+              } else {
+                console.error('onDeleteTask未定义 (详细模式)');
+              }
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            删除
+          </button>
         </div>
       </div>
       

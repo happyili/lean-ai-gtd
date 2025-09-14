@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
 import AISuggestions from './AISuggestions';
 import AIChatSidebar from './AIChatSidebar';
-import { buildUrl, handleApiError } from '@/utils/api';
+import { buildUrl, handleApiError, apiPost } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   taskTypeMap, 
@@ -42,10 +43,27 @@ interface TaskListProps {
   showAllLevels?: boolean;
   onToggleShowAllLevels?: () => void;
   onToggleCollapse?: () => void;
+  // PomodoroBannerPanel相关props
+  isPomodoroPanelExpanded?: boolean;
+  onTogglePomodoroPanel?: () => void;
+  onPomodoroTaskAdded?: () => void;
 }
 
 
-export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSearch, onSave, showNotification, isCollapsed = false, showAllLevels = false, onToggleShowAllLevels, onToggleCollapse }: TaskListProps) {
+export default function TaskList({ 
+  onViewDetail: _onViewDetail, 
+  onDelete, 
+  onSearch, 
+  onSave, 
+  showNotification, 
+  isCollapsed = false, 
+  showAllLevels = false, 
+  onToggleShowAllLevels, 
+  onToggleCollapse,
+  isPomodoroPanelExpanded = false,
+  onTogglePomodoroPanel,
+  onPomodoroTaskAdded
+}: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,10 +92,61 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
   const [showStatsDetail, setShowStatsDetail] = useState(false);
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
   
+  // 番茄钟状态
+  const [isAddingToPomodoro, setIsAddingToPomodoro] = useState<number | null>(null);
+  
   // 翻页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTasks, setTotalTasks] = useState(0);
+
+  // 将任务添加到番茄钟
+  const handleAddToPomodoro = async (taskId: number) => {
+    if (!isAuthenticated || !accessToken) {
+      showNotification('请先登录以使用番茄钟功能', 'error');
+      return;
+    }
+
+    // 找到对应的任务
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      showNotification('任务不存在', 'error');
+      return;
+    }
+
+    setIsAddingToPomodoro(taskId);
+    try {
+      const response = await apiPost(
+        '/api/pomodoro/tasks/add-single',
+        { record_id: taskId },
+        '添加任务到番茄钟',
+        accessToken
+      );
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // 自动展开PomodoroBannerPanel
+        if (onTogglePomodoroPanel && !isPomodoroPanelExpanded) {
+          onTogglePomodoroPanel();
+        }
+        
+        // 触发PomodoroBannerPanel刷新
+        if (onPomodoroTaskAdded) {
+          onPomodoroTaskAdded();
+        }
+        
+        showNotification('任务已添加到番茄钟并自动开始！', 'success');
+      } else {
+        showNotification(data.message || '添加失败', 'error');
+      }
+    } catch (error) {
+      console.error('添加任务到番茄钟失败:', error);
+      showNotification(error instanceof Error ? error.message : '添加失败', 'error');
+    } finally {
+      setIsAddingToPomodoro(null);
+    }
+  };
 
   // 更新任务内容
   const handleUpdateTaskContent = async (taskId: number, content: string) => {
@@ -1379,7 +1448,23 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                       </div>
                       
                       {/* 操作按钮 */}
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center">
+                        {/* 番茄按钮 */}
+                        {isAuthenticated && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToPomodoro(task.id);
+                            }}
+                            disabled={isAddingToPomodoro === task.id}
+                            className="px-2 py-1 rounded-lg text-xs font-medium transition-all flex items-center"
+                            title="添加到番茄钟并开始专注"
+                          >
+                            <Clock className="w-4 h-4" />
+                            <span>{isAddingToPomodoro === task.id ? '添加中...' : ''}</span>
+                          </button>
+                        )}
+                        
                         <DeleteButton
                           id={task.id}
                           deleteConfirm={deleteConfirm}
@@ -1525,6 +1610,22 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                             <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
                               {formatDate(subtask.created_at)}
                             </div>
+                            
+                            {/* 番茄按钮 */}
+                            {isAuthenticated && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToPomodoro(subtask.id);
+                                }}
+                                disabled={isAddingToPomodoro === subtask.id}
+                                className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                title="添加到番茄钟并开始专注"
+                              >
+                                <Clock className="w-4 h-4" />
+                                <span>{isAddingToPomodoro === subtask.id ? '...' : ''}</span>
+                              </button>
+                            )}
                             
                             {/* 删除子任务按钮 */}
                             <DeleteButton
@@ -1818,6 +1919,28 @@ export default function TaskList({ onViewDetail: _onViewDetail, onDelete, onSear
                                           </div>
                                         )}
                                       </div>
+                                      
+                                      {/* 番茄按钮 */}
+                                      {isAuthenticated && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAddToPomodoro(subtask.id);
+                                          }}
+                                          disabled={isAddingToPomodoro === subtask.id}
+                                          className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                          style={{
+                                            backgroundColor: isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)',
+                                            color: 'white',
+                                            border: `1px solid ${isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)'}`,
+                                            opacity: isAddingToPomodoro === subtask.id ? 0.6 : 1
+                                          }}
+                                          title="添加到番茄钟并开始专注"
+                                        >
+                                          <span>🍅</span>
+                                          <span>{isAddingToPomodoro === subtask.id ? '添加中...' : '番茄'}</span>
+                                        </button>
+                                      )}
                                       
                                       {/* 删除子任务按钮 */}
                                       <DeleteButton

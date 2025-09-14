@@ -9,6 +9,7 @@ from functools import wraps
 import jwt
 from app.models.user import User
 from app.services.pomodoro_intelligence import PomodoroIntelligenceService
+from app.database.init import db
 import logging
 
 logger = logging.getLogger(__name__)
@@ -231,6 +232,84 @@ def reset_pomodoro_task(task_id):
         return jsonify({
             'success': False,
             'message': f'操作失败: {str(e)}'
+        }), 500
+
+@pomodoro_bp.route('/tasks/add-single', methods=['POST', 'OPTIONS'])
+@cross_origin()
+@token_required
+def add_single_task_to_pomodoro():
+    """将单个任务添加到番茄任务列表"""
+    try:
+        user_id = g.current_user.id
+        
+        # 获取请求数据
+        data = request.get_json()
+        if not data or 'record_id' not in data:
+            return jsonify({
+                'success': False,
+                'message': '缺少record_id参数'
+            }), 400
+        
+        record_id = data['record_id']
+        
+        result = PomodoroIntelligenceService.add_single_task_to_pomodoro(user_id, record_id)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': result['message'],
+                'data': result['task']
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': result['message']
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"添加任务到番茄列表失败: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'添加失败: {str(e)}'
+        }), 500
+
+@pomodoro_bp.route('/tasks/<int:task_id>/delete', methods=['DELETE', 'OPTIONS'])
+@cross_origin()
+@token_required
+def delete_pomodoro_task(task_id):
+    """删除番茄任务"""
+    try:
+        user_id = g.current_user.id
+        
+        # 查找任务
+        from app.models.pomodoro_task import PomodoroTask
+        task = PomodoroTask.query.filter_by(id=task_id, user_id=user_id).first()
+        
+        if not task:
+            return jsonify({
+                'success': False,
+                'message': '任务不存在'
+            }), 404
+        
+        # 如果正在运行的任务被删除，停止计时器
+        if task.status == 'active':
+            task.skip_task()
+        
+        # 删除任务
+        db.session.delete(task)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '任务已删除'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"删除番茄任务失败: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'删除失败: {str(e)}'
         }), 500
 
 @pomodoro_bp.route('/stats', methods=['GET', 'OPTIONS'])

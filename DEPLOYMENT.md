@@ -12,9 +12,9 @@
 
 1. 访问 [Supabase](https://supabase.com) 创建新项目
 2. 在项目设置中获取数据库连接信息：
-   - Database URL： https://bkhfvcundjhzadxpdzuz.supabase.co 
+   - Database URL： DATABASE_URL=postgresql://postgres.bkhfvcundjhzadxpdzuz:XXMWy3ququkVFAje@aws-1-us-east-2.pooler.supabase.com:5432/postgres
    - API Key： xxx
-3. 在SQL编辑器中运行 `supabase/migrations/001_create_records_table.sql`
+3. 在SQL编辑器中运行 `migrations/supabase/001_create_records_table.sql`
 
 ### 2. 准备OpenRouter API
 
@@ -24,29 +24,19 @@
 
 ### 3. 部署后端到Vercel
 
-方法1：使用部署脚本（推荐）
-   ```bash
-   ./deploy.sh
-   ```
-
-方法2：手动修复
 1. 先部署后端
 ```bash
 cd backend
 vercel --prod --name aigtd-backend
 ```
-记录后端URL（例如：https://aigtd-backend-xxx.vercel.app）
-
-2. 设置前端环境变量
-```bash
-cd frontend
-echo "VITE_API_BASE_URL=https://aigtd-backend-xxx.vercel.app" > .env.local
-```
+记录后端URL（例如：https://www.aigtd.xyz）
 
 3. 部署前端
 ```bash
 vercel --prod --name aigtd-frontend
 ```
+部署之后可以在这里验证production发布情况：
+https://www.offload.fit/
 
 4. 在Vercel Dashboard中设置环境变量
 

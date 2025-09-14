@@ -294,6 +294,105 @@ class PomodoroIntelligenceService:
         return [task.to_dict() for task in tasks]
     
     @classmethod
+    def add_single_task_to_pomodoro(cls, user_id: int, record_id: int) -> Dict[str, Any]:
+        """
+        将单个任务添加到番茄任务列表
+        
+        Args:
+            user_id: 用户ID
+            record_id: 任务记录ID
+            
+        Returns:
+            Dict containing success status and created pomodoro task or error message
+        """
+        try:
+            logger.info(f"将任务 {record_id} 添加到用户 {user_id} 的番茄任务列表")
+            
+            # 1. 获取原始任务
+            record = Record.query.filter_by(id=record_id, user_id=user_id).first()
+            if not record:
+                return {
+                    'success': False,
+                    'message': '任务不存在或无权限访问'
+                }
+            
+            # 2. 检查是否已经是番茄任务
+            existing_pomodoro = PomodoroTask.query.filter(
+                PomodoroTask.user_id == user_id,
+                PomodoroTask.related_task_ids.contains(str(record_id))
+            ).first()
+            
+            if existing_pomodoro:
+                return {
+                    'success': False,
+                    'message': '该任务已经在番茄任务列表中'
+                }
+            
+            # 3. 停止当前正在运行的任务
+            active_task = PomodoroTask.query.filter_by(
+                user_id=user_id, 
+                status='active'
+            ).first()
+            
+            if active_task:
+                active_task.skip_task()
+                logger.info(f"停止当前活跃任务 {active_task.id}")
+            
+            # 4. 创建番茄任务，设置order_index为0（最前面）
+            pomodoro_task = PomodoroTask(
+                user_id=user_id,
+                title=record.content[:50] + ('...' if len(record.content) > 50 else ''),  # 限制标题长度
+                description=f"基于任务: {record.content}\n\n优先级: {record.priority or 'medium'}\n任务类型: {record.task_type or 'work'}",
+                related_task_ids=json.dumps([record_id]),
+                priority_score=cls._calculate_priority_score(record.priority),
+                estimated_pomodoros=1,  # 默认1个番茄钟
+                order_index=0,  # 设置为0，排在最前面
+                generation_context=f"手动添加的任务: {record.content}",
+                ai_reasoning=f"用户手动选择的任务，优先级: {record.priority or 'medium'}"
+            )
+            
+            db.session.add(pomodoro_task)
+            db.session.flush()  # 获取ID
+            
+            # 5. 自动开始新任务
+            pomodoro_task.start_pomodoro()
+            
+            # 6. 更新其他任务的order_index，为新任务让出位置
+            PomodoroTask.query.filter(
+                PomodoroTask.user_id == user_id,
+                PomodoroTask.id != pomodoro_task.id
+            ).update({PomodoroTask.order_index: PomodoroTask.order_index + 1})
+            
+            db.session.commit()
+            
+            logger.info(f"成功将任务 {record_id} 添加到用户 {user_id} 的番茄任务列表并自动开始")
+            
+            return {
+                'success': True,
+                'message': '任务已添加到番茄任务列表并自动开始',
+                'task': pomodoro_task.to_dict()
+            }
+            
+        except Exception as e:
+            logger.error(f"添加任务到番茄列表失败: {str(e)}")
+            db.session.rollback()
+            return {
+                'success': False,
+                'message': f'添加失败: {str(e)}'
+            }
+    
+    @classmethod
+    def _calculate_priority_score(cls, priority: str) -> int:
+        """根据任务优先级计算分数"""
+        priority_scores = {
+            'urgent': 90,
+            'high': 75,
+            'medium': 50,
+            'low': 25
+        }
+        return priority_scores.get(priority, 50)
+    
+    @classmethod
     def update_task_status(cls, task_id: int, user_id: int, action: str) -> Dict[str, Any]:
         """更新番茄任务状态"""
         try:

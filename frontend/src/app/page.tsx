@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
-import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
 import PomodoroManager from '@/components/PomodoroManager';
 import RemindersList from '@/components/Reminders/RemindersList';
@@ -21,15 +20,6 @@ interface TaskCreateData {
   taskType: 'work' | 'hobby' | 'life';
   estimatedTime?: number;
   tags?: string[];
-}
-
-interface PomodoroTask {
-  id: string;
-  title: string;
-  description: string;
-  estimatedTime: number;
-  priority: 'high' | 'medium' | 'low';
-  category: string;
 }
 
 interface Record {
@@ -74,8 +64,6 @@ export default function App() {
   const [isPriorityFilterExpanded, setIsPriorityFilterExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [currentPomodoroTask, setCurrentPomodoroTask] = useState<PomodoroTask | null>(null);
-  const [isPomodoroActive, setIsPomodoroActive] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState('all');
   const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
   const [currentView, setCurrentView] = useState<'tasks' | 'pomodoro'>('tasks'); // 新增：控制当前视图
@@ -90,7 +78,8 @@ export default function App() {
   const [isInfoResourceSearchExpanded, setIsInfoResourceSearchExpanded] = useState(false);
   const [isInfoResourceStatusFilterExpanded, setIsInfoResourceStatusFilterExpanded] = useState(false);
   const [isInfoResourceTypeFilterExpanded, setIsInfoResourceTypeFilterExpanded] = useState(false);
-  const [isPomodoroPanelExpanded, setIsPomodoroPanelExpanded] = useState(false); // 番茄面板展开状态
+  const [isPomodoroPanelExpanded, setIsPomodoroPanelExpanded] = useState(false);
+  const [pomodoroRefreshTrigger, setPomodoroRefreshTrigger] = useState(0); // 番茄面板展开状态
 
   // 点击外部关闭搜索框和下拉菜单
   useEffect(() => {
@@ -203,23 +192,6 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // 番茄时钟完成
-  const handlePomodoroComplete = () => {
-    showNotification('番茄时钟完成！休息一下吧 🎉', 'success');
-  };
-
-  // 番茄时钟暂停
-  const handlePomodoroPause = () => {
-    showNotification('番茄时钟已暂停', 'success');
-  };
-
-  // 番茄时钟停止
-  const handlePomodoroStop = () => {
-    setCurrentPomodoroTask(null);
-    setIsPomodoroActive(false);
-    showNotification('番茄时钟已停止', 'success');
   };
 
   // 删除记录
@@ -536,15 +508,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      {/* 番茄时钟专注模式 */}
-      <PomodoroFocusMode
-        isActive={isPomodoroActive}
-        task={currentPomodoroTask}
-        onComplete={handlePomodoroComplete}
-        onPause={handlePomodoroPause}
-        onStop={handlePomodoroStop}
-      />
-
       {/* 通知栏 */}
       {notification && (
         <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl transition-all backdrop-blur-sm ${
@@ -1289,10 +1252,11 @@ export default function App() {
         accessToken={accessToken} 
         isExpanded={isPomodoroPanelExpanded}
         onToggleExpanded={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
+        refreshTrigger={pomodoroRefreshTrigger}
       />
 
       {/* 主要内容区域 */}
-      <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-128px)] mt-[80px]' : 'h-[calc(100vh-48px)]'}`}>
+      <div className="flex transition-all duration-300 h-[calc(100vh-48px)]">
         {/* 条件渲染不同的视图 */}
         {currentView === 'tasks' ? (
           <main className="w-full">
@@ -1309,6 +1273,9 @@ export default function App() {
                 showAllLevels={showAllLevels}
                 onToggleShowAllLevels={() => handleFilter('showAllLevels', (!showAllLevels).toString())}
                 onToggleCollapse={() => setIsSubtaskCollapsed(!isSubtaskCollapsed)}
+                isPomodoroPanelExpanded={isPomodoroPanelExpanded}
+                onTogglePomodoroPanel={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
+                onPomodoroTaskAdded={() => setPomodoroRefreshTrigger(prev => prev + 1)}
               />
             )}
 

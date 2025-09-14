@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, Play, Pause, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
-import { apiPost, apiGet } from '@/utils/api';
+import { apiPost, apiGet, apiDelete } from '@/utils/api';
 import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
 
 interface PomodoroTask {
@@ -211,6 +211,28 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
     }
   };
 
+  // 删除番茄任务
+  const deleteTask = async (taskId: number) => {
+    if (!accessToken) return;
+
+    try {
+      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', accessToken);
+      const data = await response.json();
+      if (data.success) {
+        if (activeTaskId === taskId) {
+          setActiveTaskId(null);
+          setIsTimerRunning(false);
+          setTimerMinutes(25);
+          setTimerSeconds(0);
+        }
+        await loadPomodoroTasks();
+        await loadStats();
+      }
+    } catch (error) {
+      console.error('删除任务失败:', error);
+    }
+  };
+
   // 番茄钟计时器
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -334,56 +356,6 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         </div>
       )}
 
-      {/* 扁平化任务显示 - 紧贴banner下方 */}
-      {tasks.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 justify-start">
-            {tasks.slice(0, 6).map((task, index) => (
-              <PomodoroTaskCard
-                key={task.id}
-                task={task}
-                index={index}
-                activeTaskId={activeTaskId}
-                isTimerRunning={isTimerRunning}
-                onStartTask={startTask}
-                onCompleteTask={completeTask}
-                onSkipTask={skipTask}
-                onResetTask={resetTask}
-                onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
-                compact={true}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 番茄钟计时器 */}
-      {activeTaskId && (
-        <div className="bg-red-50 rounded-lg p-6 mb-6 text-center">
-          <div className="text-6xl font-mono font-bold text-red-600 mb-4">
-            {formatTime(timerMinutes, timerSeconds)}
-          </div>
-          <div className="text-lg text-red-800 mb-4">
-            正在专注：{tasks.find(t => t.id === activeTaskId)?.title}
-          </div>
-          <div className="flex justify-center space-x-4">
-            <button
-              onClick={() => setIsTimerRunning(!isTimerRunning)}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
-            >
-              {isTimerRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
-              {isTimerRunning ? '暂停' : '继续'}
-            </button>
-            <button
-              onClick={() => activeTaskId && completeTask(activeTaskId)}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              完成任务
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 详细任务列表 */}
       <div className="space-y-4">
         {loading ? (
@@ -422,6 +394,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
                 onCompleteTask={completeTask}
                 onSkipTask={skipTask}
                 onResetTask={resetTask}
+                onDeleteTask={deleteTask}
                 onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
                 compact={false}
               />
