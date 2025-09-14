@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro UI Test - Responsive Layout & Background Progress</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #faf8f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .tasks-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: flex-start;
+        }
+        
+        .task-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+            cursor: pointer;
+            height: 80px;
+            max-width: 600px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .task-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .task-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+        }
+        
+        .task-info {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .task-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1a1d23;
+            margin-bottom: 4px;
+            line-height: 1.2;
+        }
+        
+        .task-meta {
+            font-size: 12px;
+            color: #6b7280;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .icon-button {
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-button:hover {
+            transform: translateY(-1px);
+        }
+        
+        .play-btn {
+            background: #10b981;
+            color: white;
+        }
+        
+        .play-btn:hover {
+            background: #059669;
+        }
+        
+        .pause-btn {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .pause-btn:hover {
+            background: #d97706;
+        }
+        
+        .complete-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .complete-btn:hover {
+            background: #2563eb;
+        }
+        
+        .skip-btn {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .skip-btn:hover {
+            background: #4b5563;
+        }
+        
+        /* Screen size indicators */
+        .screen-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        /* Responsive breakpoints visualization */
+        @media (max-width: 640px) {
+            .task-card {
+                min-width: 280px;
+            }
+            .screen-info::after {
+                content: " (Small - <640px)";
+            }
+        }
+        
+        @media (min-width: 641px) and (max-width: 768px) {
+            .screen-info::after {
+                content: " (Medium - 641-768px)";
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .screen-info::after {
+                content: " (Large - 769-1024px)";
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .screen-info::after {
+                content: " (XL - >1024px)";
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="screen-info">
+        Screen width: <span id="width"></span>px
+    </div>
+    
+    <div class="container">
+        <div class="banner">
+            <h1>🍅 AI番茄钟 - UI Layout Test</h1>
+            <p>Test responsive layout and background gradient progress bars</p>
+        </div>
+        
+        <div class="tasks-container" id="tasksContainer">
+            <!-- Tasks will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        // Mock tasks data
+        const mockTasks = [
+            {
+                id: 1,
+                title: "完成前端登录页面设计",
+                description: "设计并实现用户登录界面，包括表单验证",
+                estimated_pomodoros: 4,
+                pomodoros_completed: 1,
+                status: "pending",
+                priority_score: 85
+            },
+            {
+                id: 2,
+                title: "优化数据库查询性能",
+                description: "分析慢查询并优化数据库索引",
+                estimated_pomodoros: 3,
+                pomodoros_completed: 2,
+                status: "active",
+                priority_score: 90
+            },
+            {
+                id: 3,
+                title: "编写API文档",
+                description: "为所有REST API端点编写详细文档",
+                estimated_pomodoros: 5,
+                pomodoros_completed: 0,
+                status: "pending",
+                priority_score: 70
+            },
+            {
+                id: 4,
+                title: "修复移动端适配问题",
+                description: "解决在移动设备上的显示问题",
+                estimated_pomodoros: 2,
+                pomodoros_completed: 1,
+                status: "pending",
+                priority_score: 75
+            },
+            {
+                id: 5,
+                title: "集成第三方支付API",
+                description: "接入支付宝和微信支付功能",
+                estimated_pomodoros: 6,
+                pomodoros_completed: 3,
+                status: "pending",
+                priority_score: 95
+            },
+            {
+                id: 6,
+                title: "测试用例编写",
+                description: "为核心功能编写单元测试和集成测试",
+                estimated_pomodoros: 4,
+                pomodoros_completed: 4,
+                status: "completed",
+                priority_score: 80
+            }
+        ];
+
+        function updateScreenWidth() {
+            document.getElementById('width').textContent = window.innerWidth;
+        }
+
+        function getProgressGradient(task) {
+            const progressPercent = Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100);
+            
+            if (task.status === 'completed') {
+                return 'linear-gradient(to right, #10b981 0%, #10b981 100%)';
+            } else if (task.status === 'active') {
+                return `linear-gradient(to right, #f59e0b 0%, #f59e0b ${progressPercent}%, #ffffff ${progressPercent}%, #ffffff 100%)`;
+            } else {
+                return `linear-gradient(to right, #e5e7eb 0%, #e5e7eb ${progressPercent}%, #ffffff ${progressPercent}%, #ffffff 100%)`;
+            }
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'completed': return '#10b981';
+                case 'active': return '#f59e0b';
+                case 'pending': return '#6b7280';
+                default: return '#6b7280';
+            }
+        }
+
+        function getStatusIcon(status) {
+            switch (status) {
+                case 'completed': return '✓';
+                case 'active': return '⏸️';
+                case 'pending': return '▶️';
+                default: return '▶️';
+            }
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('tasksContainer');
+            
+            container.innerHTML = mockTasks.map(task => {
+                const progressPercent = Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100);
+                
+                return `
+                    <div class="task-card" style="background: ${getProgressGradient(task)};">
+                        <div class="task-content">
+                            <div class="task-info">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-meta">
+                                    <span>🍅 ${task.pomodoros_completed}/${task.estimated_pomodoros}</span>
+                                    <span>优先级: ${task.priority_score}</span>
+                                    <span style="color: ${getStatusColor(task.status)}">${task.status}</span>
+                                </div>
+                            </div>
+                            <div class="task-actions">
+                                ${task.status === 'pending' ? `
+                                    <button class="icon-button play-btn" title="开始任务">▶️</button>
+                                ` : ''}
+                                ${task.status === 'active' ? `
+                                    <button class="icon-button pause-btn" title="暂停任务">⏸️</button>
+                                    <button class="icon-button complete-btn" title="完成任务">✓</button>
+                                ` : ''}
+                                ${task.status !== 'completed' ? `
+                                    <button class="icon-button skip-btn" title="跳过任务">⏭️</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Initialize
+        updateScreenWidth();
+        renderTasks();
+        
+        // Update screen width on resize
+        window.addEventListener('resize', updateScreenWidth);
+        
+        // Add click handlers
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('icon-button')) {
+                const action = e.target.title;
+                alert(`点击了: ${action}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -41,6 +41,9 @@ def init_database(app):
                 # 导入模型（避免循环导入）
                 from app.models.user import User
                 from app.models.record import Record
+                from app.models.info_resource import InfoResource
+                from app.models.pomodoro_task import PomodoroTask
+                from app.models.reminder import Reminder
                 
                 # 添加用户ID外键到records表（如果不存在）
                 try:

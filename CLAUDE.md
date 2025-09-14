@@ -1,272 +1,273 @@
-# Claude Code Configuration - SPARC Development Environment
+# CLAUDE.md
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚨 CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
+AIGTD is an intelligent task management system with multiple features.
 
-**ABSOLUTE RULES**:
-1. ALL operations MUST be concurrent/parallel in a single message
-2. **NEVER save working files, text/mds and tests to the root folder**
-3. ALWAYS organize files in appropriate subdirectories
+**Frontend (React/TypeScript)**
+- Main app container: `frontend/src/app/page.tsx` - Orchestrates all major components
+- Authentication context: `frontend/src/contexts/AuthContext.tsx` - Global auth state management
+**Backend (Flask/Python)**
+- App factory: `backend/app/__init__.py` - Creates Flask app with blueprints
+- Database initialization: `backend/app/database/init.py` - Handles SQLite/PostgreSQL setup
+- Core Models:
+  - `Record` - Core task/note/idea model with hierarchical support (parent/subtask)
+  - `User` - Authentication and user management
 
-### ⚡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
+## 数据库模型配置
 
-**MANDATORY PATTERNS:**
-- **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
-- **Task tool**: ALWAYS spawn ALL agents in ONE message with full instructions
-- **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
-- **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
-- **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
+### 模型设计原则
+- `records` table: Flexible content storage (tasks) ， support parent/child relationships for subtasks
+- `users` table: Authentication with JWT refresh token support. Both guest and authenticated user workflows supported。用户关联字段 `user_id` 支持 `nullable=True` 以支持访客模式
+- Pomodoro tasks link back to original records via `related_task_ids`
+- 主键使用 `BigInteger` + `autoincrement=True`
+- 状态字段 `status` 实现软删除：`active/archived/deleted`
+- 时间戳使用 UTC 时区：`datetime.now(timezone.utc)`
+- 提供 `to_dict()` 方法，使用 `safe_isoformat()` 处理时间格式
+- 实现 `soft_delete()`、`archive()`、`restore()` 方法
+- 提供类方法：`get_user_items()`、`get_guest_items()`
 
-### 📁 File Organization Rules
 
-**NEVER save to root folder. Use these directories:**
-- `/src` - Source code files
-- `/tests` - Test files
-- `/docs` - Documentation and markdown files
-- `/config` - Configuration files
-- `/scripts` - Utility scripts
-- `/examples` - Example code
+## Development Commands
 
-## Project Overview
-
-This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology with Claude-Flow orchestration for systematic Test-Driven Development.
-
-## SPARC Commands
-
-### Core Commands
-- `npx claude-flow sparc modes` - List available modes
-- `npx claude-flow sparc run <mode> "<task>"` - Execute specific mode
-- `npx claude-flow sparc tdd "<feature>"` - Run complete TDD workflow
-- `npx claude-flow sparc info <mode>` - Get mode details
-
-### Batchtools Commands
-- `npx claude-flow sparc batch <modes> "<task>"` - Parallel execution
-- `npx claude-flow sparc pipeline "<task>"` - Full pipeline processing
-- `npx claude-flow sparc concurrent <mode> "<tasks-file>"` - Multi-task processing
-
-### Build Commands
-- `npm run build` - Build project
-- `npm run test` - Run tests
-- `npm run lint` - Linting
-- `npm run typecheck` - Type checking
-
-## SPARC Workflow Phases
-
-1. **Specification** - Requirements analysis (`sparc run spec-pseudocode`)
-2. **Pseudocode** - Algorithm design (`sparc run spec-pseudocode`)
-3. **Architecture** - System design (`sparc run architect`)
-4. **Refinement** - TDD implementation (`sparc tdd`)
-5. **Completion** - Integration (`sparc run integration`)
-
-## Code Style & Best Practices
-
-- **Modular Design**: Files under 500 lines
-- **Environment Safety**: Never hardcode secrets
-- **Test-First**: Write tests before implementation
-- **Clean Architecture**: Separate concerns
-- **Documentation**: Keep updated
-
-## 🚀 Available Agents (54 Total)
-
-### Core Development
-`coder`, `reviewer`, `tester`, `planner`, `researcher`
-
-### Swarm Coordination
-`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
-
-### Consensus & Distributed
-`byzantine-coordinator`, `raft-manager`, `gossip-coordinator`, `consensus-builder`, `crdt-synchronizer`, `quorum-manager`, `security-manager`
-
-### Performance & Optimization
-`perf-analyzer`, `performance-benchmarker`, `task-orchestrator`, `memory-coordinator`, `smart-agent`
-
-### GitHub & Repository
-`github-modes`, `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`, `workflow-automation`, `project-board-sync`, `repo-architect`, `multi-repo-swarm`
-
-### SPARC Methodology
-`sparc-coord`, `sparc-coder`, `specification`, `pseudocode`, `architecture`, `refinement`
-
-### Specialized Development
-`backend-dev`, `mobile-dev`, `ml-developer`, `cicd-engineer`, `api-docs`, `system-architect`, `code-analyzer`, `base-template-generator`
-
-### Testing & Validation
-`tdd-london-swarm`, `production-validator`
-
-### Migration & Planning
-`migration-planner`, `swarm-init`
-
-## 🎯 Claude Code vs MCP Tools
-
-### Claude Code Handles ALL:
-- File operations (Read, Write, Edit, MultiEdit, Glob, Grep)
-- Code generation and programming
-- Bash commands and system operations
-- Implementation work
-- Project navigation and analysis
-- TodoWrite and task management
-- Git operations
-- Package management
-- Testing and debugging
-
-### MCP Tools ONLY:
-- Coordination and planning
-- Memory management
-- Neural features
-- Performance tracking
-- Swarm orchestration
-- GitHub integration
-
-**KEY**: MCP coordinates, Claude Code executes.
-
-## 🚀 Quick Setup
-
+### Backend (Flask + Python + posgresSQL / sqllite)
 ```bash
-# Add Claude Flow MCP server
-claude mcp add claude-flow npx claude-flow@alpha mcp start
+python -m venv venv && source venv/bin/activate  # Create/activate virtual environment
+cd backend
+uv pip install -r requirements.txt                   # Install dependencies
+python backend/app.py                                # Start Flask server (port 5050)
+python migrate_*.py                                  # Run database migrations
 ```
 
-## MCP Tool Categories
-
-### Coordination
-`swarm_init`, `agent_spawn`, `task_orchestrate`
-
-### Monitoring
-`swarm_status`, `agent_list`, `agent_metrics`, `task_status`, `task_results`
-
-### Memory & Neural
-`memory_usage`, `neural_status`, `neural_train`, `neural_patterns`
-
-### GitHub Integration
-`github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review`
-
-### System
-`benchmark_run`, `features_detect`, `swarm_monitor`
-
-## 📋 Agent Coordination Protocol
-
-### Every Agent MUST:
-
-**1️⃣ BEFORE Work:**
+### Frontend (React + Vite + TypeScript)
 ```bash
-npx claude-flow@alpha hooks pre-task --description "[task]"
-npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+cd frontend
+npm install          # Install dependencies
+npm run dev          # Start development server (port 3000)
+npm run build        # Build for production
+npm run lint         # Run ESLint
+npm run test         # Run Vitest tests
+npm run test:ui      # Run tests with UI
+npm run test:run     # Run tests once
 ```
 
-**2️⃣ DURING Work:**
-```bash
-npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
-npx claude-flow@alpha hooks notify --message "[what was done]"
-```
+## Architecture Overview
 
-**3️⃣ AFTER Work:**
-```bash
-npx claude-flow@alpha hooks post-task --task-id "[task]"
-npx claude-flow@alpha hooks session-end --export-metrics true
-```
+**Authentication Flow:**
+AuthContext → JWT tokens → Flask @token_required → User model
 
-## 🎯 Concurrent Execution Examples
+**Task Management Flow:**
+TaskList component → API calls → Records blueprint → Record model → SQLite/PostgreSQL
 
-### ✅ CORRECT (Single Message):
-```javascript
-[BatchTool]:
-  // Initialize swarm
-  mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
-  mcp__claude-flow__agent_spawn { type: "researcher" }
-  mcp__claude-flow__agent_spawn { type: "coder" }
-  mcp__claude-flow__agent_spawn { type: "tester" }
-  
-  // Spawn agents with Task tool
-  Task("Research agent: Analyze requirements...")
-  Task("Coder agent: Implement features...")
-  Task("Tester agent: Create test suite...")
-  
-  // Batch todos
-  TodoWrite { todos: [
-    {id: "1", content: "Research", status: "in_progress", priority: "high"},
-    {id: "2", content: "Design", status: "pending", priority: "high"},
-    {id: "3", content: "Implement", status: "pending", priority: "high"},
-    {id: "4", content: "Test", status: "pending", priority: "medium"},
-    {id: "5", content: "Document", status: "pending", priority: "low"}
-  ]}
-  
-  // File operations
-  Bash "mkdir -p app/{src,tests,docs}"
-  Write "app/src/index.js"
-  Write "app/tests/index.test.js"
-  Write "app/docs/README.md"
-```
+**AI Pomodoro Flow:**
+PomodoroManager → generate_pomodoro_tasks API → PomodoroIntelligenceService → 
+OpenRouter/Claude AI → PomodoroTask model → Compressed UI display
 
-### ❌ WRONG (Multiple Messages):
-```javascript
-Message 1: mcp__claude-flow__swarm_init
-Message 2: Task("agent 1")
-Message 3: TodoWrite { todos: [single todo] }
-Message 4: Write "file.js"
-// This breaks parallel coordination!
-```
 
-## Performance Benefits
+### Frontend State Management
 
-- **84.8% SWE-Bench solve rate**
-- **32.3% token reduction**
-- **2.8-4.4x speed improvement**
-- **27+ neural models**
+**React Context Pattern:**
+- `AuthContext` manages global authentication state
+- Local component state for UI interactions
+- API utility layer (`utils/api.ts`) handles HTTP requests and error standardization
 
-## Hooks Integration
+**Component Architecture:**
+- Container components manage state and API calls
+- Presentational components focus on UI rendering
+- Shared utilities for common operations (auth, API, export)
 
-### Pre-Operation
-- Auto-assign agents by file type
-- Validate commands for safety
-- Prepare resources automatically
-- Optimize topology by complexity
-- Cache searches
+### Backend Service Layer
 
-### Post-Operation
-- Auto-format code
-- Train neural patterns
-- Update memory
-- Analyze performance
-- Track token usage
+**AI Integration Architecture:**
+- OpenRouter integration for Claude AI access
+- Support Prompt engineering for LLM access: task analysis and pomodoro generation
 
-### Session Management
-- Generate summaries
-- Persist state
-- Track metrics
-- Restore context
-- Export workflows
+### Key Design Patterns
 
-## Advanced Features (v2.0.0)
+**Frontend:**
+- React Hooks pattern for state management
+- TypeScript interfaces for type safety
+- Tailwind CSS for responsive design
+- Lucide React for consistent iconography
 
-- 🚀 Automatic Topology Selection
-- ⚡ Parallel Execution (2.8-4.4x speed)
-- 🧠 Neural Training
-- 📊 Bottleneck Analysis
-- 🤖 Smart Auto-Spawning
-- 🛡️ Self-Healing Workflows
-- 💾 Cross-Session Memory
-- 🔗 GitHub Integration
+**Backend:**
+- Blueprint pattern for modular routing
+- SQLAlchemy ORM with model relationships
+- Decorator pattern for authentication (@token_required)
+- Factory pattern for app creation (create_app())
 
-## Integration Tips
+**Database:**
+- Single table inheritance for different record types (idea/task/note)
+- Soft delete pattern via status field
+- UTC timezone handling throughout
+- Auto-increment IDs with BigInteger support
 
-1. Start with basic swarm init
-2. Scale agents gradually
-3. Use memory for context
-4. Monitor progress regularly
-5. Train patterns from success
-6. Enable hooks automation
-7. Use GitHub tools first
+### Critical Integration Points
 
-## Support
+**API Data Format Consistency:**
+- All timestamps use ISO format with 'Z' suffix
+- Standardized error responses with error codes
+- Consistent success/failure response structure
 
-- Documentation: https://github.com/ruvnet/claude-flow
-- Issues: https://github.com/ruvnet/claude-flow/issues
+**Authentication Flow:**
+- JWT tokens with refresh mechanism
+- Guest user support (user_id = null)
+- Rate limiting on auth endpoints
 
----
+**AI Service Integration:**
+- OpenRouter as AI provider abstraction
+- Prompt templates for consistent AI interactions
+- Error handling and fallback for AI failures
 
-Remember: **Claude Flow coordinates, Claude Code creates!**
+### Testing Strategy
 
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-Never save working files, text/mds and tests to the root folder.
+**Unittest:**
+- Always try to add unittest testcases to cover important and corner case logics for both frontend and backend.
+- For each testcases, it should have clear asserts, and try best to avoid mocks.
+- Test out that the unittest will fail if the logic is wrong. And leave the unittest to fail if you can't fix it. Never do mocks and fake logics to only pass unittests.
+
+**Frontend:**
+- Vitest for unit testing
+- Testing Library for React component testing
+- TypeScript compilation as build-time verification
+
+**Backend:**
+- Custom test scripts for database operations
+- Integration testing for API endpoints
+- Migration scripts for schema changes
+
+
+### Development Patterns
+
+**File Organization:**
+- Backend: models/ routes/ services/ utils/ structure
+- Frontend: components/ organized by feature areas
+- Shared: API interfaces and types between frontend/backend
+
+**Code Style:**
+- TypeScript strict mode enabled
+- ESLint for code quality
+- Consistent error handling patterns
+- UTC timezone usage throughout
+
+## Environment Configuration
+
+**Backend Environment Variables:**
+- `DATABASE_URL` - SQLite or PostgreSQL connection string
+  - Local database: DATABASE_URL=sqlite:////Users/yiling/git/AIGTD/data/aigtd.db
+  - Remote database: DATABASE_URL=postgresql://postgres.bkhfvcundjhzadxpdzuz:XXMWy3ququkVFAje@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+- `JWT_SECRET_KEY` - Token signing secret
+- OpenRouter API credentials for AI integration
+
+**Frontend Environment Variables:**
+- `VITE_API_BASE_URL` - Backend API base URL (default: http://localhost:5050)
+
+## Database Management
+
+**Migration Strategy:**
+- `migrations/`: sql migration scripts for sqllite(local db) and posgresSQL on supabase(remote)
+- Manual migration scripts in backend/ directory
+- Schema deployment via `deploy_schema.py`
+- Separate migration for pomodoro features
+- first test out the migration on local database, and then prepare the migration script for migration on production database (need to be supabase & posgresSQL compatible)
+
+**Database Initialization:**
+- Auto-detection of SQLite vs PostgreSQL
+- Table creation with proper indexes
+- Admin user setup for development
+
+
+## Commit & Pull Request Guidelines
+- Commit messages: Conventional style recommended — `feat(frontend): add task filter`, `fix(backend): correct JWT expiry`.
+- PRs: include summary, linked issues, reproduction/fix notes, and screenshots for UI.
+- Keep PRs small; update docs and `.env.example` when changing configuration.
+
+## Security & Configuration
+- Never commit secrets. Copy `env.example` → `.env` (root/backend) and set `VITE_API_BASE_URL`, `JWT_SECRET_KEY`, DB URL, etc.
+- CORS and ports: backend defaults to `5050`; frontend points to `VITE_API_BASE_URL`.
+
+
+# AIGTD 新增服务配置指南
+
+## 4. 迁移脚本配置
+
+### 本地迁移脚本
+- 创建 `backend/migrate_your_table.py`
+- 检测数据库类型（SQLite/PostgreSQL）并生成兼容SQL
+- 创建必要索引：用户状态、状态、标题等
+- 支持 `--rollback` 参数回滚迁移
+
+### SQL迁移文件
+- SQLite版本：`migrations/sqllite/001_your_table.sql`
+- Supabase版本：`migrations/supabase/001_your_table.sql`
+- 包含表结构、索引、触发器（更新 `updated_at`）
+
+## 5. 测试配置
+
+### 后端测试
+- 创建 `backend/test_your_service.py`
+- 测试错误响应：缺少字段、无效值、认证错误
+- 测试成功响应：CRUD操作、搜索过滤
+- 验证统一响应格式和错误码
+
+### 前端测试
+- 创建 `frontend/tests/your-service.test.tsx`
+- Mock API调用，测试组件渲染和交互
+- 验证错误处理和成功响应处理
+
+## 6. 部署配置
+
+### 环境变量
+- `DATABASE_URL`：数据库连接字符串
+- `JWT_SECRET_KEY`：JWT密钥
+- `DEBUG_LOGGING`：调试日志开关
+- `VERBOSE_LOGGING`：详细日志开关
+
+### 部署脚本
+- 更新 `deploy.sh` 包含新迁移脚本
+- 运行迁移验证和API测试
+
+## 7. 配置检查清单
+
+### 必需文件 
+- [ ] `backend/app/models/your_model.py` - 数据模型
+- [ ] `backend/app/routes/your_service.py` - API路由
+- [ ] `backend/migrate_your_table.py` - 迁移脚本
+- [ ] `migrations/sqllite/001_your_table.sql` - SQLite迁移
+- [ ] `migrations/supabase/001_your_table.sql` - Supabase迁移
+- [ ] `backend/test_your_service.py` - 后端测试
+- [ ] `frontend/tests/your-service.test.tsx` - 前端测试
+
+### 配置更新
+- [ ] `backend/app/__init__.py` - 注册蓝图
+- [ ] `.env` - 环境变量
+- [ ] `deploy.sh` - 部署脚本
+
+### 功能验证
+- [ ] 支持用户/访客模式
+- [ ] 实现软删除
+- [ ] 使用统一响应处理
+- [ ] 自动日志记录
+- [ ] 错误码标准化
+- [ ] 时间戳UTC格式
+- [ ] 数据库索引优化
+- [ ] CRUD操作完整
+- [ ] 搜索过滤功能
+
+## 8. 常见问题
+
+- **CORS错误**：检查前端URL是否在 `origins` 配置中
+- **迁移失败**：验证SQL语法兼容性，检查表名冲突
+- **权限错误**：确认 `get_current_user()` 和JWT token有效性
+- **响应格式不一致**：强制使用 `create_error_response()` 和 `create_success_response()`
+- **时间格式错误**：使用 `safe_isoformat()` 处理时间戳
+- **数据库性能**：创建必要索引，避免全表扫描
+- **日志缺失**：确保调用响应函数时传入 `method` 和 `endpoint` 参数
+
+## 9. 最佳实践
+
+- **代码组织**：按功能模块分离，使用蓝图模式
+- **数据库设计**：支持多租户，实现软删除，使用UTC时区
+- **测试策略**：单元测试 + 集成测试 + 错误场景测试
+- **安全考虑**：输入验证、SQL注入防护、权限控制
+- **性能优化**：数据库索引、查询优化、响应缓存
+- **错误处理**：统一错误码、详细错误信息、自动日志记录

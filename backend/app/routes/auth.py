@@ -9,6 +9,7 @@ from app.models.user import User, db
 from app.utils.validators import validate_email, validate_password, validate_username
 from app.utils.rate_limiter import rate_limit
 from app.utils.email_service import send_verification_email, send_password_reset_email
+from app.utils.response_helpers import create_error_response, create_success_response, debug_log, ErrorCodes
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -24,10 +25,20 @@ def token_required(f):
             try:
                 token = auth_header.split(' ')[1]  # Bearer <token>
             except IndexError:
-                return jsonify({'error': '无效的认证头格式'}), 401
+                return create_error_response(
+                    ErrorCodes.AUTHENTICATION_ERROR,
+                    '无效的认证头格式. Authorization头格式应为: Bearer <token>',
+                    method='UNKNOWN',
+                    endpoint='token_required'
+                )
         
         if not token:
-            return jsonify({'error': 'Token缺失'}), 401
+            return create_error_response(
+                ErrorCodes.AUTHENTICATION_ERROR,
+                'Token缺失. 请求头中缺少Authorization字段',
+                method='UNKNOWN',
+                endpoint='token_required'
+            )
         
         try:
             # 验证token

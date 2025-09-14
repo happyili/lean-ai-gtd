@@ -12,6 +12,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from app.database.init import init_database
 from app.routes.records import records_bp
 from app.routes.auth import auth_bp
+from app.routes.pomodoro import pomodoro_bp
+from app.routes.info_resources import info_resources_bp
+from app.routes.reminders import reminders_bp
 
 # 配置日志系统
 def setup_logging():
@@ -113,6 +116,9 @@ def create_app():
     # 注册路由
     app.register_blueprint(records_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(pomodoro_bp)
+    app.register_blueprint(info_resources_bp)
+    app.register_blueprint(reminders_bp)
     debug_log("✅ 路由注册完成")
     
     @app.route('/')

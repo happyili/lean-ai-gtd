@@ -5,6 +5,11 @@ import TaskList from '@/components/QuickCapture/TaskList';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import PomodoroFocusMode from '@/components/QuickCapture/PomodoroFocusMode';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
+import PomodoroManager from '@/components/PomodoroManager';
+import RemindersList from '@/components/Reminders/RemindersList';
+import ReminderBanner from '@/components/Reminders/ReminderBanner';
+import InfoResourceList from '@/components/InfoResources/InfoResourceList';
+import InfoResourceDetail from '@/components/InfoResources/InfoResourceDetail';
 import { apiPost, apiDelete } from '@/utils/api';
 
 interface TaskCreateData {
@@ -41,6 +46,17 @@ interface Record {
   user_id?: number | null; // 用户ID，null表示guest用户
 }
 
+interface InfoResource {
+  id: number;
+  title: string;
+  content: string;
+  resource_type: string;
+  user_id?: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 
 export default function App() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuth();
@@ -60,24 +76,31 @@ export default function App() {
   const [isPomodoroActive, setIsPomodoroActive] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState('all');
   const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
+  const [currentView, setCurrentView] = useState<'tasks' | 'pomodoro'>('tasks'); // 新增：控制当前视图
+  const [isTaskManagementDropdownOpen, setIsTaskManagementDropdownOpen] = useState(false); // 任务管理下拉菜单状态
+  const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders'>('tasks'); // 选中的任务管理模式
+  const [selectedInfoResource, setSelectedInfoResource] = useState<InfoResource | null>(null); // 选中的信息资源
 
-  // 点击外部关闭搜索框
+  // 点击外部关闭搜索框和下拉菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (isSearchExpanded && !target.closest('.search-container')) {
         setIsSearchExpanded(false);
       }
+      if (isTaskManagementDropdownOpen && !target.closest('.task-management-dropdown')) {
+        setIsTaskManagementDropdownOpen(false);
+      }
     };
 
-    if (isSearchExpanded) {
+    if (isSearchExpanded || isTaskManagementDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSearchExpanded]);
+  }, [isSearchExpanded, isTaskManagementDropdownOpen]);
 
   // 如果正在加载认证状态，显示加载状态
   if (authLoading) {
@@ -381,6 +404,61 @@ export default function App() {
     }
   };
 
+  // 信息资源相关处理函数
+  const handleViewInfoResourceDetail = (resource: InfoResource) => {
+    setSelectedInfoResource(resource);
+  };
+
+  const handleCloseInfoResourceDetail = () => {
+    setSelectedInfoResource(null);
+  };
+
+  const handleUpdateInfoResource = async (updatedResource: InfoResource) => {
+    try {
+      const { apiPut, apiPutPublic } = await import('@/utils/api');
+      
+      if (isAuthenticated && accessToken) {
+        await apiPut(
+          `/api/info-resources/${updatedResource.id}`,
+          updatedResource,
+          '更新信息资源',
+          accessToken
+        );
+      } else {
+        await apiPutPublic(
+          `/api/info-resources/${updatedResource.id}`,
+          updatedResource,
+          '更新信息资源'
+        );
+      }
+
+      showNotification('信息资源更新成功', 'success');
+      
+      // 更新选中的信息资源
+      setSelectedInfoResource(updatedResource);
+      
+    } catch (error) {
+      console.error('更新信息资源失败:', error);
+      showNotification(error instanceof Error ? error.message : '更新信息资源失败', 'error');
+    }
+  };
+
+  const handleDeleteInfoResource = async (resourceId: number) => {
+    try {
+      await apiDelete(
+        `/api/info-resources/${resourceId}`,
+        '删除信息资源',
+        accessToken || undefined
+      );
+
+      showNotification('信息资源删除成功', 'success');
+      
+    } catch (error) {
+      console.error('删除信息资源失败:', error);
+      showNotification(error instanceof Error ? error.message : '删除信息资源失败', 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       {/* 番茄时钟专注模式 */}
@@ -415,7 +493,97 @@ export default function App() {
                 </h1>
               </div>
               
-              {/* 导航菜单 */}
+              {/* 主导航标签 */}
+              <nav className="flex items-center space-x-2">
+                {/* 任务管理下拉菜单 */}
+                <div className="relative task-management-dropdown">
+                  <button
+                    onClick={() => {
+                      setCurrentView('tasks');
+                      setIsTaskManagementDropdownOpen(!isTaskManagementDropdownOpen);
+                    }}
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      currentView === 'tasks' 
+                        ? 'text-white' 
+                        : 'hover:bg-gray-100'
+                    }`}
+                    style={{ 
+                      backgroundColor: currentView === 'tasks' ? 'var(--primary)' : 'transparent',
+                      color: currentView === 'tasks' ? 'white' : 'var(--text-primary)'
+                    }}
+                  >
+                    {selectedTaskManagementMode === 'tasks' ? '任务管理' : 
+                     selectedTaskManagementMode === 'resources' ? '信息资源' : 
+                     selectedTaskManagementMode === 'reminders' ? '定时提醒' : '任务管理'}
+                    <svg 
+                      className={`ml-1 w-4 h-4 transform transition-transform ${isTaskManagementDropdownOpen ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* 下拉菜单 */}
+                  {isTaskManagementDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 min-w-[140px] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setSelectedTaskManagementMode('tasks');
+                            setIsTaskManagementDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
+                            selectedTaskManagementMode === 'tasks' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          任务管理
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedTaskManagementMode('resources');
+                            setIsTaskManagementDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
+                            selectedTaskManagementMode === 'resources' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          信息资源
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedTaskManagementMode('reminders');
+                            setIsTaskManagementDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
+                            selectedTaskManagementMode === 'reminders' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          定时提醒
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setCurrentView('pomodoro')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    currentView === 'pomodoro' 
+                      ? 'text-white' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                  style={{ 
+                    backgroundColor: currentView === 'pomodoro' ? 'var(--primary)' : 'transparent',
+                    color: currentView === 'pomodoro' ? 'white' : 'var(--text-primary)'
+                  }}
+                >
+                  AI番茄钟
+                </button>
+              </nav>
+              
+              {/* 筛选菜单 - 只在任务管理视图显示 */}
+              {currentView === 'tasks' && (
               <nav className="flex items-center space-x-1 relative">
                 {/* 搜索筛选 - 可折叠 */}
                 <div className="flex items-center space-x-1 search-container">
@@ -824,6 +992,7 @@ export default function App() {
                   </button>
                 </div>
               </nav>
+              )}
             </div>
 
             {/* 右侧：用户菜单 */}
@@ -834,23 +1003,53 @@ export default function App() {
         </div>
       </header>
 
+      {/* 到期提醒条 - 紧贴banner下方 */}
+      <ReminderBanner accessToken={accessToken} />
+
       {/* 主要内容区域 */}
       <div className={`flex transition-all duration-300 ${isPomodoroActive ? 'h-[calc(100vh-128px)] mt-[80px]' : 'h-[calc(100vh-48px)]'}`}>
-        {/* 任务列表占满整个宽度 */}
-        <main className="w-full">
-          <TaskList
-            onViewDetail={handleViewDetail}
-            onDelete={handleDelete}
-            onSearch={handleSearch}
-            onSave={handleSave}
-            onStartPomodoro={handleStartPomodoro}
-            showNotification={showNotification}
-            isCollapsed={isSubtaskCollapsed}
-            showAllLevels={showAllLevels}
-          />
-        </main>
+        {/* 条件渲染不同的视图 */}
+        {currentView === 'tasks' ? (
+          <main className="w-full">
 
-        {/* 展开添加面板的浮动按钮 */}
+            {/* 任务管理模式 */}
+            {selectedTaskManagementMode === 'tasks' && (
+              <TaskList
+                onViewDetail={handleViewDetail}
+                onDelete={handleDelete}
+                onSearch={handleSearch}
+                onSave={handleSave}
+                onStartPomodoro={handleStartPomodoro}
+                showNotification={showNotification}
+                isCollapsed={isSubtaskCollapsed}
+                showAllLevels={showAllLevels}
+              />
+            )}
+
+            {/* 信息资源模式 */}
+            {selectedTaskManagementMode === 'resources' && (
+              <InfoResourceList
+                onViewDetail={handleViewInfoResourceDetail}
+                onDelete={handleDeleteInfoResource}
+                onSearch={handleSearch}
+                showNotification={showNotification}
+              />
+            )}
+
+            {/* 定时提醒模式 */}
+            {selectedTaskManagementMode === 'reminders' && (
+              <RemindersList accessToken={accessToken} />
+            )}
+          </main>
+        ) : (
+          <main className="w-full">
+            <PomodoroManager accessToken={accessToken} />
+          </main>
+        )}
+      </div>
+
+      {/* 展开添加面板的浮动按钮 - 只在任务管理视图的任务模式显示 */}
+      {currentView === 'tasks' && selectedTaskManagementMode === 'tasks' && (
         <button
           onClick={() => setShowAddDialog(true)}
           className="fixed bottom-6 right-6 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
@@ -862,7 +1061,7 @@ export default function App() {
         >
           <span className="text-xl font-semibold">+</span>
         </button>
-      </div>
+      )}
 
       {/* 任务详情弹窗 */}
       {selectedTask && (
@@ -872,6 +1071,16 @@ export default function App() {
           onUpdate={handleUpdateTask}
           onAddSubtask={handleAddSubtask}
           onDeleteSubtask={handleDeleteSubtask}
+        />
+      )}
+
+      {/* 信息资源详情弹窗 */}
+      {selectedInfoResource && (
+        <InfoResourceDetail
+          resource={selectedInfoResource}
+          onClose={handleCloseInfoResourceDetail}
+          onUpdate={handleUpdateInfoResource}
+          onDelete={handleDeleteInfoResource}
         />
       )}
 

@@ -4,46 +4,45 @@ from app.models.user import User
 from app.services.ai_intelligence import ai_intelligence_service
 from app.routes.auth import token_required
 from app.utils.auth_helpers import get_user_for_record_access
+from app.utils.response_helpers import create_error_response, create_success_response, debug_log, ErrorCodes
 from datetime import datetime, timezone
 import traceback
-
-def create_error_response(error_message, error_code, details=None, status_code=500):
-    """创建统一的错误响应"""
-    error_data = {
-        'error': error_message,
-        'error_code': error_code,
-        'details': details or error_message
-    }
-    
-    if current_app.debug:
-        error_data['traceback'] = traceback.format_exc()
-        error_data['suggestion'] = '请检查数据库连接和表结构是否正确'
-    
-    return jsonify(error_data), status_code
 
 records_bp = Blueprint('records', __name__)
 
 @records_bp.route('/api/records', methods=['POST'])
 def create_record():
     """创建新记录"""
-    from api.index import debug_log
-    debug_log("🔍 POST /api/records - 开始处理请求")
     try:
         data = request.get_json()
-        debug_log("📊 请求数据", data)
+        debug_log.info("📊 请求数据", data)
         
         # 验证输入
         if not data or not data.get('content'):
-            debug_log("❌ 验证失败: 记录内容为空")
-            return jsonify({'error': '记录内容不能为空'}), 400
+            return create_error_response(
+                ErrorCodes.MISSING_REQUIRED_FIELD,
+                'content字段是必需的',
+                method='POST',
+                endpoint='/api/records'
+            )
         
         content = data.get('content', '').strip()
         if len(content) > 5000:
-            return jsonify({'error': '记录内容不能超过5000字符'}), 400
+            return create_error_response(
+                ErrorCodes.INVALID_FIELD_VALUE,
+                'content字段长度不能超过5000字符',
+                method='POST',
+                endpoint='/api/records'
+            )
         
         category = data.get('category', 'general')
         if category not in ['idea', 'task', 'note', 'general']:
-            category = 'general'
+            return create_error_response(
+                ErrorCodes.INVALID_FIELD_VALUE,
+                f'无效的记录分类, category必须是idea、task、note或general之一，当前值: {category}',
+                method='POST',
+                endpoint='/api/records'
+            )
         
         # 获取当前用户
         current_user, access_level, auth_error = get_user_for_record_access()
@@ -60,7 +59,12 @@ def create_record():
                 parent_record = Record.query.filter_by(id=parent_id, user_id=None).first()
             
             if not parent_record or not parent_record.is_task():
-                return jsonify({'error': '父任务不存在或不是任务类型'}), 400
+                return create_error_response(
+                    ErrorCodes.RECORD_NOT_FOUND,
+                    f'parent_id {parent_id} 对应的记录不存在或不是任务类型',
+                    method='POST',
+                    endpoint='/api/records'
+                )
         
         # 任务类型
         task_type = data.get('task_type', 'work')
@@ -79,7 +83,12 @@ def create_record():
         progress_notes = data.get('progress_notes')
         if isinstance(progress_notes, str):
             if len(progress_notes) > 10000:
-                return jsonify({'error': '进展记录不能超过10000字符'}), 400
+                return create_error_response(
+                    ErrorCodes.INVALID_FIELD_VALUE,
+                    'progress_notes字段长度不能超过10000字符',
+                    method='POST',
+                    endpoint='/api/records'
+                )
             record.progress_notes = progress_notes
         
         priority = data.get('priority')
@@ -93,20 +102,22 @@ def create_record():
         db.session.add(record)
         db.session.commit()
         
-        return jsonify({
-            'message': '记录创建成功',
+        return create_success_response({
             'record': record.to_dict()
-        }), 201
+        }, '记录创建成功', method='POST', endpoint='/api/records')
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'创建记录失败: {str(e)}'}), 500
+        return create_error_response(
+            ErrorCodes.DATABASE_ERROR,
+            f'创建记录失败: {str(e)}',
+            method='POST',
+            endpoint='/api/records'
+        )
 
 @records_bp.route('/api/records', methods=['GET'])
 def get_records():
     """获取记录列表"""
-    from api.index import debug_log
-    debug_log("🔍 GET /api/records - 开始处理请求")
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
@@ -182,11 +193,7 @@ def get_records():
         })
         
     except Exception as e:
-        return create_error_response(
-            f'获取记录失败: {str(e)}',
-            'DATABASE_ERROR',
-            details=str(e)
-        )
+        return create_error_response('DATABASE_ERROR', f'获取记录失败: {str(e)}')
 
 @records_bp.route('/api/records/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
