@@ -1288,6 +1288,7 @@ export default function App() {
       <PomodoroBannerPanel 
         accessToken={accessToken} 
         isExpanded={isPomodoroPanelExpanded}
+        onToggleExpanded={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
       />
 
       {/* 主要内容区域 */}

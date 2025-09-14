@@ -23,11 +23,13 @@ interface PomodoroTask {
 interface PomodoroBannerPanelProps {
   accessToken: string | null;
   isExpanded: boolean;
+  onToggleExpanded?: () => void;
 }
 
 export default function PomodoroBannerPanel({ 
   accessToken, 
-  isExpanded
+  isExpanded,
+  onToggleExpanded
 }: PomodoroBannerPanelProps) {
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,47 @@ export default function PomodoroBannerPanel({
   const [timerMinutes, setTimerMinutes] = useState(25);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  // localStorage keys
+  const STORAGE_KEYS = {
+    ACTIVE_TASK_ID: 'pomodoro_active_task_id',
+    TIMER_MINUTES: 'pomodoro_timer_minutes',
+    TIMER_SECONDS: 'pomodoro_timer_seconds',
+    IS_TIMER_RUNNING: 'pomodoro_is_timer_running',
+    PANEL_EXPANDED: 'pomodoro_panel_expanded'
+  };
+
+  // 保存状态到localStorage
+  const saveStateToStorage = (key: string, value: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('保存状态到localStorage失败:', error);
+    }
+  };
+
+  // 从localStorage加载状态
+  const loadStateFromStorage = (key: string, defaultValue: any) => {
+    try {
+      const stored = localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : defaultValue;
+    } catch (error) {
+      console.error('从localStorage加载状态失败:', error);
+      return defaultValue;
+    }
+  };
+
+  // 清除localStorage中的番茄钟状态
+  const clearPomodoroState = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_TASK_ID);
+      localStorage.removeItem(STORAGE_KEYS.TIMER_MINUTES);
+      localStorage.removeItem(STORAGE_KEYS.TIMER_SECONDS);
+      localStorage.removeItem(STORAGE_KEYS.IS_TIMER_RUNNING);
+    } catch (error) {
+      console.error('清除localStorage状态失败:', error);
+    }
+  };
 
   // 加载番茄任务
   const loadPomodoroTasks = async () => {
@@ -87,6 +130,18 @@ export default function PomodoroBannerPanel({
         setTimerMinutes(25);
         setTimerSeconds(0);
         setIsTimerRunning(true);
+        
+        // 保存状态到localStorage
+        saveStateToStorage(STORAGE_KEYS.ACTIVE_TASK_ID, taskId);
+        saveStateToStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
+        saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
+        saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, true);
+        
+        // 自动展开面板
+        if (onToggleExpanded && !isExpanded) {
+          onToggleExpanded();
+        }
+        
         await loadPomodoroTasks();
       }
     } catch (error) {
@@ -107,6 +162,10 @@ export default function PomodoroBannerPanel({
         setIsTimerRunning(false);
         setTimerMinutes(25);
         setTimerSeconds(0);
+        
+        // 清除localStorage中的番茄钟状态
+        clearPomodoroState();
+        
         await loadPomodoroTasks();
       }
     } catch (error) {
@@ -127,6 +186,9 @@ export default function PomodoroBannerPanel({
           setIsTimerRunning(false);
           setTimerMinutes(25);
           setTimerSeconds(0);
+          
+          // 清除localStorage中的番茄钟状态
+          clearPomodoroState();
         }
         await loadPomodoroTasks();
       }
@@ -148,6 +210,9 @@ export default function PomodoroBannerPanel({
           setIsTimerRunning(false);
           setTimerMinutes(25);
           setTimerSeconds(0);
+          
+          // 清除localStorage中的番茄钟状态
+          clearPomodoroState();
         }
         await loadPomodoroTasks();
       }
@@ -163,15 +228,21 @@ export default function PomodoroBannerPanel({
     if (isTimerRunning && (timerMinutes > 0 || timerSeconds > 0)) {
       interval = setInterval(() => {
         if (timerSeconds > 0) {
-          setTimerSeconds(timerSeconds - 1);
+          const newSeconds = timerSeconds - 1;
+          setTimerSeconds(newSeconds);
+          saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, newSeconds);
         } else if (timerMinutes > 0) {
-          setTimerMinutes(timerMinutes - 1);
+          const newMinutes = timerMinutes - 1;
+          setTimerMinutes(newMinutes);
           setTimerSeconds(59);
+          saveStateToStorage(STORAGE_KEYS.TIMER_MINUTES, newMinutes);
+          saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, 59);
         }
       }, 1000);
     } else if (isTimerRunning && timerMinutes === 0 && timerSeconds === 0) {
       // 番茄钟结束
       setIsTimerRunning(false);
+      saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, false);
       if (activeTaskId) {
         completeTask(activeTaskId);
       }
@@ -186,6 +257,31 @@ export default function PomodoroBannerPanel({
       loadPomodoroTasks();
     }
   }, [accessToken, isExpanded]);
+
+  // 从localStorage恢复状态
+  useEffect(() => {
+    if (accessToken) {
+      const storedActiveTaskId = loadStateFromStorage(STORAGE_KEYS.ACTIVE_TASK_ID, null);
+      const storedTimerMinutes = loadStateFromStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
+      const storedTimerSeconds = loadStateFromStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
+      const storedIsTimerRunning = loadStateFromStorage(STORAGE_KEYS.IS_TIMER_RUNNING, false);
+      
+      if (storedActiveTaskId) {
+        setActiveTaskId(storedActiveTaskId);
+        setTimerMinutes(storedTimerMinutes);
+        setTimerSeconds(storedTimerSeconds);
+        setIsTimerRunning(storedIsTimerRunning);
+        
+        // 如果有活跃任务，自动展开面板
+        if (onToggleExpanded && !isExpanded) {
+          onToggleExpanded();
+        }
+        
+        // 加载任务列表
+        loadPomodoroTasks();
+      }
+    }
+  }, [accessToken]);
 
   const formatTime = (minutes: number, seconds: number) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -278,7 +374,11 @@ export default function PomodoroBannerPanel({
                   </div>
                   <div className="flex justify-center space-x-3">
                     <button
-                      onClick={() => setIsTimerRunning(!isTimerRunning)}
+                      onClick={() => {
+                        const newIsRunning = !isTimerRunning;
+                        setIsTimerRunning(newIsRunning);
+                        saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, newIsRunning);
+                      }}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center text-sm"
                     >
                       {isTimerRunning ? '暂停' : '继续'}
