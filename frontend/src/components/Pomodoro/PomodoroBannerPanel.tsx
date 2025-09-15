@@ -25,13 +25,15 @@ interface PomodoroBannerPanelProps {
   isExpanded: boolean;
   onToggleExpanded?: () => void;
   refreshTrigger?: number; // 用于触发刷新的计数器
+  onPomodoroChange?: () => void; // 回调函数，用于通知父组件番茄钟状态变化
 }
 
 export default function PomodoroBannerPanel({ 
   accessToken, 
   isExpanded,
   onToggleExpanded,
-  refreshTrigger
+  refreshTrigger,
+  onPomodoroChange
 }: PomodoroBannerPanelProps) {
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,22 +95,34 @@ export default function PomodoroBannerPanel({
       if (data.success) {
         setTasks(data.data.tasks);
         
-        // 检查是否有新的活跃任务
+        // 检查是否有活跃任务
         const activeTask = data.data.tasks.find((task: PomodoroTask) => task.status === 'active');
-        if (activeTask && activeTask.id !== activeTaskId) {
-          // 发现新的活跃任务，自动设置状态
-          setActiveTaskId(activeTask.id);
-          setTimerMinutes(25);
-          setTimerSeconds(0);
-          setIsTimerRunning(true);
-          
-          // 保存状态到localStorage
-          saveStateToStorage(STORAGE_KEYS.ACTIVE_TASK_ID, activeTask.id);
-          saveStateToStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
-          saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
-          saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, true);
-          
-          console.log('检测到新的活跃任务，自动切换到计时器模式:', activeTask.id);
+        if (activeTask) {
+          if (activeTask.id !== activeTaskId) {
+            // 发现新的活跃任务，自动设置状态
+            setActiveTaskId(activeTask.id);
+            setTimerMinutes(25);
+            setTimerSeconds(0);
+            setIsTimerRunning(true);
+            
+            // 保存状态到localStorage
+            saveStateToStorage(STORAGE_KEYS.ACTIVE_TASK_ID, activeTask.id);
+            saveStateToStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
+            saveStateToStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
+            saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, true);
+            
+            console.log('检测到新的活跃任务，自动切换到计时器模式:', activeTask.id);
+          }
+        } else {
+          // 没有活跃任务，清除状态
+          if (activeTaskId !== null) {
+            setActiveTaskId(null);
+            setIsTimerRunning(false);
+            setTimerMinutes(25);
+            setTimerSeconds(0);
+            clearPomodoroState();
+            console.log('没有活跃任务，清除计时器状态');
+          }
         }
       }
     } catch (error) {
@@ -128,6 +142,7 @@ export default function PomodoroBannerPanel({
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
+        onPomodoroChange?.(); // 通知父组件状态变化
       } else {
         console.error('生成番茄任务失败:', data.message);
       }
@@ -163,6 +178,7 @@ export default function PomodoroBannerPanel({
         }
         
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('开始任务失败:', error);
@@ -187,6 +203,7 @@ export default function PomodoroBannerPanel({
         clearPomodoroState();
         
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('完成任务失败:', error);
@@ -211,6 +228,7 @@ export default function PomodoroBannerPanel({
           clearPomodoroState();
         }
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('跳过任务失败:', error);
@@ -235,6 +253,7 @@ export default function PomodoroBannerPanel({
           clearPomodoroState();
         }
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('重置任务失败:', error);
@@ -250,15 +269,18 @@ export default function PomodoroBannerPanel({
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
+          // 先清除localStorage中的番茄钟状态
+          clearPomodoroState();
+          
+          // 然后更新状态
           setActiveTaskId(null);
           setIsTimerRunning(false);
           setTimerMinutes(25);
           setTimerSeconds(0);
-          
-          // 清除localStorage中的番茄钟状态
-          clearPomodoroState();
         }
+        // 重新加载任务列表
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('删除任务失败:', error);

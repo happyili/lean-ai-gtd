@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Play, Pause, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
+import { Clock, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
 import { apiPost, apiGet, apiDelete } from '@/utils/api';
 import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
 
@@ -41,9 +41,11 @@ interface PomodoroStats {
 
 interface PomodoroManagerProps {
   accessToken: string | null;
+  onPomodoroChange?: () => void; // 回调函数，用于通知父组件番茄钟状态变化
+  refreshTrigger?: number; // 用于触发刷新的计数器
 }
 
-export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
+export default function PomodoroManager({ accessToken, onPomodoroChange, refreshTrigger }: PomodoroManagerProps) {
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [stats, setStats] = useState<PomodoroStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -117,6 +119,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
       if (data.success) {
         setTasks(data.data.tasks);
         await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
       } else {
         console.error('生成番茄任务失败:', data.message);
       }
@@ -140,6 +143,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         setTimerSeconds(0);
         setIsTimerRunning(true);
         await loadPomodoroTasks();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('开始任务失败:', error);
@@ -161,6 +165,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         setTimerSeconds(0);
         await loadPomodoroTasks();
         await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('完成任务失败:', error);
@@ -183,6 +188,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         }
         await loadPomodoroTasks();
         await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('跳过任务失败:', error);
@@ -205,6 +211,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         }
         await loadPomodoroTasks();
         await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('重置任务失败:', error);
@@ -227,6 +234,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
         }
         await loadPomodoroTasks();
         await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
       }
     } catch (error) {
       console.error('删除任务失败:', error);
@@ -265,9 +273,15 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
     }
   }, [accessToken]);
 
-  const formatTime = (minutes: number, seconds: number) => {
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
+  // 监听refreshTrigger变化，刷新任务列表
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0 && accessToken) {
+      console.log('PomodoroManager检测到refreshTrigger变化，刷新任务列表');
+      loadPomodoroTasks();
+      loadStats();
+    }
+  }, [refreshTrigger, accessToken]);
+
 
 
   if (!accessToken) {
@@ -367,15 +381,7 @@ export default function PomodoroManager({ accessToken }: PomodoroManagerProps) {
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无番茄任务</h3>
-            <p className="text-gray-600 mb-6">点击"生成我的番茄任务"让AI为你规划今日任务</p>
-            <button
-              onClick={generateTasks}
-              disabled={generating}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? '生成中...' : '生成我的番茄任务'}
-            </button>
+            <p className="text-gray-600">点击上方的"生成我的番茄任务"让AI为你规划今日任务</p>
           </div>
         ) : (
           <div>

@@ -1253,6 +1253,7 @@ export default function App() {
         isExpanded={isPomodoroPanelExpanded}
         onToggleExpanded={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
         refreshTrigger={pomodoroRefreshTrigger}
+        onPomodoroChange={() => setPomodoroRefreshTrigger(prev => prev + 1)}
       />
 
       {/* 主要内容区域 */}
@@ -1295,12 +1296,20 @@ export default function App() {
 
             {/* AI番茄钟模式 */}
             {selectedTaskManagementMode === 'ai-pomodoro' && (
-              <PomodoroManager accessToken={accessToken} />
+              <PomodoroManager 
+                accessToken={accessToken} 
+                onPomodoroChange={() => setPomodoroRefreshTrigger(prev => prev + 1)}
+                refreshTrigger={pomodoroRefreshTrigger}
+              />
             )}
           </main>
         ) : (
           <main className="w-full">
-            <PomodoroManager accessToken={accessToken} />
+            <PomodoroManager 
+              accessToken={accessToken} 
+              onPomodoroChange={() => setPomodoroRefreshTrigger(prev => prev + 1)}
+              refreshTrigger={pomodoroRefreshTrigger}
+            />
           </main>
         )}
       </div>

@@ -338,29 +338,6 @@ export default function PomodoroTaskCard({
           </button>
         </div>
       </div>
-      
-      {/* 进度条 */}
-      <div className="mt-4">
-        <div 
-          className="flex justify-between text-sm mb-1"
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          <span>完成进度</span>
-          <span>{Math.round((task.pomodoros_completed / task.estimated_pomodoros) * 100)}%</span>
-        </div>
-        <div 
-          className="w-full rounded-full h-2"
-          style={{ backgroundColor: 'var(--border-light)' }}
-        >
-          <div
-            className="h-2 rounded-full transition-all duration-300"
-            style={{
-              width: `${Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100)}%`,
-              backgroundColor: 'var(--success)'
-            }}
-          />
-        </div>
-      </div>
     </div>
   );
 }
