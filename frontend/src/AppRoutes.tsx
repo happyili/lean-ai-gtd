@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute, { PublicRoute, AdminRoute } from '@/components/Auth/ProtectedRoute';
 import AuthPage from '@/components/Auth/AuthPage';
 import App from '@/app/page';
@@ -10,9 +11,10 @@ import App from '@/app/page';
  */
 export default function AppRoutes() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
           {/* 公开路由 - 登录注册页面 */}
           <Route
             path="/login"
@@ -120,5 +122,6 @@ export default function AppRoutes() {
         </Routes>
       </Router>
     </AuthProvider>
+    </ThemeProvider>
   );
 }

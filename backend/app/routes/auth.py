@@ -191,7 +191,7 @@ def login():
             'access_token': access_token,
             'refresh_token': refresh_token,
             'token_type': 'Bearer',
-            'expires_in': 3600,  # 1小时
+            'expires_in': 864000,  # 10天
             'user': user.to_dict()
         }), 200
         
@@ -229,7 +229,7 @@ def refresh_token():
             return jsonify({
                 'access_token': new_access_token,
                 'token_type': 'Bearer',
-                'expires_in': 3600
+                'expires_in': 864000
             }), 200
             
         except Exception as e:

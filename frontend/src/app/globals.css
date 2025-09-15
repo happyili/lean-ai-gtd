@@ -59,52 +59,6 @@
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', 'Consolas', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark Mode - Professional */
-    --background: #0f1419;
-    --background-secondary: #1c2128;
-    --card-background: #21262d;
-    --surface-elevated: #2d333b;
-    
-    /* Dark Mode Text - WCAG AA Compliant */
-    --text-primary: #f0f6fc;       /* 15.8:1 contrast on dark bg */
-    --text-secondary: #e6edf3;     /* 13.2:1 contrast on dark bg */
-    --text-tertiary: #b6c2cf;      /* 8.4:1 contrast on dark bg */
-    --text-muted: #8d96a0;         /* 6.1:1 contrast on dark bg */
-    --text-disabled: #636c76;      /* 3.8:1 contrast on dark bg */
-    
-    /* Dark Mode Colors - Professional */
-    --primary: #3b82f6;            /* Professional blue for dark mode */
-    --primary-hover: #2563eb;      /* Darker blue on hover */
-    --primary-light: #1e293b;
-    --primary-dark: #1e40af;
-    
-    /* Dark Mode Accent Colors - Professional */
-    --accent-sky: #0ea5e9;
-    --accent-blue: #3b82f6;
-    --accent-emerald: #10b981;
-    --accent-amber: #f59e0b;
-    --accent-red: #ef4444;
-    --accent-purple: #8b5cf6;
-    --accent-purple-bg: rgba(139, 92, 246, 0.15);
-    
-    /* Dark Mode Semantic Colors - Professional */
-    --success: #10b981;            /* Professional green for dark mode */
-    --success-bg: rgba(16, 185, 129, 0.15);
-    --warning: #f59e0b;            /* Professional amber for dark mode */
-    --warning-bg: rgba(245, 158, 11, 0.15);
-    --error: #ef4444;              /* Professional red for dark mode */
-    --error-bg: rgba(239, 68, 68, 0.15);
-    --info: #3b82f6;               /* Professional blue for dark mode */
-    --info-bg: rgba(59, 130, 246, 0.15);
-    
-    --border-light: #374151;
-    --border-default: #4b5563;
-    --border-strong: #6b7280;
-    --border-interactive: #3b82f6;
-  }
-}
 
 /* Base Typography */
 body {
@@ -116,6 +70,67 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 全局主题切换支持 */
+html {
+  transition: background-color 0.3s ease;
+}
+
+/* 白天模式 */
+html.light {
+  color-scheme: light;
+}
+
+/* 夜间模式 */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark {
+  /* Dark Mode - Professional */
+  --background: #0f1419;
+  --background-secondary: #1c2128;
+  --card-background: #21262d;
+  --surface-elevated: #2d333b;
+  
+  /* Dark Mode Text - WCAG AA Compliant */
+  --text-primary: #f0f6fc;       /* 15.8:1 contrast on dark bg */
+  --text-secondary: #e6edf3;     /* 13.2:1 contrast on dark bg */
+  --text-tertiary: #b6c2cf;      /* 8.4:1 contrast on dark bg */
+  --text-muted: #8d96a0;         /* 6.1:1 contrast on dark bg */
+  --text-disabled: #636c76;      /* 3.8:1 contrast on dark bg */
+  
+  /* Dark Mode Colors - Professional */
+  --primary: #3b82f6;            /* Professional blue for dark mode */
+  --primary-hover: #2563eb;      /* Darker blue on hover */
+  --primary-light: #1e293b;
+  --primary-dark: #1e40af;
+  
+  /* Dark Mode Accent Colors - Professional */
+  --accent-sky: #0ea5e9;
+  --accent-blue: #3b82f6;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-purple: #8b5cf6;
+  --accent-purple-bg: rgba(139, 92, 246, 0.15);
+  
+  /* Dark Mode Semantic Colors - Professional */
+  --success: #10b981;            /* Professional green for dark mode */
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --warning: #f59e0b;            /* Professional amber for dark mode */
+  --warning-bg: rgba(245, 158, 11, 0.15);
+  --error: #ef4444;              /* Professional red for dark mode */
+  --error-bg: rgba(239, 68, 68, 0.15);
+  --info: #3b82f6;               /* Professional blue for dark mode */
+  --info-bg: rgba(59, 130, 246, 0.15);
+  
+  --border-light: #374151;
+  --border-default: #4b5563;
+  --border-strong: #6b7280;
+  --border-interactive: #3b82f6;
 }
 
 /* Typography Scale */

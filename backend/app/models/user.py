@@ -49,8 +49,8 @@ class User(db.Model):
         """验证密码"""
         return check_password_hash(self.password_hash, password)
     
-    def generate_access_token(self, expires_in: int = 3600) -> str:
-        """生成访问Token (默认1小时)"""
+    def generate_access_token(self, expires_in: int = 864000) -> str:
+        """生成访问Token (默认10天)"""
         import time
         now = datetime.now(timezone.utc)
         exp_time = now + timedelta(seconds=expires_in)
