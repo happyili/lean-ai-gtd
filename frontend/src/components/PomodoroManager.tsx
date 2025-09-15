@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, RefreshCw, AlertCircle, BarChart3, Plus, X } from 'lucide-react';
-import { apiPost, apiGet, apiDelete, apiPut } from '@/utils/api';
+import { apiPost, apiGet, apiDelete } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
 
 interface PomodoroTask {
@@ -46,6 +47,9 @@ interface PomodoroManagerProps {
 }
 
 export default function PomodoroManager({ accessToken, onPomodoroChange, refreshTrigger }: PomodoroManagerProps) {
+  const { accessToken: authToken } = useAuth();
+  const token = authToken || accessToken; // Use auth context token first, fallback to prop
+  
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [stats, setStats] = useState<PomodoroStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,11 +72,11 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 加载番茄任务
   const loadPomodoroTasks = async () => {
-    if (!accessToken) return;
+    if (!token) return;
     
     setLoading(true);
     try {
-      const response = await apiGet('/api/pomodoro/tasks', '获取番茄任务', accessToken);
+      const response = await apiGet('/api/pomodoro/tasks', '获取番茄任务', token);
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
@@ -86,11 +90,11 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 加载统计信息
   const loadStats = async () => {
-    if (!accessToken) return;
+    if (!token) return;
     setStatsLoading(true);
     setStatsError(null);
     try {
-      const response = await apiGet('/api/pomodoro/stats', '获取统计信息', accessToken);
+      const response = await apiGet('/api/pomodoro/stats', '获取统计信息', token);
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -118,10 +122,10 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 创建新的番茄任务
   const createTask = async () => {
-    if (!accessToken || !createFormData.title.trim()) return;
+    if (!token || !createFormData.title.trim()) return;
     
     try {
-      const response = await apiPost('/api/pomodoro/tasks', createFormData, '创建番茄任务', accessToken);
+      const response = await apiPost('/api/pomodoro/tasks', createFormData, '创建番茄任务', token);
       const data = await response.json();
       if (data.success) {
         setTasks(prev => [...prev, data.data]);
@@ -143,33 +147,13 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
     }
   };
 
-  // 更新番茄任务
-  const updateTask = async (taskId: number, updateData: Partial<PomodoroTask>) => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await apiPut(`/api/pomodoro/tasks/${taskId}`, updateData, '更新番茄任务', accessToken);
-      const data = await response.json();
-      if (data.success) {
-        setTasks(prev => prev.map(task => 
-          task.id === taskId ? { ...task, ...data.data } : task
-        ));
-        onPomodoroChange?.(); // 通知父组件状态变化
-      } else {
-        console.error('更新番茄任务失败:', data.message);
-      }
-    } catch (error) {
-      console.error('更新番茄任务失败:', error);
-    }
-  };
-
   // 生成新的番茄任务
   const generateTasks = async () => {
-    if (!accessToken) return;
+    if (!token) return;
     
     setGenerating(true);
     try {
-      const response = await apiPost('/api/pomodoro/tasks/generate', {}, '生成番茄任务', accessToken);
+      const response = await apiPost('/api/pomodoro/tasks/generate', {}, '生成番茄任务', token);
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
@@ -187,10 +171,10 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 开始番茄任务
   const startTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/start`, {}, '开始任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/start`, {}, '开始任务', token);
       const data = await response.json();
       if (data.success) {
         setActiveTaskId(taskId);
@@ -207,11 +191,11 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 完成番茄任务
   const completeTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
       const focusMinutes = 25 - timerMinutes + (timerSeconds > 0 ? 1 : 0);
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/complete`, { focus_minutes: focusMinutes }, '完成任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/complete`, { focus_minutes: focusMinutes }, '完成任务', token);
       const data = await response.json();
       if (data.success) {
         setActiveTaskId(null);
@@ -229,10 +213,10 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 跳过番茄任务
   const skipTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/skip`, {}, '跳过任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/skip`, {}, '跳过任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -252,10 +236,10 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 重置番茄任务到未开始
   const resetTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
 
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/reset`, {}, '重置任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/reset`, {}, '重置任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -275,10 +259,10 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 删除番茄任务
   const deleteTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
 
     try {
-      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', accessToken);
+      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -322,48 +306,59 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
   // 初始加载
   useEffect(() => {
-    if (accessToken) {
+    if (token) {
       loadPomodoroTasks();
       loadStats();
     }
-  }, [accessToken]);
+  }, [token]);
 
   // 监听refreshTrigger变化，刷新任务列表
   useEffect(() => {
-    if (refreshTrigger && refreshTrigger > 0 && accessToken) {
+    if (refreshTrigger && refreshTrigger > 0 && token) {
       console.log('PomodoroManager检测到refreshTrigger变化，刷新任务列表');
       loadPomodoroTasks();
       loadStats();
     }
-  }, [refreshTrigger, accessToken]);
+  }, [refreshTrigger, token]);
 
 
 
-  if (!accessToken) {
+  if (!token) {
     return (
       <div className="text-center py-8">
-        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600">请先登录以使用番茄钟功能</p>
+        <AlertCircle className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+        <p style={{ color: 'var(--text-secondary)' }}>请先登录以使用番茄钟功能</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
       {/* 页面头部 */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Clock className="w-8 h-8 mr-2 text-red-500" />
+          <h1 className="text-2xl font-bold flex items-center" style={{ color: 'var(--text-primary)' }}>
+            <Clock className="w-8 h-8 mr-2" style={{ color: 'var(--accent-red)' }} />
             AI番茄钟
           </h1>
-          <p className="text-gray-600 mt-1">AI为你智能规划今日最重要的任务</p>
+          <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>AI为你智能规划今日最重要的任务</p>
         </div>
         
         <div className="flex space-x-3">
           <button
             onClick={toggleStats}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center"
+            className="px-4 py-2 rounded-lg transition-colors flex items-center"
+            style={{ 
+              backgroundColor: 'var(--background-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-light)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--border-light)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+            }}
           >
             <BarChart3 className="w-4 h-4 mr-2" />
             统计
@@ -371,7 +366,19 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
           
           <button
             onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+            className="px-4 py-2 rounded-lg transition-colors flex items-center"
+            style={{ 
+              backgroundColor: 'var(--success)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--success-bg)';
+              e.currentTarget.style.color = 'var(--success)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--success)';
+              e.currentTarget.style.color = 'white';
+            }}
           >
             <Plus className="w-4 h-4 mr-2" />
             新建任务
@@ -380,7 +387,21 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
           <button
             onClick={generateTasks}
             disabled={generating}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
+            className="px-6 py-2 rounded-lg transition-colors flex items-center disabled:opacity-50"
+            style={{ 
+              backgroundColor: 'var(--primary)',
+              color: 'white'
+            }}
+            onMouseEnter={(e) => {
+              if (!generating) {
+                e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!generating) {
+                e.currentTarget.style.backgroundColor = 'var(--primary)';
+              }
+            }}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
             {generating ? '生成中...' : '生成我的番茄任务'}
@@ -393,38 +414,51 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
         <div className="mb-6">
           {statsLoading ? (
             <div className="flex items-center justify-center py-6">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-              <span className="text-gray-600">加载统计中...</span>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 mr-2" style={{ borderColor: 'var(--primary)' }}></div>
+              <span style={{ color: 'var(--text-secondary)' }}>加载统计中...</span>
             </div>
           ) : stats ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-blue-600">{stats.today_stats.today_pomodoros}</div>
-                <div className="text-sm text-blue-800">今日番茄钟</div>
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--info-bg)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--info)' }}>{stats.today_stats.today_pomodoros}</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>今日番茄钟</div>
               </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-green-600">{stats.today_stats.today_completed_tasks}</div>
-                <div className="text-sm text-green-800">今日完成任务</div>
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--success-bg)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{stats.today_stats.today_completed_tasks}</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>今日完成任务</div>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-purple-600">{stats.today_stats.today_focus_hours}h</div>
-                <div className="text-sm text-purple-800">今日专注时间</div>
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--accent-purple-bg)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent-purple)' }}>{stats.today_stats.today_focus_hours}h</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>今日专注时间</div>
               </div>
-              <div className="bg-orange-50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-orange-600">{stats.total_stats.completion_rate}%</div>
-                <div className="text-sm text-orange-800">完成率</div>
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--warning-bg)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--warning)' }}>{stats.total_stats.completion_rate}%</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>完成率</div>
               </div>
             </div>
           ) : (
-            <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
+            <div className="px-4 py-3 rounded-lg flex items-center justify-between" style={{ 
+              backgroundColor: 'var(--background-secondary)',
+              border: '1px solid var(--border-light)'
+            }}>
               <div>
-                <div className="text-gray-800 font-medium">暂无统计数据</div>
-                <div className="text-sm text-gray-500">生成番茄任务或刷新以获取统计</div>
-                {statsError && <div className="text-sm text-red-600 mt-1">{statsError}</div>}
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>暂无统计数据</div>
+                <div className="text-sm" style={{ color: 'var(--text-muted)' }}>生成番茄任务或刷新以获取统计</div>
+                {statsError && <div className="text-sm mt-1" style={{ color: 'var(--error)' }}>{statsError}</div>}
               </div>
               <button
                 onClick={loadStats}
-                className="px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-800 text-sm"
+                className="px-3 py-1 rounded text-sm transition-colors"
+                style={{ 
+                  backgroundColor: 'var(--primary)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--primary)';
+                }}
               >
                 刷新
               </button>
@@ -435,12 +469,27 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
 
       {/* 创建任务表单 */}
       {showCreateForm && (
-        <div className="mb-6 bg-white rounded-lg border border-gray-200 p-6">
+        <div className="mb-6 rounded-lg p-6" style={{ 
+          backgroundColor: 'var(--card-background)',
+          border: '1px solid var(--border-light)'
+        }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">创建新番茄任务</h3>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>创建新番茄任务</h3>
             <button
               onClick={() => setShowCreateForm(false)}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ 
+                color: 'var(--text-muted)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
             >
               <X className="w-5 h-5" />
             </button>
@@ -448,26 +497,36 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                 任务标题 *
               </label>
               <input
                 type="text"
                 value={createFormData.title}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
                 placeholder="输入任务标题"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                 任务描述
               </label>
               <textarea
                 value={createFormData.description}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
                 rows={3}
                 placeholder="输入任务描述"
               />
@@ -475,7 +534,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                   优先级分数
                 </label>
                 <input
@@ -484,12 +543,17 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                   max="100"
                   value={createFormData.priority_score}
                   onChange={(e) => setCreateFormData(prev => ({ ...prev, priority_score: parseInt(e.target.value) || 50 }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{
+                    backgroundColor: 'var(--background-secondary)',
+                    border: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
+                  }}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                   预估番茄钟数
                 </label>
                 <input
@@ -497,19 +561,29 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                   min="1"
                   value={createFormData.estimated_pomodoros}
                   onChange={(e) => setCreateFormData(prev => ({ ...prev, estimated_pomodoros: parseInt(e.target.value) || 1 }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{
+                    backgroundColor: 'var(--background-secondary)',
+                    border: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
+                  }}
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
                 AI建议
               </label>
               <textarea
                 value={createFormData.ai_reasoning}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, ai_reasoning: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
                 rows={2}
                 placeholder="输入AI建议或备注"
               />
@@ -518,14 +592,37 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = 'var(--text-muted)';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 取消
               </button>
               <button
                 onClick={createTask}
                 disabled={!createFormData.title.trim()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                style={{ 
+                  backgroundColor: 'var(--primary)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--primary)';
+                  }
+                }}
               >
                 创建任务
               </button>
@@ -538,20 +635,20 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
       <div className="space-y-4">
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-2">加载中...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: 'var(--primary)' }}></div>
+            <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>加载中...</p>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无番茄任务</h3>
-            <p className="text-gray-600">点击上方的"生成我的番茄任务"让AI为你规划今日任务</p>
+          <div className="text-center py-12 rounded-lg" style={{ backgroundColor: 'var(--background-secondary)' }}>
+            <Clock className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>暂无番茄任务</h3>
+            <p style={{ color: 'var(--text-secondary)' }}>点击上方的"生成我的番茄任务"让AI为你规划今日任务</p>
           </div>
         ) : (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">详细任务信息</h2>
-              <span className="text-sm text-gray-500">{tasks.length} 个任务</span>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>详细任务信息</h2>
+              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{tasks.length} 个任务</span>
             </div>
             {tasks.map((task, index) => (
               <PomodoroTaskCard
@@ -573,6 +670,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                 }}
                 onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
                 compact={false}
+                token={token}
               />
             ))}
           </div>

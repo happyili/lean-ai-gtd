@@ -32,6 +32,7 @@ interface PomodoroTaskCardProps {
   onToggleTimer: () => void;
   onTaskUpdate?: (taskId: number, updatedTask: PomodoroTask) => void; // 新增：任务更新回调
   compact?: boolean; // 是否使用紧凑模式
+  token?: string | null; // 认证token
 }
 
 export default function PomodoroTaskCard({
@@ -46,7 +47,8 @@ export default function PomodoroTaskCard({
   onDeleteTask,
   onToggleTimer,
   onTaskUpdate,
-  compact = false
+  compact = false,
+  token
 }: PomodoroTaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -80,7 +82,6 @@ export default function PomodoroTaskCard({
 
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('token');
       const updateData = {
         title: editTitle.trim(),
         description: editDescription.trim(),

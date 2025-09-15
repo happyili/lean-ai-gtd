@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, RefreshCw } from 'lucide-react';
 import { apiGet, apiPost, apiDelete } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 import PomodoroTaskCard from './PomodoroTaskCard';
 
 interface PomodoroTask {
@@ -35,6 +36,8 @@ export default function PomodoroBannerPanel({
   refreshTrigger,
   onPomodoroChange
 }: PomodoroBannerPanelProps) {
+  const { accessToken: authToken } = useAuth();
+  const token = authToken || accessToken; // Use auth context token first, fallback to prop
   const [tasks, setTasks] = useState<PomodoroTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -87,11 +90,11 @@ export default function PomodoroBannerPanel({
 
   // 加载番茄任务
   const loadPomodoroTasks = async () => {
-    if (!accessToken) return;
+    if (!token) return;
     
     setLoading(true);
     try {
-      const response = await apiGet('/api/pomodoro/tasks', '获取番茄任务', accessToken);
+      const response = await apiGet('/api/pomodoro/tasks', '获取番茄任务', token);
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
@@ -135,11 +138,11 @@ export default function PomodoroBannerPanel({
 
   // 生成新的番茄任务
   const generateTasks = async () => {
-    if (!accessToken) return;
+    if (!token) return;
     
     setGenerating(true);
     try {
-      const response = await apiPost('/api/pomodoro/tasks/generate', {}, '生成番茄任务', accessToken);
+      const response = await apiPost('/api/pomodoro/tasks/generate', {}, '生成番茄任务', token);
       const data = await response.json();
       if (data.success) {
         setTasks(data.data.tasks);
@@ -156,10 +159,10 @@ export default function PomodoroBannerPanel({
 
   // 开始番茄任务
   const startTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/start`, {}, '开始任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/start`, {}, '开始任务', token);
       const data = await response.json();
       if (data.success) {
         setActiveTaskId(taskId);
@@ -188,11 +191,11 @@ export default function PomodoroBannerPanel({
 
   // 完成番茄任务
   const completeTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
       const focusMinutes = 25 - timerMinutes + (timerSeconds > 0 ? 1 : 0);
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/complete`, { focus_minutes: focusMinutes }, '完成任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/complete`, { focus_minutes: focusMinutes }, '完成任务', token);
       const data = await response.json();
       if (data.success) {
         setActiveTaskId(null);
@@ -217,10 +220,10 @@ export default function PomodoroBannerPanel({
 
   // 跳过番茄任务
   const skipTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
     
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/skip`, {}, '跳过任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/skip`, {}, '跳过任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -242,10 +245,10 @@ export default function PomodoroBannerPanel({
 
   // 重置番茄任务到未开始
   const resetTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
 
     try {
-      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/reset`, {}, '重置任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${taskId}/reset`, {}, '重置任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -267,10 +270,10 @@ export default function PomodoroBannerPanel({
 
   // 删除番茄任务
   const deleteTask = async (taskId: number) => {
-    if (!accessToken) return;
+    if (!token) return;
 
     try {
-      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', accessToken);
+      const response = await apiDelete(`/api/pomodoro/tasks/${taskId}/delete`, '删除任务', token);
       const data = await response.json();
       if (data.success) {
         if (activeTaskId === taskId) {
@@ -329,12 +332,12 @@ export default function PomodoroBannerPanel({
 
   // 停止专注模式
   const stopFocusMode = async () => {
-    if (!accessToken || !activeTaskId) return;
+    if (!token || !activeTaskId) return;
     
     setIsStopping(true);
     try {
       // 重置任务状态为未开始
-      const response = await apiPost(`/api/pomodoro/tasks/${activeTaskId}/reset`, {}, '重置任务', accessToken);
+      const response = await apiPost(`/api/pomodoro/tasks/${activeTaskId}/reset`, {}, '重置任务', token);
       const data = await response.json();
       
       if (data.success) {
@@ -393,14 +396,14 @@ export default function PomodoroBannerPanel({
 
   // 初始加载
   useEffect(() => {
-    if (accessToken && isExpanded) {
+    if (token && isExpanded) {
       loadPomodoroTasks();
     }
-  }, [accessToken, isExpanded]);
+  }, [token, isExpanded]);
 
   // 从localStorage恢复状态
   useEffect(() => {
-    if (accessToken) {
+    if (token) {
       const storedActiveTaskId = loadStateFromStorage(STORAGE_KEYS.ACTIVE_TASK_ID, null);
       const storedTimerMinutes = loadStateFromStorage(STORAGE_KEYS.TIMER_MINUTES, 25);
       const storedTimerSeconds = loadStateFromStorage(STORAGE_KEYS.TIMER_SECONDS, 0);
@@ -421,21 +424,21 @@ export default function PomodoroBannerPanel({
         loadPomodoroTasks();
       }
     }
-  }, [accessToken]);
+  }, [token]);
 
   // 监听refreshTrigger变化，刷新任务列表
   useEffect(() => {
-    if (refreshTrigger && refreshTrigger > 0 && accessToken && isExpanded) {
+    if (refreshTrigger && refreshTrigger > 0 && token && isExpanded) {
       console.log('检测到refreshTrigger变化，刷新番茄任务列表');
       loadPomodoroTasks();
     }
-  }, [refreshTrigger, accessToken, isExpanded]);
+  }, [refreshTrigger, token, isExpanded]);
 
   const formatTime = (minutes: number, seconds: number) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  if (!accessToken) return null;
+  if (!token) return null;
 
   return (
     <div className="w-full top-[48px]">
@@ -495,8 +498,8 @@ export default function PomodoroBannerPanel({
                         ));
                     }}
                     onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
-                    accessToken={accessToken}
                     compact={true}
+                    token={token}
                     />
                 ))}
                 
@@ -508,21 +511,49 @@ export default function PomodoroBannerPanel({
             {/* 番茄钟计时器 */}
             {activeTaskId && (
               <div 
-                className="border-t p-2"
+                className="border-t p-2 relative overflow-hidden"
                 style={{
                   borderColor: 'var(--border-light)',
-                  backgroundColor: 'var(--error-bg)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.03)',
                   borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
                 }}
               >
-                <div className="text-center">
+                {/* 动效背景 */}
+                <div 
+                  className="absolute inset-0 opacity-40"
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(255, 210, 210, 0.83) 0%, rgba(255, 255, 255, 0.1) 25%, rgba(239, 68, 68, 0.15) 50%, rgba(255, 255, 255, 0.1) 75%, rgba(239, 68, 68, 0.15) 100%)',
+                    backgroundSize: '300% 100%',
+                    borderRadius: '12px',
+                    animation: 'pomodoroWaveShift 15s ease-in-out infinite'
+                  }}
+                />
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                    @keyframes pomodoroWaveShift {
+                      0%, 100% {
+                        background-position: 0% 50%;
+                      }
+                      25% {
+                        background-position: 50% 50%;
+                      }
+                      50% {
+                        background-position: 100% 50%;
+                      }
+                      75% {
+                        background-position: 50% 50%;
+                      }
+                    }
+                  `
+                }} />
+                <div className="text-center relative z-10">
                   {/* 计时器 - 更大字体 */}
                   <div 
                     className="text-2xl font-mono font-bold mb-4"
                     style={{ 
                       color: 'var(--error)',
-                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                      textShadow: 'none'
                     }}
                   >
                     {formatTime(timerMinutes, timerSeconds)} 
@@ -532,8 +563,8 @@ export default function PomodoroBannerPanel({
                   <div 
                     className="text-4xl font-semibold mb-3"
                     style={{ 
-                      color: 'var(--error)',
-                      fontWeight: '600'
+                      color: 'var(--text-primary)',
+                      fontWeight: '500'
                     }}
                   >
                      正在专注：{tasks.find(t => t.id === activeTaskId)?.title}
@@ -545,8 +576,8 @@ export default function PomodoroBannerPanel({
                       <p 
                         className="text-sm leading-relaxed"
                         style={{ 
-                          color: 'var(--warning)',
-                          fontStyle: 'italic'
+                          color: 'var(--text-tertiary)',
+                          fontStyle: 'normal'
                         }}
                       >
                         <strong>AI建议：</strong> {tasks.find(t => t.id === activeTaskId)?.ai_reasoning}
@@ -562,20 +593,56 @@ export default function PomodoroBannerPanel({
                         setIsTimerRunning(newIsRunning);
                         saveStateToStorage(STORAGE_KEYS.IS_TIMER_RUNNING, newIsRunning);
                       }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center text-sm"
+                      className="px-4 py-2 rounded-lg transition-colors flex items-center text-sm"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--border-light)',
+                        color: 'var(--text-primary)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       {isTimerRunning ? '暂停' : '继续'}
                     </button>
                     <button
                       onClick={() => activeTaskId && completeTask(activeTaskId)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      className="px-4 py-2 rounded-lg transition-colors text-sm"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--border-light)',
+                        color: 'var(--text-primary)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       完成任务
                     </button>
                     <button
                       onClick={stopFocusMode}
                       disabled={isStopping}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors text-base font-medium shadow-lg text-sm"
+                      className="px-4 py-2 rounded-lg transition-colors text-sm"
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid var(--border-light)',
+                        color: isStopping ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        opacity: isStopping ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isStopping) {
+                          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
                     >
                       {isStopping ? '重置中...' : '停止并重置'}
                     </button>
