@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, g
 from flask_cors import cross_origin
 from functools import wraps
 import jwt
+from datetime import datetime
 from app.models.user import User
 from app.services.pomodoro_intelligence import PomodoroIntelligenceService
 from app.database.init import db
@@ -312,6 +313,147 @@ def delete_pomodoro_task(task_id):
             'message': f'删除失败: {str(e)}'
         }), 500
 
+@pomodoro_bp.route('/tasks', methods=['POST', 'OPTIONS'])
+@cross_origin()
+@token_required
+def create_pomodoro_task():
+    """创建新的番茄任务"""
+    try:
+        user_id = g.current_user.id
+        
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': '缺少请求数据'
+            }), 400
+        
+        # 验证必需字段
+        required_fields = ['title']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({
+                    'success': False,
+                    'message': f'缺少必需字段: {field}'
+                }), 400
+        
+        # 创建新任务
+        from app.models.pomodoro_task import PomodoroTask
+        
+        # 获取下一个order_index
+        max_order = db.session.query(db.func.max(PomodoroTask.order_index)).filter_by(user_id=user_id).scalar() or 0
+        
+        new_task = PomodoroTask(
+            user_id=user_id,
+            title=data['title'],
+            description=data.get('description', ''),
+            priority_score=data.get('priority_score', 50),
+            estimated_pomodoros=data.get('estimated_pomodoros', 1),
+            order_index=max_order + 1,
+            status='pending',
+            ai_reasoning=data.get('ai_reasoning', '')
+        )
+        
+        db.session.add(new_task)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': '任务创建成功',
+            'data': new_task.to_dict()
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"创建番茄任务失败: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'创建失败: {str(e)}'
+        }), 500
+
+@pomodoro_bp.route('/tasks/<int:task_id>', methods=['PUT', 'OPTIONS'])
+@cross_origin()
+@token_required
+def update_pomodoro_task(task_id):
+    """更新番茄任务"""
+    try:
+        user_id = g.current_user.id
+        
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': '缺少请求数据'
+            }), 400
+        
+        # 查找任务
+        from app.models.pomodoro_task import PomodoroTask
+        task = PomodoroTask.query.filter_by(id=task_id, user_id=user_id).first()
+        
+        if not task:
+            return jsonify({
+                'success': False,
+                'message': '任务不存在'
+            }), 404
+        
+        # 更新字段
+        updated = False
+        if 'title' in data:
+            title = data.get('title', '').strip()
+            if title and len(title) <= 200:
+                task.title = title
+                updated = True
+            elif not title:
+                return jsonify({
+                    'success': False,
+                    'message': '任务标题不能为空'
+                }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': '任务标题不能超过200字符'
+                }), 400
+        
+        if 'description' in data:
+            description = data.get('description', '').strip()
+            task.description = description
+            updated = True
+        if 'priority_score' in data:
+            task.priority_score = data['priority_score']
+            updated = True
+        if 'estimated_pomodoros' in data:
+            task.estimated_pomodoros = data['estimated_pomodoros']
+            updated = True
+        if 'ai_reasoning' in data:
+            task.ai_reasoning = data['ai_reasoning']
+            updated = True
+        
+        task.updated_at = datetime.utcnow()
+        
+        if updated:
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': '任务更新成功',
+                'data': task.to_dict()
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': '没有需要更新的字段'
+            }), 400
+        
+    except Exception as e:
+        logger.error(f"更新番茄任务失败: {str(e)}")
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'更新失败: {str(e)}'
+        }), 500
+
 @pomodoro_bp.route('/stats', methods=['GET', 'OPTIONS'])
 @cross_origin()
 @token_required
@@ -385,3 +527,4 @@ def get_pomodoro_stats():
             'success': False,
             'message': f'获取失败: {str(e)}'
         }), 500
+

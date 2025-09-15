@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Clock, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
-import { apiPost, apiGet, apiDelete } from '@/utils/api';
+import { Clock, RefreshCw, AlertCircle, BarChart3, Plus, X } from 'lucide-react';
+import { apiPost, apiGet, apiDelete, apiPut } from '@/utils/api';
 import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
 
 interface PomodoroTask {
@@ -57,6 +57,14 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
   const [showStats, setShowStats] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    title: '',
+    description: '',
+    priority_score: 50,
+    estimated_pomodoros: 1,
+    ai_reasoning: ''
+  });
 
   // 加载番茄任务
   const loadPomodoroTasks = async () => {
@@ -105,6 +113,53 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
     setShowStats(next);
     if (next) {
       loadStats();
+    }
+  };
+
+  // 创建新的番茄任务
+  const createTask = async () => {
+    if (!accessToken || !createFormData.title.trim()) return;
+    
+    try {
+      const response = await apiPost('/api/pomodoro/tasks', createFormData, '创建番茄任务', accessToken);
+      const data = await response.json();
+      if (data.success) {
+        setTasks(prev => [...prev, data.data]);
+        setShowCreateForm(false);
+        setCreateFormData({
+          title: '',
+          description: '',
+          priority_score: 50,
+          estimated_pomodoros: 1,
+          ai_reasoning: ''
+        });
+        await loadStats();
+        onPomodoroChange?.(); // 通知父组件状态变化
+      } else {
+        console.error('创建番茄任务失败:', data.message);
+      }
+    } catch (error) {
+      console.error('创建番茄任务失败:', error);
+    }
+  };
+
+  // 更新番茄任务
+  const updateTask = async (taskId: number, updateData: Partial<PomodoroTask>) => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await apiPut(`/api/pomodoro/tasks/${taskId}`, updateData, '更新番茄任务', accessToken);
+      const data = await response.json();
+      if (data.success) {
+        setTasks(prev => prev.map(task => 
+          task.id === taskId ? { ...task, ...data.data } : task
+        ));
+        onPomodoroChange?.(); // 通知父组件状态变化
+      } else {
+        console.error('更新番茄任务失败:', data.message);
+      }
+    } catch (error) {
+      console.error('更新番茄任务失败:', error);
     }
   };
 
@@ -315,6 +370,14 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
           </button>
           
           <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            新建任务
+          </button>
+          
+          <button
             onClick={generateTasks}
             disabled={generating}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
@@ -370,6 +433,107 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
         </div>
       )}
 
+      {/* 创建任务表单 */}
+      {showCreateForm && (
+        <div className="mb-6 bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">创建新番茄任务</h3>
+            <button
+              onClick={() => setShowCreateForm(false)}
+              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                任务标题 *
+              </label>
+              <input
+                type="text"
+                value={createFormData.title}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="输入任务标题"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                任务描述
+              </label>
+              <textarea
+                value={createFormData.description}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="输入任务描述"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  优先级分数
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={createFormData.priority_score}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, priority_score: parseInt(e.target.value) || 50 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  预估番茄钟数
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={createFormData.estimated_pomodoros}
+                  onChange={(e) => setCreateFormData(prev => ({ ...prev, estimated_pomodoros: parseInt(e.target.value) || 1 }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                AI建议
+              </label>
+              <textarea
+                value={createFormData.ai_reasoning}
+                onChange={(e) => setCreateFormData(prev => ({ ...prev, ai_reasoning: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={2}
+                placeholder="输入AI建议或备注"
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={createTask}
+                disabled={!createFormData.title.trim()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                创建任务
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 详细任务列表 */}
       <div className="space-y-4">
         {loading ? (
@@ -401,6 +565,12 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                 onSkipTask={skipTask}
                 onResetTask={resetTask}
                 onDeleteTask={deleteTask}
+                onTaskUpdate={(taskId, updatedTask) => {
+                  setTasks(prev => prev.map(task => 
+                    task.id === taskId ? updatedTask : task
+                  ));
+                  onPomodoroChange?.();
+                }}
                 onToggleTimer={() => setIsTimerRunning(!isTimerRunning)}
                 compact={false}
               />

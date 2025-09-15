@@ -316,17 +316,17 @@ class PomodoroIntelligenceService:
                     'message': '任务不存在或无权限访问'
                 }
             
-            # 2. 检查是否已经是番茄任务
-            existing_pomodoro = PomodoroTask.query.filter(
-                PomodoroTask.user_id == user_id,
-                PomodoroTask.related_task_ids.contains(str(record_id))
-            ).first()
+            # # 2. 检查是否已经是番茄任务
+            # existing_pomodoro = PomodoroTask.query.filter(
+            #     PomodoroTask.user_id == user_id,
+            #     PomodoroTask.related_task_ids.contains(str(record_id))
+            # ).first()
             
-            if existing_pomodoro:
-                return {
-                    'success': False,
-                    'message': '该任务已经在番茄任务列表中'
-                }
+            # if existing_pomodoro:
+            #     return {
+            #         'success': False,
+            #         'message': '该任务已经在番茄任务列表中'
+            #     }
             
             # 3. 停止当前正在运行的任务
             active_task = PomodoroTask.query.filter_by(

@@ -217,6 +217,30 @@ export const apiDeletePublic = async (url: string, operation: string): Promise<R
   return apiFetch(url, { method: 'DELETE' }, operation);
 };
 
+/**
+ * 更新番茄任务
+ */
+export const updatePomodoroTask = async (
+  taskId: number,
+  data: { 
+    title?: string; 
+    description?: string; 
+    priority_score?: number; 
+    estimated_pomodoros?: number; 
+    ai_reasoning?: string 
+  },
+  token?: string
+): Promise<any> => {
+  const response = await apiPut(`/api/pomodoro/tasks/${taskId}`, data, '更新番茄任务', token);
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.message || '更新番茄任务失败');
+  }
+  
+  return result.data;
+};
+
 
 export default {
   handleApiError,
