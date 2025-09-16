@@ -51,26 +51,62 @@ export default function PomodoroTaskCard({
   token
 }: PomodoroTaskCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [editingField, setEditingField] = useState<'title' | 'description' | 'ai_reasoning' | null>(null);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editDescription, setEditDescription] = useState(task.description);
   const [editPriorityScore, setEditPriorityScore] = useState(task.priority_score);
   const [editEstimatedPomodoros, setEditEstimatedPomodoros] = useState(task.estimated_pomodoros);
   const [editAiReasoning, setEditAiReasoning] = useState(task.ai_reasoning);
   const [isSaving, setIsSaving] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const aiReasoningTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 当进入编辑模式时，自动聚焦输入框
+  // 当进入编辑模式时，自动聚焦对应的输入框
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (isEditing && editingField) {
+      switch (editingField) {
+        case 'title':
+          if (titleInputRef.current) {
+            titleInputRef.current.focus();
+            titleInputRef.current.select();
+          }
+          break;
+        case 'description':
+          if (descriptionTextareaRef.current) {
+            descriptionTextareaRef.current.focus();
+          }
+          break;
+        case 'ai_reasoning':
+          if (aiReasoningTextareaRef.current) {
+            aiReasoningTextareaRef.current.focus();
+          }
+          break;
+      }
     }
-  }, [isEditing]);
+  }, [isEditing, editingField]);
 
   const handleTitleClick = () => {
     if (!isEditing) {
       setIsEditing(true);
+      setEditingField('title');
       setEditTitle(task.title);
+    }
+  };
+
+  const handleDescriptionClick = () => {
+    if (!isEditing) {
+      setIsEditing(true);
+      setEditingField('description');
+      setEditDescription(task.description);
+    }
+  };
+
+  const handleAiReasoningClick = () => {
+    if (!isEditing) {
+      setIsEditing(true);
+      setEditingField('ai_reasoning');
+      setEditAiReasoning(task.ai_reasoning);
     }
   };
 
@@ -113,6 +149,7 @@ export default function PomodoroTaskCard({
 
   const handleCancel = () => {
     setIsEditing(false);
+    setEditingField(null);
     setEditTitle(task.title);
     setEditDescription(task.description);
     setEditPriorityScore(task.priority_score);
@@ -133,10 +170,17 @@ export default function PomodoroTaskCard({
   const progressPercent = Math.min(100, (task.pomodoros_completed / task.estimated_pomodoros) * 100);
 
   const getPriorityColor = (score: number) => {
-    if (score >= 80) return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20';
-    if (score >= 60) return 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20';
-    if (score >= 40) return 'text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20';
-    return 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20';
+    if (score >= 80) return 'text-red-600 dark:text-red-400';
+    if (score >= 60) return 'text-orange-600 dark:text-orange-400';
+    if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-green-600 dark:text-green-400';
+  };
+
+  const getPriorityText = (score: number) => {
+    if (score >= 80) return '高优先级';
+    if (score >= 60) return '中高优先级';
+    if (score >= 40) return '中等优先级';
+    return '低优先级';
   };
 
   const getStatusIcon = (status: string) => {
@@ -146,9 +190,9 @@ export default function PomodoroTaskCard({
       case 'active':
         return <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
       case 'skipped':
-        return <SkipForward className="w-5 h-5 text-gray-600 dark:text-gray-400" />;
+        return <SkipForward className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />;
       default:
-        return <Clock className="w-5 h-5 text-gray-400 dark:text-gray-500" />;
+        return <Clock className="w-5 h-5" style={{ color: 'var(--text-muted)' }} />;
     }
   };
 
@@ -156,8 +200,7 @@ export default function PomodoroTaskCard({
     // 紧凑模式 - 用于banner展开面板
     return (
       <div
-        className="relative overflow-hidden rounded-lg border transition-all cursor-pointer hover:shadow-sm"
-        onClick={() => task.status === 'pending' && !activeTaskId ? onStartTask(task.id) : null}
+        className="relative overflow-hidden rounded-lg border transition-all"
         style={{ 
           height: '60px',
           borderColor: task.status === 'completed' 
@@ -167,7 +210,8 @@ export default function PomodoroTaskCard({
             : task.status === 'skipped'
             ? 'var(--border-default)'
             : 'var(--border-light)',
-          backgroundColor: 'var(--card-background)'
+          backgroundColor: 'var(--card-background)',
+          cursor: task.status === 'pending' && !activeTaskId ? 'pointer' : 'default'
         }}
       >
         {/* 背景进度条 */}
@@ -188,7 +232,7 @@ export default function PomodoroTaskCard({
         
         {/* 内容层 */}
         <div className="relative z-10 p-3 h-full flex items-center justify-between">
-          <div className="flex-1 min-w-0 flex items-center">
+          <div className="flex-1 min-w-0 flex items-center relative z-10">
             <span 
               className="text-sm font-bold mr-2"
               style={{ color: 'var(--text-muted)' }}
@@ -199,7 +243,7 @@ export default function PomodoroTaskCard({
             <div className="ml-2 flex-1 min-w-0">
               {isEditing ? (
                 <input
-                  ref={inputRef}
+                  ref={titleInputRef}
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
@@ -211,8 +255,17 @@ export default function PomodoroTaskCard({
                 />
               ) : (
                 <h4 
-                  className="text-sm font-semibold truncate leading-tight cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-1 py-0.5 rounded"
-                  style={{ color: 'var(--text-primary)' }}
+                  className="text-sm font-semibold truncate leading-tight cursor-pointer py-0.5 rounded transition-colors"
+                  style={{ 
+                    color: 'var(--text-primary)',
+                    backgroundColor: 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleTitleClick();
@@ -223,7 +276,10 @@ export default function PomodoroTaskCard({
                 </h4>
               )}
               <div className="flex items-center text-xs space-x-3">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority_score)}`}>
+                <span 
+                  className={`text-xs font-medium ${getPriorityColor(task.priority_score)}`}
+                  title={`优先级分数: ${task.priority_score} (${getPriorityText(task.priority_score)})`}
+                >
                   {task.priority_score}
                 </span>
                 <span style={{ color: 'var(--text-tertiary)' }}>{task.estimated_pomodoros}🍅</span>
@@ -233,7 +289,7 @@ export default function PomodoroTaskCard({
           </div>
           
           {/* 按钮区域 - 只显示图标 */}
-          <div className="flex items-center space-x-2 ml-3">
+          <div className="flex items-center space-x-2 ml-3 relative z-10">
             {task.status === 'pending' && !activeTaskId && (
               <button
                 onClick={(e) => {
@@ -278,7 +334,17 @@ export default function PomodoroTaskCard({
                   e.stopPropagation();
                   onSkipTask(task.id);
                 }}
-                className="p-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  backgroundColor: 'var(--border-default)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--border-strong)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--border-default)';
+                }}
                 title="跳过任务"
               >
                 <SkipForward className="w-4 h-4" />
@@ -352,20 +418,28 @@ export default function PomodoroTaskCard({
             {getStatusIcon(task.status)}
             {isEditing ? (
               <input
-                ref={inputRef}
+                ref={titleInputRef}
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 onKeyDown={handleKeyDown}
-                onBlur={handleSave}
                 className="text-lg font-semibold ml-2 bg-transparent border-none outline-none flex-1"
                 style={{ color: 'var(--text-primary)' }}
                 disabled={isSaving}
               />
             ) : (
               <h3 
-                className="text-lg font-semibold ml-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded"
-                style={{ color: 'var(--text-primary)' }}
+                className="text-lg font-semibold ml-2 cursor-pointer px-2 py-1 rounded transition-colors"
+                style={{ 
+                  color: 'var(--text-primary)',
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 onClick={handleTitleClick}
                 title="点击编辑标题"
               >
@@ -379,29 +453,52 @@ export default function PomodoroTaskCard({
                 max="100"
                 value={editPriorityScore}
                 onChange={(e) => setEditPriorityScore(parseInt(e.target.value) || 0)}
-                className="ml-3 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 border border-gray-300"
-                style={{ width: '80px' }}
+                className="ml-3 px-2 py-1 rounded-full text-xs font-medium"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)',
+                  width: '80px'
+                }}
               />
             ) : (
-              <span className={`ml-3 px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority_score)}`}>
+              <span 
+                className={`ml-3 text-xs font-medium ${getPriorityColor(task.priority_score)}`}
+                title={`优先级分数: ${task.priority_score} (${getPriorityText(task.priority_score)})`}
+              >
                 优先级 {task.priority_score}
               </span>
             )}
           </div>
           
           {isEditing ? (
-            <textarea
-              value={editDescription}
-              onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full mb-3 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              placeholder="输入任务描述"
-            />
+              <textarea
+                ref={descriptionTextareaRef}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="w-full mb-3 px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
+                rows={3}
+                placeholder="输入任务描述"
+              />
           ) : (
             <p 
-              className="mb-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded"
-              style={{ color: 'var(--text-secondary)' }}
-              onClick={() => setIsEditing(true)}
+              className="mb-3 cursor-pointer px-2 py-1 rounded transition-colors"
+              style={{ 
+                color: 'var(--text-secondary)',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              onClick={handleDescriptionClick}
               title="点击编辑描述"
             >
               {task.description || '点击添加描述'}
@@ -414,9 +511,15 @@ export default function PomodoroTaskCard({
                 AI建议:
               </label>
               <textarea
+                ref={aiReasoningTextareaRef}
                 value={editAiReasoning}
                 onChange={(e) => setEditAiReasoning(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  border: '1px solid var(--border-light)',
+                  color: 'var(--text-primary)'
+                }}
                 rows={2}
                 placeholder="输入AI建议或备注"
               />
@@ -424,12 +527,18 @@ export default function PomodoroTaskCard({
           ) : (
             task.ai_reasoning && (
               <div 
-                className="border-l-4 p-3 mb-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                className="border-l-4 p-3 mb-3 cursor-pointer rounded transition-colors"
                 style={{
                   backgroundColor: 'var(--warning-bg)',
                   borderColor: 'var(--warning)'
                 }}
-                onClick={() => setIsEditing(true)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--warning-bg)';
+                }}
+                onClick={handleAiReasoningClick}
                 title="点击编辑AI建议"
               >
                 <p 
@@ -454,7 +563,12 @@ export default function PomodoroTaskCard({
                   min="1"
                   value={editEstimatedPomodoros}
                   onChange={(e) => setEditEstimatedPomodoros(parseInt(e.target.value) || 1)}
-                  className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                  className="w-16 px-2 py-1 rounded text-sm"
+                  style={{
+                    backgroundColor: 'var(--background-secondary)',
+                    border: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
+                  }}
                 />
               </div>
             ) : (
@@ -479,7 +593,21 @@ export default function PomodoroTaskCard({
               <button
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors flex items-center"
+                className="px-4 py-2 rounded-lg disabled:opacity-50 transition-colors flex items-center"
+                style={{
+                  backgroundColor: 'var(--border-default)',
+                  color: 'white'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--border-strong)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--border-default)';
+                  }
+                }}
               >
                 <X className="w-4 h-4 mr-1" />
                 取消
@@ -488,8 +616,22 @@ export default function PomodoroTaskCard({
           ) : (
             <>
               <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center"
+                onClick={() => {
+                  setIsEditing(true);
+                  setEditingField('title');
+                }}
+                className="px-4 py-2 rounded-lg transition-colors flex items-center"
+                style={{
+                  backgroundColor: 'var(--background-secondary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-light)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--border-light)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                }}
               >
                 <Edit2 className="w-4 h-4 mr-1" />
                 编辑
@@ -510,7 +652,17 @@ export default function PomodoroTaskCard({
           {task.status !== 'completed' && task.status !== 'skipped' && (
             <button
               onClick={() => onSkipTask(task.id)}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center"
+              className="px-4 py-2 rounded-lg transition-colors flex items-center"
+              style={{
+                backgroundColor: 'var(--border-default)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--border-strong)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--border-default)';
+              }}
             >
               <SkipForward className="w-4 h-4 mr-1" />
               跳过

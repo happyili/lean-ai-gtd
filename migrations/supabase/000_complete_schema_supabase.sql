@@ -252,7 +252,7 @@ ALTER TABLE pomodoro_tasks ADD CONSTRAINT chk_pomodoro_tasks_estimated_pomodoros
 
 ALTER TABLE pomodoro_tasks DROP CONSTRAINT IF EXISTS chk_pomodoro_tasks_order_index;
 ALTER TABLE pomodoro_tasks ADD CONSTRAINT chk_pomodoro_tasks_order_index 
-    CHECK (order_index >= 1 AND order_index <= 5);
+    CHECK (order_index >= 0 AND order_index <= 5);
 
 -- Info resources constraints
 ALTER TABLE info_resources DROP CONSTRAINT IF EXISTS chk_info_resources_status;

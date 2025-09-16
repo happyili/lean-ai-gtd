@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Clock, RefreshCw, AlertCircle, BarChart3, Plus, X } from 'lucide-react';
 import { apiPost, apiGet, apiDelete } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
-import PomodoroTaskCard from './Pomodoro/PomodoroTaskCard';
+import PomodoroTaskCard from './PomodoroTaskCard';
 
 interface PomodoroTask {
   id: number;
@@ -333,7 +333,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="max-w-4xl mx-auto p-6 card">
       {/* 页面头部 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -504,7 +504,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                 type="text"
                 value={createFormData.title}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 style={{
                   backgroundColor: 'var(--background-secondary)',
                   border: '1px solid var(--border-light)',
@@ -521,7 +521,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
               <textarea
                 value={createFormData.description}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 style={{
                   backgroundColor: 'var(--background-secondary)',
                   border: '1px solid var(--border-light)',
@@ -543,7 +543,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                   max="100"
                   value={createFormData.priority_score}
                   onChange={(e) => setCreateFormData(prev => ({ ...prev, priority_score: parseInt(e.target.value) || 50 }))}
-                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                   style={{
                     backgroundColor: 'var(--background-secondary)',
                     border: '1px solid var(--border-light)',
@@ -561,7 +561,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
                   min="1"
                   value={createFormData.estimated_pomodoros}
                   onChange={(e) => setCreateFormData(prev => ({ ...prev, estimated_pomodoros: parseInt(e.target.value) || 1 }))}
-                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                   style={{
                     backgroundColor: 'var(--background-secondary)',
                     border: '1px solid var(--border-light)',
@@ -578,7 +578,7 @@ export default function PomodoroManager({ accessToken, onPomodoroChange, refresh
               <textarea
                 value={createFormData.ai_reasoning}
                 onChange={(e) => setCreateFormData(prev => ({ ...prev, ai_reasoning: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 style={{
                   backgroundColor: 'var(--background-secondary)',
                   border: '1px solid var(--border-light)',

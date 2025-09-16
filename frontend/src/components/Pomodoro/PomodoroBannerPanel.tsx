@@ -450,7 +450,7 @@ export default function PomodoroBannerPanel({
             <div>
             {loading ? (
                 <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600 mr-2"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 mr-2" style={{ borderColor: 'var(--accent-red)' }}></div>
                 <span style={{ color: 'var(--text-tertiary)' }}>加载中...</span>
                 </div>
             ) : tasks.filter(task => task.status !== 'completed').length === 0 ? (
@@ -471,7 +471,21 @@ export default function PomodoroBannerPanel({
                 <button
                     onClick={generateTasks}
                     disabled={generating}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center mx-auto"
+                    className="px-4 py-2 rounded-lg disabled:opacity-50 transition-colors flex items-center justify-center mx-auto"
+                    style={{
+                      backgroundColor: 'var(--accent-red)',
+                      color: 'white'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!generating) {
+                        e.currentTarget.style.backgroundColor = 'var(--error)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!generating) {
+                        e.currentTarget.style.backgroundColor = 'var(--accent-red)';
+                      }
+                    }}
                 >
                     <RefreshCw className={`w-4 h-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
                     {generating ? '生成中...' : '生成我的番茄任务'}

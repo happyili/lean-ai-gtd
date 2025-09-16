@@ -5,7 +5,7 @@ import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
 import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
-import PomodoroManager from '@/components/PomodoroManager';
+import PomodoroManager from '@/components/Pomodoro/PomodoroManager';
 import RemindersList from '@/components/Reminders/RemindersList';
 import ReminderBanner from '@/components/Reminders/ReminderBanner';
 import PomodoroBannerPanel from '@/components/Pomodoro/PomodoroBannerPanel';
@@ -1305,11 +1305,6 @@ export default function App() {
           </main>
         ) : (
           <main className="w-full">
-            <PomodoroManager 
-              accessToken={accessToken} 
-              onPomodoroChange={() => setPomodoroRefreshTrigger(prev => prev + 1)}
-              refreshTrigger={pomodoroRefreshTrigger}
-            />
           </main>
         )}
       </div>
