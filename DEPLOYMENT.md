@@ -66,32 +66,6 @@ https://www.offload.fit/
 ### 前端环境变量
 - `VITE_API_BASE_URL`: 后端API的基础URL
 
-## 数据库迁移
-
-如果需要在Supabase中手动创建表结构，可以运行以下SQL：
-
-```sql
--- 创建records表
-CREATE TABLE IF NOT EXISTS records (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    category VARCHAR(20) DEFAULT 'general',
-    parent_id INTEGER REFERENCES records(id),
-    priority VARCHAR(20) DEFAULT 'medium',
-    progress INTEGER DEFAULT 0,
-    progress_notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    status VARCHAR(20) DEFAULT 'active'
-);
-
--- 创建索引
-CREATE INDEX IF NOT EXISTS idx_records_parent_id ON records(parent_id);
-CREATE INDEX IF NOT EXISTS idx_records_status ON records(status);
-CREATE INDEX IF NOT EXISTS idx_records_category ON records(category);
-CREATE INDEX IF NOT EXISTS idx_records_priority ON records(priority);
-```
-
 ## 故障排除
 
 ### 常见问题
