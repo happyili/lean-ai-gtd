@@ -1492,160 +1492,378 @@ export default function TaskList({
                       ).map((subtask: Record, _index: number) => (
                         <div 
                           key={subtask.id} 
-                          className="group flex items-center justify-between py-1 text-body-small"
+                          className="group"
                           style={{ 
                             borderLeft: '2px solid var(--border-light)', 
-                            paddingLeft: '12px',
                             marginLeft: '8px',
                             color: 'var(--text-tertiary)'
                           }}
                         >
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
-                            
-                            {/* 子任务内容 - 可点击编辑 */}
-                            {editingSubtask === subtask.id ? (
-                              <input
-                                type="text"
-                                value={editingSubtaskContent[subtask.id] || subtask.content}
-                                onChange={(e) => setEditingSubtaskContent(prev => ({
-                                  ...prev,
-                                  [subtask.id]: e.target.value
-                                }))}
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    saveSubtaskEdit(subtask.id, task.id);
-                                  } else if (e.key === 'Escape') {
-                                    cancelEditingSubtask();
-                                  }
-                                }}
-                                onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
-                                className="flex-1 px-2 py-1 text-xs rounded form-input"
-                                style={{
-                                  backgroundColor: 'var(--card-background)',
-                                  border: '1px solid var(--border-light)',
-                                  color: 'var(--text-primary)'
-                                }}
-                                autoFocus
-                              />
-                            ) : (
-                              <span 
-                                className="font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  startEditingSubtask(subtask.id, subtask.content);
-                                }}
-                                title={subtask.content}
-                              >
-                                {subtask.content}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            {/* 可点击编辑的子任务优先级标签 */}
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
-                                }}
-                                className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
-                                style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
-                                title="点击修改优先级"
-                              >
-                                <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
-                                <span className="text-xs">▼</span>
-                              </button>
+                          {/* 子任务主行 */}
+                          <div className="flex items-center justify-between py-1 text-body-small" style={{ paddingLeft: '12px' }}>
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
                               
-                              {/* 子任务优先级下拉菜单 */}
-                              {priorityDropdownOpen === subtask.id && (
-                                <div {...getDropdownStyle()}>
-                                  {Object.entries(priorityMap).map(([key, info]) => (
-                                    <button
-                                      key={key}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleUpdatePriority(subtask.id, key);
-                                        setPriorityDropdownOpen(null);
-                                      }}
-                                      {...getDropdownItemStyle(subtask.priority === key)}
-                                    >
-                                      {info.label}
-                                    </button>
-                                  ))}
-                                </div>
+                              {/* 子任务内容 - 可点击编辑 */}
+                              {editingSubtask === subtask.id ? (
+                                <input
+                                  type="text"
+                                  value={editingSubtaskContent[subtask.id] || subtask.content}
+                                  onChange={(e) => setEditingSubtaskContent(prev => ({
+                                    ...prev,
+                                    [subtask.id]: e.target.value
+                                  }))}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      saveSubtaskEdit(subtask.id, task.id);
+                                    } else if (e.key === 'Escape') {
+                                      cancelEditingSubtask();
+                                    }
+                                  }}
+                                  onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
+                                  className="flex-1 px-2 py-1 text-xs rounded form-input"
+                                  style={{
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border-light)',
+                                    color: 'var(--text-primary)'
+                                  }}
+                                  autoFocus
+                                />
+                              ) : (
+                                <span 
+                                  className="font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEditingSubtask(subtask.id, subtask.content);
+                                  }}
+                                  title={subtask.content}
+                                >
+                                  {subtask.content}
+                                </span>
                               )}
                             </div>
-                            
-                            {/* 可点击编辑的状态标签 */}
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
-                                }}
-                                className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
-                                style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
-                                title="点击修改状态"
-                              >
-                                <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
-                                <span className="text-xs">▼</span>
-                              </button>
+                            <div className="flex items-center space-x-2 flex-shrink-0">
+                              {/* 可点击编辑的子任务优先级标签 */}
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
+                                  }}
+                                  className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                  style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
+                                  title="点击修改优先级"
+                                >
+                                  <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                  <span className="text-xs">▼</span>
+                                </button>
+                                
+                                {/* 子任务优先级下拉菜单 */}
+                                {priorityDropdownOpen === subtask.id && (
+                                  <div {...getDropdownStyle()}>
+                                    {Object.entries(priorityMap).map(([key, info]) => (
+                                      <button
+                                        key={key}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleUpdatePriority(subtask.id, key);
+                                          setPriorityDropdownOpen(null);
+                                        }}
+                                        {...getDropdownItemStyle(subtask.priority === key)}
+                                      >
+                                        {info.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                               
-                              {/* 子任务状态下拉菜单 */}
-                              {statusDropdownOpen === subtask.id && (
-                                <div {...getDropdownStyle()}>
-                                  {Object.entries(statusMap).map(([key, info]) => (
-                                    <button
-                                      key={key}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        updateSubtaskStatus(subtask.id, task.id, key);
-                                        setStatusDropdownOpen(null);
-                                      }}
-                                      {...getDropdownItemStyle(subtask.status === key)}
-                                    >
-                                      {info.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* 子任务时间 */}
-                            <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
-                              {formatDate(subtask.created_at)}
-                            </div>
-                            
-                            {/* 番茄按钮 */}
-                            {isAuthenticated && (
+                              {/* 可点击编辑的状态标签 */}
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
+                                  }}
+                                  className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                  style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
+                                  title="点击修改状态"
+                                >
+                                  <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
+                                  <span className="text-xs">▼</span>
+                                </button>
+                                
+                                {/* 子任务状态下拉菜单 */}
+                                {statusDropdownOpen === subtask.id && (
+                                  <div {...getDropdownStyle()}>
+                                    {Object.entries(statusMap).map(([key, info]) => (
+                                      <button
+                                        key={key}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateSubtaskStatus(subtask.id, task.id, key);
+                                          setStatusDropdownOpen(null);
+                                        }}
+                                        {...getDropdownItemStyle(subtask.status === key)}
+                                      >
+                                        {info.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* 子任务时间 */}
+                              <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                {formatDate(subtask.created_at)}
+                              </div>
+                              
+                              {/* 添加子任务按钮 */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAddToPomodoro(subtask.id);
+                                  setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
                                 }}
-                                disabled={isAddingToPomodoro === subtask.id}
                                 className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
-                                title="添加到番茄钟并开始专注"
+                                style={{
+                                  backgroundColor: 'var(--primary)',
+                                  color: 'white',
+                                  border: '1px solid var(--primary)'
+                                }}
+                                title="为此子任务添加子任务"
                               >
-                                <Clock className="w-4 h-4" />
-                                <span>{isAddingToPomodoro === subtask.id ? '...' : ''}</span>
+                                <span>+</span>
                               </button>
-                            )}
-                            
-                            {/* 删除子任务按钮 */}
-                            <DeleteButton
-                              id={subtask.id}
-                              deleteConfirm={deleteSubtaskConfirm}
-                              onDelete={(id) => {
-                                handleDeleteSubtask(id, task.id);
-                              }}
-                              onSetDeleteConfirm={(id) => {
-                                setDeleteSubtaskConfirm(id);
-                              }}
-                              size="small"
-                            />
+                              
+                              {/* 番茄按钮 */}
+                              {isAuthenticated && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddToPomodoro(subtask.id);
+                                  }}
+                                  disabled={isAddingToPomodoro === subtask.id}
+                                  className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                  title="添加到番茄钟并开始专注"
+                                >
+                                  <Clock className="w-4 h-4" />
+                                  <span>{isAddingToPomodoro === subtask.id ? '...' : ''}</span>
+                                </button>
+                              )}
+                              
+                              {/* 删除子任务按钮 */}
+                              <DeleteButton
+                                id={subtask.id}
+                                deleteConfirm={deleteSubtaskConfirm}
+                                onDelete={(id) => {
+                                  handleDeleteSubtask(id, task.id);
+                                }}
+                                onSetDeleteConfirm={(id) => {
+                                  setDeleteSubtaskConfirm(id);
+                                }}
+                                size="small"
+                              />
+                            </div>
                           </div>
+
+                          {/* 子任务的添加子任务输入框 */}
+                          {isAddingSubtask === subtask.id && (
+                            <div className="pl-6 pb-2">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={newSubtaskContent[subtask.id] || ''}
+                                  onChange={(e) => handleSubtaskContentChange(subtask.id, e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleAddSubtask(subtask.id);
+                                    }
+                                  }}
+                                  placeholder="输入子任务内容..."
+                                  className="flex-1 px-2 py-1 rounded text-xs form-input"
+                                  style={{
+                                    backgroundColor: 'var(--card-background)',
+                                    border: '1px solid var(--border-light)',
+                                    color: 'var(--text-primary)'
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddSubtask(subtask.id);
+                                  }}
+                                  className="px-2 py-1 rounded text-xs btn-primary"
+                                  disabled={!newSubtaskContent[subtask.id]?.trim()}
+                                >
+                                  添加
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 递归显示子任务的子任务 */}
+                          {subtask.subtasks && subtask.subtasks.length > 0 && (
+                            <div className="pl-4">
+                              {subtask.subtasks.map((subSubtask: Record) => (
+                                <div 
+                                  key={subSubtask.id} 
+                                  className="group flex items-center justify-between py-1 text-body-small"
+                                  style={{ 
+                                    borderLeft: '2px solid var(--border-light)', 
+                                    paddingLeft: '12px',
+                                    marginLeft: '8px',
+                                    color: 'var(--text-tertiary)'
+                                  }}
+                                >
+                                  <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└└</span>
+                                    
+                                    {/* 子子任务内容 - 可点击编辑 */}
+                                    {editingSubtask === subSubtask.id ? (
+                                      <input
+                                        type="text"
+                                        value={editingSubtaskContent[subSubtask.id] || subSubtask.content}
+                                        onChange={(e) => setEditingSubtaskContent(prev => ({
+                                          ...prev,
+                                          [subSubtask.id]: e.target.value
+                                        }))}
+                                        onKeyPress={(e) => {
+                                          if (e.key === 'Enter') {
+                                            saveSubtaskEdit(subSubtask.id, subtask.id);
+                                          } else if (e.key === 'Escape') {
+                                            cancelEditingSubtask();
+                                          }
+                                        }}
+                                        onBlur={() => saveSubtaskEdit(subSubtask.id, subtask.id)}
+                                        className="flex-1 px-2 py-1 text-xs rounded form-input"
+                                        style={{
+                                          backgroundColor: 'var(--card-background)',
+                                          border: '1px solid var(--border-light)',
+                                          color: 'var(--text-primary)'
+                                        }}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span 
+                                        className="font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          startEditingSubtask(subSubtask.id, subSubtask.content);
+                                        }}
+                                        title={subSubtask.content}
+                                      >
+                                        {subSubtask.content}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-2 flex-shrink-0">
+                                    {/* 子子任务优先级标签 */}
+                                    <div className="relative">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPriorityDropdownOpen(priorityDropdownOpen === subSubtask.id ? null : subSubtask.id);
+                                        }}
+                                        className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                        style={getPriorityStyle(priorityMap[subSubtask.priority as keyof typeof priorityMap]?.color || 'default')}
+                                        title="点击修改优先级"
+                                      >
+                                        <span>{priorityMap[subSubtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                        <span className="text-xs">▼</span>
+                                      </button>
+                                      
+                                      {priorityDropdownOpen === subSubtask.id && (
+                                        <div {...getDropdownStyle()}>
+                                          {Object.entries(priorityMap).map(([key, info]) => (
+                                            <button
+                                              key={key}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleUpdatePriority(subSubtask.id, key);
+                                                setPriorityDropdownOpen(null);
+                                              }}
+                                              {...getDropdownItemStyle(subSubtask.priority === key)}
+                                            >
+                                              {info.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* 子子任务状态标签 */}
+                                    <div className="relative">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setStatusDropdownOpen(statusDropdownOpen === subSubtask.id ? null : subSubtask.id);
+                                        }}
+                                        className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                        style={getStatusStyle(statusMap[subSubtask.status as keyof typeof statusMap]?.color || 'default')}
+                                        title="点击修改状态"
+                                      >
+                                        <span>{statusMap[subSubtask.status as keyof typeof statusMap]?.label || subSubtask.status}</span>
+                                        <span className="text-xs">▼</span>
+                                      </button>
+                                      
+                                      {statusDropdownOpen === subSubtask.id && (
+                                        <div {...getDropdownStyle()}>
+                                          {Object.entries(statusMap).map(([key, info]) => (
+                                            <button
+                                              key={key}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                updateSubtaskStatus(subSubtask.id, subtask.id, key);
+                                                setStatusDropdownOpen(null);
+                                              }}
+                                              {...getDropdownItemStyle(subSubtask.status === key)}
+                                            >
+                                              {info.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* 子子任务时间 */}
+                                    <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                      {formatDate(subSubtask.created_at)}
+                                    </div>
+                                    
+                                    {/* 番茄按钮 */}
+                                    {isAuthenticated && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleAddToPomodoro(subSubtask.id);
+                                        }}
+                                        disabled={isAddingToPomodoro === subSubtask.id}
+                                        className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                        title="添加到番茄钟并开始专注"
+                                      >
+                                        <Clock className="w-4 h-4" />
+                                        <span>{isAddingToPomodoro === subSubtask.id ? '...' : ''}</span>
+                                      </button>
+                                    )}
+                                    
+                                    {/* 删除子子任务按钮 */}
+                                    <DeleteButton
+                                      id={subSubtask.id}
+                                      deleteConfirm={deleteSubtaskConfirm}
+                                      onDelete={(id) => {
+                                        handleDeleteSubtask(id, subtask.id);
+                                      }}
+                                      onSetDeleteConfirm={(id) => {
+                                        setDeleteSubtaskConfirm(id);
+                                      }}
+                                      size="small"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                       {task.subtasks.length > 3 && !showAllInlineSubtasks.has(task.id) && (
@@ -1829,166 +2047,388 @@ export default function TaskList({
                               // 展开详情中：完整展示所有子任务，去除内部滚动和高度限制
                               <div className="space-y-2">
                                 {task.subtasks.map((subtask: Record) => (
-                                  <div 
-                                    key={subtask.id}
-                                    className="group flex items-center justify-between p-2 rounded-lg hover:bg-opacity-50 transition-all"
-                                    style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}
-                                  >
-                                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
-                                      
-                                      {/* 子任务内容 - 可点击编辑 */}
-                                      {editingSubtask === subtask.id ? (
-                                        <input
-                                          type="text"
-                                          value={editingSubtaskContent[subtask.id] || subtask.content}
-                                          onChange={(e) => setEditingSubtaskContent(prev => ({
-                                            ...prev,
-                                            [subtask.id]: e.target.value
-                                          }))}
-                                          onKeyPress={(e) => {
-                                            if (e.key === 'Enter') {
-                                              saveSubtaskEdit(subtask.id, task.id);
-                                            } else if (e.key === 'Escape') {
-                                              cancelEditingSubtask();
-                                            }
-                                          }}
-                                          onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
-                                          className="flex-1 px-2 py-1 text-body-small rounded form-input"
-                                          style={{
-                                            backgroundColor: 'var(--card-background)',
-                                            border: '1px solid var(--border-light)',
-                                            color: 'var(--text-primary)'
-                                          }}
-                                          autoFocus
-                                        />
-                                      ) : (
-                                        <span 
-                                          className="text-body-small font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
-                                          style={{ 
-                                            color: 'var(--text-primary)'
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            startEditingSubtask(subtask.id, subtask.content);
-                                          }}
-                                          title={subtask.content}
-                                        >
-                                          {subtask.content}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      {/* 可点击编辑的子任务优先级标签 */}
-                                      <div className="relative">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
-                                          }}
-                                          className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
-                                          style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
-                                          title="点击修改优先级"
-                                        >
-                                          <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
-                                          <span className="text-xs">▼</span>
-                                        </button>
+                                  <div key={subtask.id} className="space-y-2">
+                                    {/* 主子任务 */}
+                                    <div 
+                                      className="group flex items-center justify-between p-2 rounded-lg hover:bg-opacity-50 transition-all"
+                                      style={{ backgroundColor: 'var(--card-background)', border: '1px solid var(--border-light)' }}
+                                    >
+                                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
                                         
-                                        {/* 子任务优先级下拉菜单 */}
-                                        {priorityDropdownOpen === subtask.id && (
-                                          <div {...getDropdownStyle()}>
-                                            {Object.entries(priorityMap).map(([key, info]) => (
-                                              <button
-                                                key={key}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleUpdatePriority(subtask.id, key);
-                                                  setPriorityDropdownOpen(null);
-                                                }}
-                                                {...getDropdownItemStyle(subtask.priority === key)}
-                                              >
-                                                {info.label}
-                                              </button>
-                                            ))}
-                                          </div>
+                                        {/* 子任务内容 - 可点击编辑 */}
+                                        {editingSubtask === subtask.id ? (
+                                          <input
+                                            type="text"
+                                            value={editingSubtaskContent[subtask.id] || subtask.content}
+                                            onChange={(e) => setEditingSubtaskContent(prev => ({
+                                              ...prev,
+                                              [subtask.id]: e.target.value
+                                            }))}
+                                            onKeyPress={(e) => {
+                                              if (e.key === 'Enter') {
+                                                saveSubtaskEdit(subtask.id, task.id);
+                                              } else if (e.key === 'Escape') {
+                                                cancelEditingSubtask();
+                                              }
+                                            }}
+                                            onBlur={() => saveSubtaskEdit(subtask.id, task.id)}
+                                            className="flex-1 px-2 py-1 text-body-small rounded form-input"
+                                            style={{
+                                              backgroundColor: 'var(--card-background)',
+                                              border: '1px solid var(--border-light)',
+                                              color: 'var(--text-primary)'
+                                            }}
+                                            autoFocus
+                                          />
+                                        ) : (
+                                          <span 
+                                            className="text-body-small font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
+                                            style={{ 
+                                              color: 'var(--text-primary)'
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              startEditingSubtask(subtask.id, subtask.content);
+                                            }}
+                                            title={subtask.content}
+                                          >
+                                            {subtask.content}
+                                          </span>
                                         )}
                                       </div>
-                                      
-                                      {/* 可点击编辑的状态标签 */}
-                                      <div className="relative">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
-                                          }}
-                                          className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
-                                          style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
-                                          title="点击修改状态"
-                                        >
-                                          <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
-                                          <span className="text-xs">▼</span>
-                                        </button>
+                                      <div className="flex items-center space-x-2">
+                                        {/* 可点击编辑的子任务优先级标签 */}
+                                        <div className="relative">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setPriorityDropdownOpen(priorityDropdownOpen === subtask.id ? null : subtask.id);
+                                            }}
+                                            className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                            style={getPriorityStyle(priorityMap[subtask.priority as keyof typeof priorityMap]?.color || 'default')}
+                                            title="点击修改优先级"
+                                          >
+                                            <span>{priorityMap[subtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                            <span className="text-xs">▼</span>
+                                          </button>
+                                          
+                                          {/* 子任务优先级下拉菜单 */}
+                                          {priorityDropdownOpen === subtask.id && (
+                                            <div {...getDropdownStyle()}>
+                                              {Object.entries(priorityMap).map(([key, info]) => (
+                                                <button
+                                                  key={key}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleUpdatePriority(subtask.id, key);
+                                                    setPriorityDropdownOpen(null);
+                                                  }}
+                                                  {...getDropdownItemStyle(subtask.priority === key)}
+                                                >
+                                                  {info.label}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
                                         
-                                        {/* 子任务状态下拉菜单 */}
-                                        {statusDropdownOpen === subtask.id && (
-                                          <div {...getDropdownStyle()}>
-                                            {Object.entries(statusMap).map(([key, info]) => (
-                                              <button
-                                                key={key}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  updateSubtaskStatus(subtask.id, task.id, key);
-                                                  setStatusDropdownOpen(null);
-                                                }}
-                                                {...getDropdownItemStyle(subtask.status === key)}
-                                              >
-                                                {info.label}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      {/* 番茄按钮 */}
-                                      {isAuthenticated && (
+                                        {/* 可点击编辑的状态标签 */}
+                                        <div className="relative">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setStatusDropdownOpen(statusDropdownOpen === subtask.id ? null : subtask.id);
+                                            }}
+                                            className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                            style={getStatusStyle(statusMap[subtask.status as keyof typeof statusMap]?.color || 'default')}
+                                            title="点击修改状态"
+                                          >
+                                            <span>{statusMap[subtask.status as keyof typeof statusMap]?.label || subtask.status}</span>
+                                            <span className="text-xs">▼</span>
+                                          </button>
+                                          
+                                          {/* 子任务状态下拉菜单 */}
+                                          {statusDropdownOpen === subtask.id && (
+                                            <div {...getDropdownStyle()}>
+                                              {Object.entries(statusMap).map(([key, info]) => (
+                                                <button
+                                                  key={key}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    updateSubtaskStatus(subtask.id, task.id, key);
+                                                    setStatusDropdownOpen(null);
+                                                  }}
+                                                  {...getDropdownItemStyle(subtask.status === key)}
+                                                >
+                                                  {info.label}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        {/* 添加子任务按钮 */}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleAddToPomodoro(subtask.id);
+                                            setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
                                           }}
-                                          disabled={isAddingToPomodoro === subtask.id}
-                                          className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                          className="px-2 py-1 rounded text-xs font-medium transition-all"
                                           style={{
-                                            backgroundColor: isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)',
+                                            backgroundColor: 'var(--primary)',
                                             color: 'white',
-                                            border: `1px solid ${isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)'}`,
-                                            opacity: isAddingToPomodoro === subtask.id ? 0.6 : 1
+                                            border: '1px solid var(--primary)'
                                           }}
-                                          title="添加到番茄钟并开始专注"
+                                          title="为此子任务添加子任务"
                                         >
-                                          <span>🍅</span>
-                                          <span>{isAddingToPomodoro === subtask.id ? '添加中...' : '番茄'}</span>
+                                          + 子任务
                                         </button>
-                                      )}
-                                      
-                                      {/* 删除子任务按钮 */}
-                                      <DeleteButton
-                                        id={subtask.id}
-                                        deleteConfirm={deleteSubtaskConfirm}
-                                        onDelete={(id) => {
-                                          handleDeleteSubtask(id, task.id);
-                                        }}
-                                        onSetDeleteConfirm={(id) => {
-                                          setDeleteSubtaskConfirm(id);
-                                        }}
-                                        size="small"
-                                      />
-                                      
-                                      {/* 子任务时间 */}
-                                      <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
-                                        {formatDate(subtask.created_at)}
+                                        
+                                        {/* 番茄按钮 */}
+                                        {isAuthenticated && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleAddToPomodoro(subtask.id);
+                                            }}
+                                            disabled={isAddingToPomodoro === subtask.id}
+                                            className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                            style={{
+                                              backgroundColor: isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)',
+                                              color: 'white',
+                                              border: `1px solid ${isAddingToPomodoro === subtask.id ? 'var(--text-disabled)' : 'var(--error)'}`,
+                                              opacity: isAddingToPomodoro === subtask.id ? 0.6 : 1
+                                            }}
+                                            title="添加到番茄钟并开始专注"
+                                          >
+                                            <span>🍅</span>
+                                            <span>{isAddingToPomodoro === subtask.id ? '添加中...' : '番茄'}</span>
+                                          </button>
+                                        )}
+                                        
+                                        {/* 删除子任务按钮 */}
+                                        <DeleteButton
+                                          id={subtask.id}
+                                          deleteConfirm={deleteSubtaskConfirm}
+                                          onDelete={(id) => {
+                                            handleDeleteSubtask(id, task.id);
+                                          }}
+                                          onSetDeleteConfirm={(id) => {
+                                            setDeleteSubtaskConfirm(id);
+                                          }}
+                                          size="small"
+                                        />
+                                        
+                                        {/* 子任务时间 */}
+                                        <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                          {formatDate(subtask.created_at)}
+                                        </div>
                                       </div>
                                     </div>
+
+                                    {/* 子任务的添加子任务输入框 */}
+                                    {isAddingSubtask === subtask.id && (
+                                      <div className="pl-6">
+                                        <div className="flex items-center space-x-2">
+                                          <input
+                                            type="text"
+                                            value={newSubtaskContent[subtask.id] || ''}
+                                            onChange={(e) => handleSubtaskContentChange(subtask.id, e.target.value)}
+                                            onKeyPress={(e) => {
+                                              if (e.key === 'Enter') {
+                                                handleAddSubtask(subtask.id);
+                                              }
+                                            }}
+                                            placeholder="输入子任务内容..."
+                                            className="flex-1 px-3 py-2 rounded-lg form-input text-body-small"
+                                            style={{
+                                              backgroundColor: 'var(--card-background)',
+                                              border: '1px solid var(--border-light)',
+                                              color: 'var(--text-primary)'
+                                            }}
+                                            autoFocus
+                                          />
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleAddSubtask(subtask.id);
+                                            }}
+                                            className="px-3 py-2 rounded-lg btn-primary text-body-small"
+                                            disabled={!newSubtaskContent[subtask.id]?.trim()}
+                                          >
+                                            添加
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 递归显示子任务的子任务 */}
+                                    {subtask.subtasks && subtask.subtasks.length > 0 && (
+                                      <div className="pl-6 space-y-2">
+                                        {subtask.subtasks.map((subSubtask: Record) => (
+                                          <div 
+                                            key={subSubtask.id}
+                                            className="group flex items-center justify-between p-2 rounded-lg hover:bg-opacity-50 transition-all"
+                                            style={{ backgroundColor: 'var(--background-secondary)', border: '1px solid var(--border-light)' }}
+                                          >
+                                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└└</span>
+                                              
+                                              {/* 子子任务内容 - 可点击编辑 */}
+                                              {editingSubtask === subSubtask.id ? (
+                                                <input
+                                                  type="text"
+                                                  value={editingSubtaskContent[subSubtask.id] || subSubtask.content}
+                                                  onChange={(e) => setEditingSubtaskContent(prev => ({
+                                                    ...prev,
+                                                    [subSubtask.id]: e.target.value
+                                                  }))}
+                                                  onKeyPress={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                      saveSubtaskEdit(subSubtask.id, subtask.id);
+                                                    } else if (e.key === 'Escape') {
+                                                      cancelEditingSubtask();
+                                                    }
+                                                  }}
+                                                  onBlur={() => saveSubtaskEdit(subSubtask.id, subtask.id)}
+                                                  className="flex-1 px-2 py-1 text-body-small rounded form-input"
+                                                  style={{
+                                                    backgroundColor: 'var(--card-background)',
+                                                    border: '1px solid var(--border-light)',
+                                                    color: 'var(--text-primary)'
+                                                  }}
+                                                  autoFocus
+                                                />
+                                              ) : (
+                                                <span 
+                                                  className="text-body-small font-medium cursor-pointer hover:underline task-content-truncated task-content-responsive subtask-width block"
+                                                  style={{ 
+                                                    color: 'var(--text-primary)'
+                                                  }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    startEditingSubtask(subSubtask.id, subSubtask.content);
+                                                  }}
+                                                  title={subSubtask.content}
+                                                >
+                                                  {subSubtask.content}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              {/* 子子任务优先级标签 */}
+                                              <div className="relative">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPriorityDropdownOpen(priorityDropdownOpen === subSubtask.id ? null : subSubtask.id);
+                                                  }}
+                                                  className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                                  style={getPriorityStyle(priorityMap[subSubtask.priority as keyof typeof priorityMap]?.color || 'default')}
+                                                  title="点击修改优先级"
+                                                >
+                                                  <span>{priorityMap[subSubtask.priority as keyof typeof priorityMap]?.label || '中'}</span>
+                                                  <span className="text-xs">▼</span>
+                                                </button>
+                                                
+                                                {priorityDropdownOpen === subSubtask.id && (
+                                                  <div {...getDropdownStyle()}>
+                                                    {Object.entries(priorityMap).map(([key, info]) => (
+                                                      <button
+                                                        key={key}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          handleUpdatePriority(subSubtask.id, key);
+                                                          setPriorityDropdownOpen(null);
+                                                        }}
+                                                        {...getDropdownItemStyle(subSubtask.priority === key)}
+                                                      >
+                                                        {info.label}
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              
+                                              {/* 子子任务状态标签 */}
+                                              <div className="relative">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setStatusDropdownOpen(statusDropdownOpen === subSubtask.id ? null : subSubtask.id);
+                                                  }}
+                                                  className="px-2 py-0.5 rounded text-xs font-medium cursor-pointer hover:opacity-80 transition-all flex items-center space-x-1"
+                                                  style={getStatusStyle(statusMap[subSubtask.status as keyof typeof statusMap]?.color || 'default')}
+                                                  title="点击修改状态"
+                                                >
+                                                  <span>{statusMap[subSubtask.status as keyof typeof statusMap]?.label || subSubtask.status}</span>
+                                                  <span className="text-xs">▼</span>
+                                                </button>
+                                                
+                                                {statusDropdownOpen === subSubtask.id && (
+                                                  <div {...getDropdownStyle()}>
+                                                    {Object.entries(statusMap).map(([key, info]) => (
+                                                      <button
+                                                        key={key}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          updateSubtaskStatus(subSubtask.id, subtask.id, key);
+                                                          setStatusDropdownOpen(null);
+                                                        }}
+                                                        {...getDropdownItemStyle(subSubtask.status === key)}
+                                                      >
+                                                        {info.label}
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              
+                                              {/* 番茄按钮 */}
+                                              {isAuthenticated && (
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAddToPomodoro(subSubtask.id);
+                                                  }}
+                                                  disabled={isAddingToPomodoro === subSubtask.id}
+                                                  className="px-2 py-1 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                                  style={{
+                                                    backgroundColor: isAddingToPomodoro === subSubtask.id ? 'var(--text-disabled)' : 'var(--error)',
+                                                    color: 'white',
+                                                    border: `1px solid ${isAddingToPomodoro === subSubtask.id ? 'var(--text-disabled)' : 'var(--error)'}`,
+                                                    opacity: isAddingToPomodoro === subSubtask.id ? 0.6 : 1
+                                                  }}
+                                                  title="添加到番茄钟并开始专注"
+                                                >
+                                                  <span>🍅</span>
+                                                  <span>{isAddingToPomodoro === subSubtask.id ? '...' : ''}</span>
+                                                </button>
+                                              )}
+                                              
+                                              {/* 删除子子任务按钮 */}
+                                              <DeleteButton
+                                                id={subSubtask.id}
+                                                deleteConfirm={deleteSubtaskConfirm}
+                                                onDelete={(id) => {
+                                                  handleDeleteSubtask(id, subtask.id);
+                                                }}
+                                                onSetDeleteConfirm={(id) => {
+                                                  setDeleteSubtaskConfirm(id);
+                                                }}
+                                                size="small"
+                                              />
+                                              
+                                              {/* 子子任务时间 */}
+                                              <div className="text-caption" style={{ color: 'var(--text-muted)' }}>
+                                                {formatDate(subSubtask.created_at)}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
