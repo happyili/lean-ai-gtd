@@ -91,6 +91,8 @@ export default function TaskList({
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
   const [showStatsDetail, setShowStatsDetail] = useState(false);
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
+  // 控制在折叠视图下是否展示全部子任务（仅影响内联子任务区域，不展开详情）
+  const [showAllInlineSubtasks, setShowAllInlineSubtasks] = useState<Set<number>>(new Set());
   
   // 番茄钟状态
   const [isAddingToPomodoro, setIsAddingToPomodoro] = useState<number | null>(null);
@@ -1483,7 +1485,11 @@ export default function TaskList({
                   {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示，且未折叠时显示 */}
                   {!showAllLevels && !isSubtask && !isExpanded && !isCollapsed && task.subtasks && task.subtasks.length > 0 && (
                     <div className="pl-12 pr-4 pb-2">
-                      {task.subtasks.slice(0, 3).map((subtask: Record, _index: number) => (
+                      {(
+                        showAllInlineSubtasks.has(task.id)
+                          ? task.subtasks
+                          : task.subtasks.slice(0, 3)
+                      ).map((subtask: Record, _index: number) => (
                         <div 
                           key={subtask.id} 
                           className="group flex items-center justify-between py-1 text-body-small"
@@ -1642,16 +1648,38 @@ export default function TaskList({
                           </div>
                         </div>
                       ))}
-                      {task.subtasks.length > 3 && (
+                      {task.subtasks.length > 3 && !showAllInlineSubtasks.has(task.id) && (
                         <div 
                           className="py-1 text-xs font-medium cursor-pointer hover:underline"
                           style={{ 
                             color: 'var(--primary)',
                             paddingLeft: '20px'
                           }}
-                          onClick={() => handleTaskClick(task)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = new Set(showAllInlineSubtasks);
+                            next.add(task.id);
+                            setShowAllInlineSubtasks(next);
+                          }}
                         >
                           还有 {task.subtasks!.length - 3} 个子任务...
+                        </div>
+                      )}
+                      {task.subtasks.length > 3 && showAllInlineSubtasks.has(task.id) && (
+                        <div 
+                          className="py-1 text-xs font-medium cursor-pointer hover:underline"
+                          style={{ 
+                            color: 'var(--primary)',
+                            paddingLeft: '20px'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = new Set(showAllInlineSubtasks);
+                            next.delete(task.id);
+                            setShowAllInlineSubtasks(next);
+                          }}
+                        >
+                          收起子任务
                         </div>
                       )}
                     </div>
@@ -1798,7 +1826,8 @@ export default function TaskList({
 
                             {/* 所有子任务列表 */}
                             {task.subtasks && task.subtasks.length > 0 && (
-                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                              // 展开详情中：完整展示所有子任务，去除内部滚动和高度限制
+                              <div className="space-y-2">
                                 {task.subtasks.map((subtask: Record) => (
                                   <div 
                                     key={subtask.id}
