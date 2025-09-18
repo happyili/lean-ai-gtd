@@ -34,7 +34,6 @@ interface Record {
 }
 
 interface TaskListProps {
-  onViewDetail: (record: Record) => void;
   onDelete: (id: number) => void;
   onSearch: (query: string) => void;
   onSave: (content: string, category: string) => Promise<void>;
@@ -50,8 +49,7 @@ interface TaskListProps {
 }
 
 
-export default function TaskList({ 
-  onViewDetail: _onViewDetail, 
+export default function TaskList({
   onDelete, 
   onSearch, 
   onSave, 
@@ -460,9 +458,9 @@ export default function TaskList({
 
       const data = await response.json();
       
-      // 更新任务列表，添加新子任务
-      setTasks(prevTasks => 
-        prevTasks.map(task => {
+      // 递归更新任务列表，支持多层嵌套
+      const updateTasksRecursively = (tasks: Record[]): Record[] => {
+        return tasks.map(task => {
           if (task.id === parentId) {
             return {
               ...task,
@@ -470,9 +468,18 @@ export default function TaskList({
               subtask_count: (task.subtask_count || 0) + 1
             };
           }
+          
+          // 如果有子任务，递归更新子任务
+          if (task.subtasks && task.subtasks.length > 0) {
+            const updatedSubtasks = updateTasksRecursively(task.subtasks);
+            return { ...task, subtasks: updatedSubtasks };
+          }
+          
           return task;
-        })
-      );
+        });
+      };
+      
+      setTasks(prevTasks => updateTasksRecursively(prevTasks));
 
       // 清空输入框并关闭添加状态
       setNewSubtaskContent(prev => ({ ...prev, [parentId]: '' }));
@@ -496,9 +503,9 @@ export default function TaskList({
           accessToken || undefined
         );
 
-        // 更新任务列表，移除子任务
-        setTasks(prevTasks => 
-          prevTasks.map(task => {
+        // 递归更新任务列表，支持多层嵌套删除
+        const updateTasksRecursively = (tasks: Record[]): Record[] => {
+          return tasks.map(task => {
             if (task.id === parentId) {
               return {
                 ...task,
@@ -506,9 +513,18 @@ export default function TaskList({
                 subtask_count: Math.max(0, (task.subtask_count || 0) - 1)
               };
             }
+            
+            // 如果有子任务，递归更新子任务
+            if (task.subtasks && task.subtasks.length > 0) {
+              const updatedSubtasks = updateTasksRecursively(task.subtasks);
+              return { ...task, subtasks: updatedSubtasks };
+            }
+            
             return task;
-          })
-        );
+          });
+        };
+        
+        setTasks(prevTasks => updateTasksRecursively(prevTasks));
         
         setDeleteSubtaskConfirm(null);
       } catch (error) {
@@ -1193,14 +1209,16 @@ export default function TaskList({
               <button
                 onClick={handleAddTask}
                 disabled={!newTaskContent.trim()}
-                className="px-2 py-1 rounded-lg btn-primary text-xs font-medium"
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{ 
-                  background: newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)',
-                  color: 'white',
-                  border: `1px solid ${newTaskContent.trim() ? 'var(--primary)' : 'var(--text-disabled)'}`
+                  background: 'transparent',
+                  color: newTaskContent.trim() ? 'var(--text-primary)' : 'var(--text-muted)',
+                  border: '1px solid var(--border-light)'
                 }}
+                title="添加任务"
               >
-                + 任务
+                <span style={{ fontSize: '1.1rem', lineHeight: 1, marginRight: '0.25rem' }}>＋</span>
+                <span>任务</span>
               </button>
             </div>
           </div>
@@ -1450,7 +1468,25 @@ export default function TaskList({
                       </div>
                       
                       {/* 操作按钮 */}
-                      <div className="flex items-center">
+                      <div className="flex items-center space-x-0.25">
+                        {/* 添加子任务按钮 - 只对非子任务显示 */}
+                        {!isSubtask && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
+                            }}
+                            className="px-1 py-0.75 rounded-lg text-sm font-medium transition-all flex items-center"
+                            style={{
+                              backgroundColor: 'transparent',
+                              color: 'var(--text-secondary)',
+                            }}
+                            title="添加子任务"
+                          >
+                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>＋</span>
+                          </button>
+                        )}
+                        
                         {/* 番茄按钮 */}
                         {isAuthenticated && (
                           <button
@@ -1482,9 +1518,45 @@ export default function TaskList({
                     </div>
                   </div>
 
+                  {/* 顶级任务的添加子任务输入框 */}
+                  {!isSubtask && isAddingSubtask === task.id && (
+                    <div className="pl-12 pr-4 pb-2">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={newSubtaskContent[task.id] || ''}
+                          onChange={(e) => handleSubtaskContentChange(task.id, e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleAddSubtask(task.id);
+                            }
+                          }}
+                          placeholder="输入子任务内容..."
+                          className="flex-1 px-2 py-1 rounded text-xs form-input"
+                          style={{
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-light)',
+                            color: 'var(--text-primary)'
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddSubtask(task.id);
+                          }}
+                          className="px-2 py-1 rounded text-xs btn-primary"
+                          disabled={!newSubtaskContent[task.id]?.trim()}
+                        >
+                          添加
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示，且未折叠时显示 */}
                   {!showAllLevels && !isSubtask && !isExpanded && !isCollapsed && task.subtasks && task.subtasks.length > 0 && (
-                    <div className="pl-12 pr-4 pb-2">
+                    <div className="pl-12 pb-2">
                       {(
                         showAllInlineSubtasks.has(task.id)
                           ? task.subtasks
@@ -1624,15 +1696,14 @@ export default function TaskList({
                                   e.stopPropagation();
                                   setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
                                 }}
-                                className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                className="px-0.5 py-0.5 rounded text-xs font-medium transition-all flex items-center"
                                 style={{
-                                  backgroundColor: 'var(--primary)',
-                                  color: 'white',
-                                  border: '1px solid var(--primary)'
+                                  backgroundColor: 'transparent',
+                                  color: 'var(--text-secondary)',
                                 }}
                                 title="为此子任务添加子任务"
                               >
-                                <span>+</span>
+                                <span style={{ fontSize: '1.0rem', lineHeight: 1 }}>＋</span>
                               </button>
                               
                               {/* 番茄按钮 */}
@@ -1912,7 +1983,7 @@ export default function TaskList({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
                               <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
-                                10秒自动保存 • 支持多行输入 • Ctrl+Z撤销
+                                {getCurrentProgressNotes(task.id).length} 字符 • Ctrl+Z撤销
                               </span>
                               {progressNotesHistory[task.id] && progressNotesHistory[task.id].length > 0 && (
                                 <button
@@ -1927,9 +1998,28 @@ export default function TaskList({
                                 </button>
                               )}
                             </div>
-                            <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
-                              {getCurrentProgressNotes(task.id).length} 字符
-                            </span>
+                            
+                            <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAISuggestions(task.id);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-primary"
+                                  style={{ background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
+                                >
+                                  🤖 AI分析
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowStrategySuggestions(task.id);
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-primary"
+                                  style={{ background: 'var(--primary)', borderColor: 'var(--primary)' }}
+                                  title="AI策略建议"
+                                >
+                                  🎯 策略建议
+                            </button>
                           </div>
                           <textarea
                             value={getCurrentProgressNotes(task.id)}
@@ -1968,33 +2058,11 @@ export default function TaskList({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    _onViewDetail(task);
                                   }}
                                   className="text-xs px-3 py-1 rounded btn-secondary"
                                   title="查看任务详情"
                                 >
                                   📋 详情
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowAISuggestions(task.id);
-                                  }}
-                                  className="text-xs px-3 py-1 rounded btn-primary"
-                                  style={{ background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
-                                >
-                                  🤖 AI智能分析
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowStrategySuggestions(task.id);
-                                  }}
-                                  className="text-xs px-3 py-1 rounded btn-primary"
-                                  style={{ background: 'var(--primary)', borderColor: 'var(--primary)' }}
-                                  title="AI策略建议"
-                                >
-                                  🎯 策略建议
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -2174,15 +2242,16 @@ export default function TaskList({
                                             e.stopPropagation();
                                             setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
                                           }}
-                                          className="px-2 py-1 rounded text-xs font-medium transition-all"
+                                          className="px-1 py-1 rounded text-xs font-medium transition-all flex items-center"
                                           style={{
-                                            backgroundColor: 'var(--primary)',
-                                            color: 'white',
-                                            border: '1px solid var(--primary)'
+                                            backgroundColor: 'transparent',
+                                            color: 'var(--text-secondary)',
+                                            border: '0px solid var(--border-light)'
                                           }}
                                           title="为此子任务添加子任务"
                                         >
-                                          + 子任务
+                                          <span style={{ fontSize: '1.05rem', lineHeight: 1, marginRight: '0rem' }}>＋</span>
+                                          <span>子任务</span>
                                         </button>
                                         
                                         {/* 番茄按钮 */}
