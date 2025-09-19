@@ -3,7 +3,6 @@ import { Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import UserMenu from '@/components/Auth/UserMenu';
 import TaskList from '@/components/QuickCapture/TaskList';
-import TaskDetail from '@/components/QuickCapture/TaskDetail';
 import SimpleTaskCreator from '@/components/QuickCapture/SimpleTaskCreator';
 import PomodoroManager from '@/components/Pomodoro/PomodoroManager';
 import RemindersList from '@/components/Reminders/RemindersList';
@@ -22,22 +21,6 @@ interface TaskCreateData {
   tags?: string[];
 }
 
-interface Record {
-  id: number;
-  content: string;
-  category: string;
-  parent_id?: number;
-  priority?: string;
-  progress_notes?: string; // 替换progress为progress_notes
-  created_at: string;
-  updated_at: string;
-  status: string;
-  task_type?: string; // work/hobby/life - 工作/业余/生活
-  subtask_count?: number;
-  subtasks?: Record[];
-  user_id?: number | null; // 用户ID，null表示guest用户
-}
-
 interface InfoResource {
   id: number;
   title: string;
@@ -54,7 +37,6 @@ export default function App() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Record | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -235,7 +217,6 @@ export default function App() {
   const getStatusDisplayText = (status: string) => {
     const statusMap: { [key: string]: string } = {
       'all': '状态',
-      'pending': '待办',
       'active': '进行中',
       'completed': '已完成',
       'paused': '暂停',
@@ -348,108 +329,6 @@ export default function App() {
     window.dispatchEvent(searchEvent);
   };
 
-
-  // 查看任务详情
-  const handleViewDetail = (record: Record) => {
-    setSelectedTask(record);
-  };
-
-  // 关闭任务详情
-  const handleCloseDetail = () => {
-    setSelectedTask(null);
-  };
-
-  // 更新任务
-  const handleUpdateTask = async (updatedTask: Record) => {
-    try {
-      const { apiPut, apiPutPublic } = await import('@/utils/api');
-      
-      if (isAuthenticated && accessToken) {
-        await apiPut(
-          `/api/records/${updatedTask.id}`,
-          updatedTask,
-          '更新任务',
-          accessToken
-        );
-      } else {
-        await apiPutPublic(
-          `/api/records/${updatedTask.id}`,
-          updatedTask,
-          '更新任务'
-        );
-      }
-
-      showNotification('任务更新成功', 'success');
-      
-      // 更新选中的任务
-      setSelectedTask(updatedTask);
-      
-    } catch (error) {
-      console.error('更新任务失败:', error);
-      showNotification(error instanceof Error ? error.message : '更新任务失败', 'error');
-    }
-  };
-
-  // 添加子任务
-  const handleAddSubtask = async (parentId: number, content: string) => {
-    try {
-      const { apiPost, apiPostPublic } = await import('@/utils/api');
-      
-      // 根据是否登录选择API方法
-      const response = isAuthenticated 
-        ? await apiPost(
-            `/api/records/${parentId}/subtasks`,
-            {
-              content: content,
-              category: 'task'
-            },
-            '添加子任务',
-            accessToken || undefined
-          )
-        : await apiPostPublic(
-            `/api/records/${parentId}/subtasks`,
-            {
-              content: content,
-              category: 'task'
-            },
-            '添加子任务'
-          );
-
-      await response.json();
-      showNotification('子任务添加成功', 'success');
-      
-      // Refresh task list to show new subtask
-      const refreshEvent = new CustomEvent('taskRefresh');
-      window.dispatchEvent(refreshEvent);
-      
-    } catch (error) {
-      console.error('添加子任务失败:', error);
-      showNotification(error instanceof Error ? error.message : '添加子任务失败', 'error');
-    }
-  };
-
-  // 删除子任务
-  const handleDeleteSubtask = async (subtaskId: number) => {
-    try {
-      const { apiDelete } = await import('@/utils/api');
-      
-      await apiDelete(
-        `/api/records/${subtaskId}`,
-        '删除子任务',
-        accessToken || undefined
-      );
-
-      showNotification('子任务删除成功', 'success');
-      
-      // Refresh task list to remove deleted subtask
-      const refreshEvent = new CustomEvent('taskRefresh');
-      window.dispatchEvent(refreshEvent);
-      
-    } catch (error) {
-      console.error('删除子任务失败:', error);
-      showNotification(error instanceof Error ? error.message : '删除子任务失败', 'error');
-    }
-  };
 
   // 信息资源相关处理函数
   const handleViewInfoResourceDetail = (resource: InfoResource) => {
@@ -810,21 +689,6 @@ export default function App() {
                         }}
                       >
                         全部
-                      </button>
-                      <button
-                        onClick={() => handleFilter('status', 'pending')}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                          statusFilter === 'pending' 
-                            ? '' 
-                            : 'hover:btn-secondary'
-                        }`}
-                        style={{ 
-                          backgroundColor: 'transparent',
-                          color: statusFilter === 'pending' ? 'var(--text-primary)' : 'var(--text-primary)',
-                          border: `1px solid ${statusFilter === 'pending' ? 'var(--border-default)' : 'var(--border-default)'}`
-                        }}
-                      >
-                        待办
                       </button>
                       <button
                         onClick={() => handleFilter('status', 'completed')}
@@ -1265,7 +1129,6 @@ export default function App() {
             {/* 任务管理模式 */}
             {selectedTaskManagementMode === 'tasks' && (
               <TaskList
-                onViewDetail={handleViewDetail}
                 onDelete={handleDelete}
                 onSearch={handleSearch}
                 onSave={handleSave}
@@ -1322,17 +1185,6 @@ export default function App() {
         >
           <span className="text-xl font-semibold">+</span>
         </button>
-      )}
-
-      {/* 任务详情弹窗 */}
-      {selectedTask && (
-        <TaskDetail
-          task={selectedTask}
-          onClose={handleCloseDetail}
-          onUpdate={handleUpdateTask}
-          onAddSubtask={handleAddSubtask}
-          onDeleteSubtask={handleDeleteSubtask}
-        />
       )}
 
       {/* 信息资源详情弹窗 */}

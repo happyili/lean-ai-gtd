@@ -21,8 +21,7 @@ export const statusMap = {
   active: { label: '进行中', color: 'info' },
   completed: { label: '已完成', color: 'success' },
   paused: { label: '暂停', color: 'warning' },
-  cancelled: { label: '已取消', color: 'error' },
-  pending: { label: '待办', color: 'muted' }
+  cancelled: { label: '已取消', color: 'error' }
 };
 
 // 分类映射（用于RecordHistory）

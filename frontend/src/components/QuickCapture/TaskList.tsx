@@ -1568,7 +1568,8 @@ export default function TaskList({
                           style={{ 
                             borderLeft: '2px solid var(--border-light)', 
                             marginLeft: '8px',
-                            color: 'var(--text-tertiary)'
+                            color: 'var(--text-tertiary)',
+                            opacity: subtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
                           }}
                         >
                           {/* 子任务主行 */}
@@ -1609,6 +1610,9 @@ export default function TaskList({
                                     startEditingSubtask(subtask.id, subtask.content);
                                   }}
                                   title={subtask.content}
+                                  style={{
+                                    textDecoration: subtask.status === 'completed' ? 'line-through' : 'none'
+                                  }}
                                 >
                                   {subtask.content}
                                 </span>
@@ -1784,7 +1788,8 @@ export default function TaskList({
                                     borderLeft: '2px solid var(--border-light)', 
                                     paddingLeft: '12px',
                                     marginLeft: '8px',
-                                    color: 'var(--text-tertiary)'
+                                    color: 'var(--text-tertiary)',
+                                    opacity: subSubtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
                                   }}
                                 >
                                   <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -1823,6 +1828,9 @@ export default function TaskList({
                                           startEditingSubtask(subSubtask.id, subSubtask.content);
                                         }}
                                         title={subSubtask.content}
+                                        style={{
+                                          textDecoration: subSubtask.status === 'completed' ? 'line-through' : 'none'
+                                        }}
                                       >
                                         {subSubtask.content}
                                       </span>
