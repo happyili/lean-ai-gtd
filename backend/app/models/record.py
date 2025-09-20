@@ -52,15 +52,16 @@ class Record(db.Model):
         }
         
         if include_subtasks:
-            # 仅返回活跃子任务；如已预加载则内存过滤，否则将触发一次加载
+            # 返回子任务；如已预加载则内存过滤，否则将触发一次加载
             loaded_subtasks = list(self.subtasks)
-            active_subtasks = [s for s in loaded_subtasks if s.status == 'active']
-            result['subtasks'] = [subtask.to_dict(include_subtasks=True) for subtask in active_subtasks]
-            result['subtask_count'] = len(active_subtasks)
+            filtered_subtasks = [s for s in loaded_subtasks if s.status != 'deleted']
+            result['subtasks'] = [subtask.to_dict(include_subtasks=True) for subtask in filtered_subtasks]
+            result['subtask_count'] = len(filtered_subtasks)
         else:
             # 只统计数量；此处会触发一次加载（与原先 .count() 的一次查询等价）
             loaded_subtasks = list(self.subtasks)
-            result['subtask_count'] = sum(1 for s in loaded_subtasks if s.status == 'active')
+            filtered_subtasks = [s for s in loaded_subtasks if s.status == 'deleted']
+            result['subtask_count'] = sum(1 for s in filtered_subtasks)
             
         return result
     

@@ -44,7 +44,7 @@ export const fetchAllTasks = async (accessToken?: string): Promise<TaskRecord[]>
       include_subtasks: true,
       subtask_detail: true,
       top_level_only: false,
-      per_page: 1000, // 获取所有任务
+      per_page: 10000, // 获取所有任务
       page: 1
     };
 

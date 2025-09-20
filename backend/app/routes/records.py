@@ -120,7 +120,7 @@ def get_records():
     """获取记录列表"""
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
+        per_page = request.args.get('per_page', 100, type=int)
         search = request.args.get('search', '')
         category = request.args.get('category', '')
         status = request.args.get('status', '')
@@ -197,7 +197,7 @@ def get_records():
 
 @records_bp.route('/api/records/<int:record_id>', methods=['DELETE'])
 def delete_record(record_id):
-    """删除记录（软删除）"""
+    """删除记录（默认软删除，可选择硬删除，用hard_delete=true）"""
     try:
         # 获取当前用户
         current_user, access_level, auth_error = get_user_for_record_access()
@@ -221,16 +221,20 @@ def delete_record(record_id):
             if not record:
                 return jsonify({'error': '记录不存在或无权限删除'}), 404
         
-        record.status = 'deleted'
-        record.updated_at = datetime.now(timezone.utc)
-        
-        db.session.commit()
+        # 默认软删除
+        if (request.args.get('hard_delete', 'false').lower() == 'true'):
+            record.hard_delete()
+        else:
+            record.status = 'deleted'
+            record.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
         
         return jsonify({'message': '记录删除成功'}), 200
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'删除记录失败: {str(e)}'}), 500
+
 
 @records_bp.route('/api/records/search', methods=['GET'])
 def search_records():
@@ -294,7 +298,7 @@ def get_subtasks(current_user, record_id):
             return jsonify({'error': '只有任务类型才能查看子任务'}), 400
         
         # 是否包含非active子任务（用于复盘/上下文构建）
-        include_inactive = request.args.get('include_inactive', 'false').lower() == 'true'
+        include_inactive = request.args.get('include_inactive', 'true').lower() == 'true'
         subtasks = parent_record.get_subtasks(include_inactive=include_inactive)
         
         return jsonify({

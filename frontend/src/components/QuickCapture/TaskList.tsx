@@ -773,7 +773,7 @@ export default function TaskList({
         include_subtasks: true,
         subtask_detail: true,
         top_level_only: false,
-        per_page: 30,  // 设置每页显示30个任务
+        per_page: 100,  // 设置每页显示30个任务
         page: page      // 添加页码参数
       };
       
