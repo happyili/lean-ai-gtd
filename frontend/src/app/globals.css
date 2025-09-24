@@ -384,21 +384,6 @@ html.dark {
 }
 
 /* 主任务内容响应式宽度 - 大幅增加最大宽度 */
-.main-task-width {
-  max-width: 300px;
-}
-
-@media (min-width: 640px) {
-  .main-task-width {
-    max-width: 400px;
-  }
-}
-
-@media (min-width: 768px) {
-  .main-task-width {
-    max-width: 500px;
-  }
-}
 
 @media (min-width: 1024px) {
   .main-task-width {
@@ -431,33 +416,6 @@ html.dark {
 }
 
 /* 子任务内容响应式宽度 - 大幅增加最大宽度 */
-.subtask-width {
-  max-width: 280px;
-}
-
-@media (min-width: 640px) {
-  .subtask-width {
-    max-width: 370px;
-  }
-}
-
-@media (min-width: 768px) {
-  .subtask-width {
-    max-width: 470px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .subtask-width {
-    max-width: 600px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .subtask-width {
-    max-width: 750px;
-  }
-}
 
 @media (min-width: 1536px) {
   .subtask-width {
@@ -552,14 +510,14 @@ html.dark {
     padding: 0.75rem !important;
   }
   
-  /* 移动端任务内容宽度调整 */
+  /* 移动端任务内容宽度调整 
   .main-task-width {
     max-width: 250px !important;
   }
   
   .subtask-width {
     max-width: 220px !important;
-  }
+  }*/
   
   /* 移动端按钮优化 */
   .mobile-btn {
@@ -657,11 +615,11 @@ html.dark {
   }
   
   .main-task-width {
-    max-width: 200px !important;
+    max-width: 360px !important;
   }
   
   .subtask-width {
-    max-width: 180px !important;
+    max-width: 300px !important;
   }
 }
 
@@ -672,11 +630,11 @@ html.dark {
   }
   
   .tablet-optimized .main-task-width {
-    max-width: 400px !important;
+    max-width: 600px !important;
   }
   
   .tablet-optimized .subtask-width {
-    max-width: 350px !important;
+    max-width: 550px !important;
   }
 }
 
@@ -730,5 +688,29 @@ html.dark {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* 删除按钮响应式显示逻辑 */
+.mobile-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* 桌面端：悬停时显示 */
+@media (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  .group:hover .mobile-delete-btn {
+    opacity: 1;
+  }
+}
+
+/* 移动端和平板：默认显示（稍微透明） */
+@media (max-width: 1024px), (hover: none), (pointer: coarse) {
+  .mobile-delete-btn {
+    opacity: 0.7;
+  }
+  
+  .mobile-delete-btn:hover {
+    opacity: 1;
   }
 }

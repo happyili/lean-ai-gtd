@@ -49,7 +49,7 @@ interface TaskListProps {
 }
 
 
-export default function TaskList({
+export default function TaskList({ 
   onDelete, 
   onSearch, 
   onSave, 
@@ -202,18 +202,34 @@ export default function TaskList({
         );
       }
 
-      // 更新本地状态
+      // 递归更新嵌套任务优先级的辅助函数
+      const updateNestedPriority = (subtasks: Record[]): Record[] => {
+        return subtasks.map(subtask => {
+          if (subtask.id === taskId) {
+            return { ...subtask, priority: newPriority };
+          }
+          if (subtask.subtasks && subtask.subtasks.length > 0) {
+            return {
+              ...subtask,
+              subtasks: updateNestedPriority(subtask.subtasks)
+            };
+          }
+          return subtask;
+        });
+      };
+
+      // 更新本地状态（支持嵌套）
       setTasks(prevTasks => 
         prevTasks.map(task => {
           if (task.id === taskId) {
             return { ...task, priority: newPriority };
           }
-          // 同时更新子任务中的对应项
-          if (task.subtasks) {
-            const updatedSubtasks = task.subtasks.map(subtask => 
-              subtask.id === taskId ? { ...subtask, priority: newPriority } : subtask
-            );
-            return { ...task, subtasks: updatedSubtasks };
+          // 同时更新子任务中的对应项（支持嵌套）
+          if (task.subtasks && task.subtasks.length > 0) {
+            return {
+              ...task,
+              subtasks: updateNestedPriority(task.subtasks)
+            };
           }
           return task;
         })
@@ -278,18 +294,34 @@ export default function TaskList({
         );
       }
 
-      // 更新本地状态
+      // 递归更新嵌套任务类型的辅助函数
+      const updateNestedTaskType = (subtasks: Record[]): Record[] => {
+        return subtasks.map(subtask => {
+          if (subtask.id === taskId) {
+            return { ...subtask, task_type: newTaskType };
+          }
+          if (subtask.subtasks && subtask.subtasks.length > 0) {
+            return {
+              ...subtask,
+              subtasks: updateNestedTaskType(subtask.subtasks)
+            };
+          }
+          return subtask;
+        });
+      };
+
+      // 更新本地状态（支持嵌套）
       setTasks(prevTasks => 
         prevTasks.map(task => {
           if (task.id === taskId) {
             return { ...task, task_type: newTaskType };
           }
-          // 同时更新子任务中的对应项
-          if (task.subtasks) {
-            const updatedSubtasks = task.subtasks.map(subtask => 
-              subtask.id === taskId ? { ...subtask, task_type: newTaskType } : subtask
-            );
-            return { ...task, subtasks: updatedSubtasks };
+          // 同时更新子任务中的对应项（支持嵌套）
+          if (task.subtasks && task.subtasks.length > 0) {
+            return {
+              ...task,
+              subtasks: updateNestedTaskType(task.subtasks)
+            };
           }
           return task;
         })
@@ -620,17 +652,37 @@ export default function TaskList({
         );
       }
 
-      // 更新任务列表中的子任务内容
+      // 递归更新嵌套子任务内容的辅助函数
+      const updateNestedSubtasks = (subtasks: Record[]): Record[] => {
+        return subtasks.map(subtask => {
+          if (subtask.id === subtaskId) {
+            return { ...subtask, content: newContent };
+          }
+          if (subtask.subtasks && subtask.subtasks.length > 0) {
+            return {
+              ...subtask,
+              subtasks: updateNestedSubtasks(subtask.subtasks)
+            };
+          }
+          return subtask;
+        });
+      };
+
+      // 更新任务列表中的子任务内容（支持嵌套）
       setTasks(prevTasks => 
         prevTasks.map(task => {
+          // 如果是顶级任务的直接子任务
           if (task.id === parentId) {
             return {
               ...task,
-              subtasks: (task.subtasks || []).map(subtask => 
-                subtask.id === subtaskId 
-                  ? { ...subtask, content: newContent }
-                  : subtask
-              )
+              subtasks: task.subtasks ? updateNestedSubtasks(task.subtasks) : []
+            };
+          }
+          // 如果需要在任务的子任务中查找
+          if (task.subtasks && task.subtasks.length > 0) {
+            return {
+              ...task,
+              subtasks: updateNestedSubtasks(task.subtasks)
             };
           }
           return task;
@@ -671,17 +723,37 @@ export default function TaskList({
         );
       }
 
-      // 更新任务列表中的子任务状态
+      // 递归更新嵌套子任务状态的辅助函数
+      const updateNestedSubtaskStatus = (subtasks: Record[]): Record[] => {
+        return subtasks.map(subtask => {
+          if (subtask.id === subtaskId) {
+            return { ...subtask, status: newStatus };
+          }
+          if (subtask.subtasks && subtask.subtasks.length > 0) {
+            return {
+              ...subtask,
+              subtasks: updateNestedSubtaskStatus(subtask.subtasks)
+            };
+          }
+          return subtask;
+        });
+      };
+
+      // 更新任务列表中的子任务状态（支持嵌套）
       setTasks(prevTasks => 
         prevTasks.map(task => {
+          // 如果是顶级任务的直接子任务
           if (task.id === parentId) {
             return {
               ...task,
-              subtasks: (task.subtasks || []).map(subtask => 
-                subtask.id === subtaskId 
-                  ? { ...subtask, status: newStatus }
-                  : subtask
-              )
+              subtasks: task.subtasks ? updateNestedSubtaskStatus(task.subtasks) : []
+            };
+          }
+          // 如果需要在任务的子任务中查找
+          if (task.subtasks && task.subtasks.length > 0) {
+            return {
+              ...task,
+              subtasks: updateNestedSubtaskStatus(task.subtasks)
             };
           }
           return task;
@@ -1268,7 +1340,7 @@ export default function TaskList({
                       paddingRight: 0
                     }}
                   >
-                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
                       {/* 展开/收缩指示器 */}
                       <button 
                         className="text-xs cursor-pointer hover:opacity-70 transition-opacity" 
@@ -1280,11 +1352,28 @@ export default function TaskList({
                       >
                         {isExpanded ? '▼' : '▶'}
                       </button>
+                    
+                      {/* 添加子任务按钮 - 只对非子任务显示 */}
+                      {!isSubtask && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
+                          }}
+                          className="py-0.75 rounded-lg text-sm font-medium transition-all flex items-center"
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: 'var(--text-secondary)',
+                          }}
+                          title="添加子任务"
+                        >
+                          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>＋</span>
+                        </button>
+                      )}
                       
                       {/* 子任务标识 */}
                       {isSubtask && (
                         <div className="flex items-center space-x-1">
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
                           <span 
                             className="px-2 py-0.5 rounded text-xs font-medium"
                             style={{ backgroundColor: 'var(--accent-amber)', color: 'white' }}
@@ -1469,24 +1558,6 @@ export default function TaskList({
                       
                       {/* 操作按钮 */}
                       <div className="flex items-center space-x-0.25">
-                        {/* 添加子任务按钮 - 只对非子任务显示 */}
-                        {!isSubtask && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsAddingSubtask(isAddingSubtask === task.id ? null : task.id);
-                            }}
-                            className="px-1 py-0.75 rounded-lg text-sm font-medium transition-all flex items-center"
-                            style={{
-                              backgroundColor: 'transparent',
-                              color: 'var(--text-secondary)',
-                            }}
-                            title="添加子任务"
-                          >
-                            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>＋</span>
-                          </button>
-                        )}
-                        
                         {/* 番茄按钮 */}
                         {isAuthenticated && (
                           <button
@@ -1556,7 +1627,7 @@ export default function TaskList({
 
                   {/* 一级子任务内联显示 - 只在显示顶级任务且不是子任务且任务未展开时显示，但用户选择只显示主任务时不显示，且未折叠时显示 */}
                   {!showAllLevels && !isSubtask && !isExpanded && !isCollapsed && task.subtasks && task.subtasks.length > 0 && (
-                    <div className="pl-12 pb-2">
+                    <div className="pl-10 pb-2">
                       {(
                         showAllInlineSubtasks.has(task.id)
                           ? task.subtasks
@@ -1567,7 +1638,7 @@ export default function TaskList({
                           className="group"
                           style={{ 
                             borderLeft: '2px solid var(--border-light)', 
-                            marginLeft: '8px',
+                            marginLeft: '2px',
                             color: 'var(--text-tertiary)',
                             opacity: subtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
                           }}
@@ -1575,7 +1646,22 @@ export default function TaskList({
                           {/* 子任务主行 */}
                           <div className="flex items-center justify-between py-1 text-body-small" style={{ paddingLeft: '12px' }}>
                             <div className="flex items-center space-x-2 flex-1 min-w-0">
-                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
+                              {/* 添加子任务按钮 */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
+                                }}
+                                className="px-0.5 py-0.5 rounded text-xs font-medium transition-all flex items-center"
+                                style={{
+                                  backgroundColor: 'transparent',
+                                  color: 'var(--text-secondary)',
+                                }}
+                                title="为此子任务添加子任务"
+                              >
+                                <span style={{ fontSize: '1.0rem', lineHeight: 1 }}>＋</span>
+                              </button>
+                              
                               
                               {/* 子任务内容 - 可点击编辑 */}
                               {editingSubtask === subtask.id ? (
@@ -1694,22 +1780,6 @@ export default function TaskList({
                                 {formatDate(subtask.created_at)}
                               </div>
                               
-                              {/* 添加子任务按钮 */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIsAddingSubtask(isAddingSubtask === subtask.id ? null : subtask.id);
-                                }}
-                                className="px-0.5 py-0.5 rounded text-xs font-medium transition-all flex items-center"
-                                style={{
-                                  backgroundColor: 'transparent',
-                                  color: 'var(--text-secondary)',
-                                }}
-                                title="为此子任务添加子任务"
-                              >
-                                <span style={{ fontSize: '1.0rem', lineHeight: 1 }}>＋</span>
-                              </button>
-                              
                               {/* 番茄按钮 */}
                               {isAuthenticated && (
                                 <button
@@ -1718,7 +1788,7 @@ export default function TaskList({
                                     handleAddToPomodoro(subtask.id);
                                   }}
                                   disabled={isAddingToPomodoro === subtask.id}
-                                  className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                  className="py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-0.25"
                                   title="添加到番茄钟并开始专注"
                                 >
                                   <Clock className="w-4 h-4" />
@@ -1787,13 +1857,13 @@ export default function TaskList({
                                   style={{ 
                                     borderLeft: '2px solid var(--border-light)', 
                                     paddingLeft: '12px',
-                                    marginLeft: '8px',
+                                    marginLeft: '4px',
                                     color: 'var(--text-tertiary)',
                                     opacity: subSubtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
                                   }}
                                 >
                                   <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└└</span>
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>└</span>
                                     
                                     {/* 子子任务内容 - 可点击编辑 */}
                                     {editingSubtask === subSubtask.id ? (
@@ -1918,7 +1988,7 @@ export default function TaskList({
                                           handleAddToPomodoro(subSubtask.id);
                                         }}
                                         disabled={isAddingToPomodoro === subSubtask.id}
-                                        className="px-1.5 py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-1"
+                                        className="py-0.5 rounded text-xs font-medium transition-all flex items-center space-x-0.25"
                                         title="添加到番茄钟并开始专注"
                                       >
                                         <Clock className="w-4 h-4" />
@@ -1990,28 +2060,28 @@ export default function TaskList({
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
 
-                          <div className="flex items-center space-x-2">
-                              <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                       setShowAISuggestions(task.id);
-                                    }}
-                                    className="text-xs px-3 py-1 rounded btn-secondary"
+                                  }}
+                                  className="text-xs px-3 py-1 rounded btn-secondary"
                                   >
                                     🤖 AI分析
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowStrategySuggestions(task.id);
-                                    }}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowStrategySuggestions(task.id);
+                                  }}
                                     className="text-xs px-3 py-1 rounded btn-secondary"
-                                    title="AI策略建议"
-                                  >
-                                    🎯 策略建议
-                              </button>
+                                  title="AI策略建议"
+                                >
+                                  🎯 策略建议
+                                </button>
 
-                              <button
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                   }}
@@ -2019,28 +2089,28 @@ export default function TaskList({
                                   title="查看任务详情"
                                 >
                                 📋 详情
-                              </button>
-                            </div>
+                                </button>
+                              </div>
 
-                            <div className="flex items-center space-x-2">
+                                      <div className="flex items-center space-x-2">
                               <span className="text-caption" style={{ color: 'var(--text-muted)' }}>
                                 {getCurrentProgressNotes(task.id).length} 字符 • Ctrl+Z撤销
                               </span>
                               {progressNotesHistory[task.id] && progressNotesHistory[task.id].length > 0 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
                                     undoProgressNotesChange(task.id);
-                                  }}
+                                            }}
                                   className="text-xs px-2 py-1 rounded btn-secondary"
                                   title="撤销 (Ctrl+Z)"
-                                >
+                                          >
                                   ↶ 撤销
-                                </button>
-                              )}
-                            </div>
-                            
-                          </div>
+                                          </button>
+                                          )}
+                                        </div>
+                                        
+                                            </div>
                           <textarea
                             value={getCurrentProgressNotes(task.id)}
                             onChange={(e) => handleProgressNotesChange(task.id, e.target.value)}
@@ -2058,14 +2128,14 @@ export default function TaskList({
                             placeholder="记录当前进展、遇到的问题和难点..."
                             className="w-full p-4 rounded-lg form-input text-body-small resize-none"
                             rows={5}
-                            style={{
-                              backgroundColor: 'var(--card-background)',
-                              border: '1px solid var(--border-light)',
+                                                  style={{
+                                                    backgroundColor: 'var(--card-background)',
+                                                    border: '1px solid var(--border-light)',
                               color: 'var(--text-primary)',
                               minHeight: '120px'
                             }}
                           />
-                        </div>
+                                            </div>
 
                       </div>
                     </div>

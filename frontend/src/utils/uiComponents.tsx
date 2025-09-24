@@ -248,7 +248,7 @@ export const DeleteButton = ({
         onSetDeleteConfirm(id);
         setTimeout(() => onSetDeleteConfirm(0), 3000);
       }}
-      className={`opacity-0 group-hover:opacity-100 w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80 ${className}`}
+      className={`mobile-delete-btn w-6 h-6 rounded flex items-center justify-center transition-all hover:opacity-80 ${className}`}
       style={{ color: 'var(--text-muted)' }}
       title="删除"
     >
