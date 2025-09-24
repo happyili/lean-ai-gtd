@@ -1353,8 +1353,8 @@ export default function TaskList({
                         {isExpanded ? '▼' : '▶'}
                       </button>
                     
-                      {/* 添加子任务按钮 - 只对非子任务显示 */}
-                      {!isSubtask && (
+                      {/* 添加子任务按钮 - 只对非子任务显示，折叠状态下隐藏 */}
+                      {!isSubtask && !isCollapsed && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
