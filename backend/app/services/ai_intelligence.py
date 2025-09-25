@@ -3,15 +3,10 @@ AI智能分析服务模块
 提供基于任务进展的智能分析功能：执行策略建议、潜在机会发掘、任务拆分建议
 """
 
-import sys
-import os
 import json
 from typing import Dict, List, Optional
 
-# 添加项目根目录到路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-
-from openrouter_utils import query_openrounter
+from app.utils.openrouter_utils import query_openrounter
 
 
 class AIIntelligenceService:
