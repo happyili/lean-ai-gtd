@@ -11,7 +11,7 @@ from datetime import datetime
 from app.models.record import Record
 from app.models.pomodoro_task import PomodoroTask
 from app.database import db
-from openrouter_utils import query_openrounter as query_openrouter
+from app.utils.openrouter_utils import query_openrouter
 
 logger = logging.getLogger(__name__)
 

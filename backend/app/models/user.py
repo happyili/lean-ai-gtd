@@ -40,6 +40,7 @@ class User(db.Model):
     
     # 关系定义
     records = db.relationship('Record', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    thinking_records = db.relationship('ThinkingRecord', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     
     def set_password(self, password: str) -> None:
         """设置密码哈希"""

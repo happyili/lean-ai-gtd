@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import AISuggestions from './AISuggestions';
 import AIChatSidebar from './AIChatSidebar';
+import FragmentedTimeManager from '../FragmentedTimeManager';
+import ProgressDashboard from '../ProgressDashboard';
 import { buildUrl, handleApiError, apiPost } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -89,6 +91,8 @@ export default function TaskList({
   const [taskTypeDropdownOpen, setTaskTypeDropdownOpen] = useState<number | null>(null);
   const [showStatsDetail, setShowStatsDetail] = useState(false);
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
+  const [showFragmentedTimeManager, setShowFragmentedTimeManager] = useState(false);
+  const [showProgressDashboard, setShowProgressDashboard] = useState(false);
   // 控制在折叠视图下是否展示全部子任务（仅影响内联子任务区域，不展开详情）
   const [showAllInlineSubtasks, setShowAllInlineSubtasks] = useState<Set<number>>(new Set());
   
@@ -1238,16 +1242,47 @@ export default function TaskList({
 
             <button
               onClick={() => setShowAIChatSidebar(true)}
-              className="px-4 py-1 rounded-xl text-body-small font-medium transition-all hover:shadow-sm"
+              className="px-3 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
               style={{ 
-                backgroundColor: 'var(--card-background)',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--primary)',
-                boxShadow: '0 0px 0px 0 var(--shadow-light)'
+                backgroundColor: 'var(--accent-purple)',
+                color: 'white',
+                border: 'none',
+                opacity: 0.9
               }}
               title="AI助手聊天"
             >
+              <span style={{ fontSize: '10px', marginRight: '4px' }}>✨</span>
               AI助手
+            </button>
+            
+            <button
+              onClick={() => setShowFragmentedTimeManager(true)}
+              className="px-3 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
+              style={{ 
+                backgroundColor: 'var(--accent-sky)',
+                color: 'white',
+                border: 'none',
+                opacity: 0.9
+              }}
+              title="碎片时间管理"
+            >
+              <span style={{ fontSize: '10px', marginRight: '4px' }}>⏱️</span>
+              碎片时间
+            </button>
+            
+            <button
+              onClick={() => setShowProgressDashboard(true)}
+              className="px-3 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
+              style={{ 
+                backgroundColor: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                opacity: 0.9
+              }}
+              title="进度监控面板"
+            >
+              <span style={{ fontSize: '10px', marginRight: '4px' }}>📊</span>
+              进度分析
             </button>
           </div>
         </div>
@@ -2282,6 +2317,21 @@ export default function TaskList({
         isOpen={showAIChatSidebar}
         onClose={() => setShowAIChatSidebar(false)}
         tasks={tasks}
+        accessToken={accessToken || undefined}
+      />
+      
+      {/* 碎片时间管理器 */}
+      <FragmentedTimeManager
+        isOpen={showFragmentedTimeManager}
+        onClose={() => setShowFragmentedTimeManager(false)}
+        accessToken={accessToken || undefined}
+      />
+      
+      {/* 进度监控面板 */}
+      <ProgressDashboard
+        isOpen={showProgressDashboard}
+        onClose={() => setShowProgressDashboard(false)}
+        accessToken={accessToken || undefined}
       />
     </div>
   );

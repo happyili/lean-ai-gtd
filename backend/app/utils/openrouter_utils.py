@@ -15,10 +15,13 @@ load_dotenv()
 class Config:
     # OpenRouter Models
     OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
-    OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
+    # OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
     OPENROUTER_DEEPSEEK_MODEL = "deepseek/deepseek-chat"
     OPENROUTER_GEMINI25_FREE_MODEL = "google/gemini-2.5-pro-exp-03-25:free"
 
+    OPENROUTER_API_URL = "http://127.0.0.1:11434/v1"
+    OPENROUTER_GPTOSS_20 = "gpt-oss:20b"
+    OPENROUTER_QWNER3CODER_30 = "qwen3-coder:30b"
 
 config = Config()
 
@@ -41,7 +44,10 @@ def get_openrounter_chat_client(model: str):
       # temperature=temperature
 )
 
-def query_openrounter(model: str,prompt: str):
+def query_openrouter(prompt: str):
+    return query_openrouter_with_model(config.OPENROUTER_QWNER3CODER_30, prompt)
+
+def query_openrouter_with_model(model: str, prompt: str):
     """使用OpenRouter查询模型"""
     try:
         client = get_openrouter_client()
@@ -53,7 +59,7 @@ def query_openrounter(model: str,prompt: str):
                     "content": prompt
                 }
             ],
-            temperature=0.7
+            temperature=0.9
         )
         
         response = completion.choices[0].message.content
@@ -63,8 +69,3 @@ def query_openrounter(model: str,prompt: str):
     except Exception as e:
         logger.error(f"Error querying {model}: {str(e)}")
         raise
-
-# if __name__ == "__main__":
-#     # 示例用法
-#     response = query_openrounter(config.OPENROUTER_DEEPSEEK_MODEL, "请介绍一下DEEPSEEK v0324模型的特点")
-#     print(response)

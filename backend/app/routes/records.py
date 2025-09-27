@@ -571,6 +571,61 @@ def analyze_task_with_ai(current_user, record_id):
     except Exception as e:
         return jsonify({'error': f'AI分析失败: {str(e)}'}), 500
 
+@records_bp.route('/api/records/<int:record_id>/enhanced-decomposition', methods=['POST'])
+@token_required
+def enhanced_task_decomposition(current_user, record_id):
+    """使用增强算法进行任务拆解分析"""
+    try:
+        # 查找记录
+        if current_user.is_admin:
+            record = Record.query.get_or_404(record_id)
+        else:
+            record = Record.query.filter_by(id=record_id, user_id=current_user.id).first()
+            if not record:
+                return jsonify({'error': '任务不存在或无权限分析'}), 404
+        
+        # 只分析任务类型的记录
+        if not record.is_task():
+            return jsonify({'error': '只能对任务类型进行增强拆解分析'}), 400
+        
+        # 读取配置
+        data = request.get_json(silent=True) or {}
+        include_inactive = bool(data.get('include_inactive_subtasks'))
+        user_extra_context = data.get('context')
+
+        # 获取子任务信息
+        subtasks = record.get_subtasks(include_inactive=include_inactive)
+        
+        # 构建任务数据
+        task_data = {
+            'content': record.content,
+            'progress_notes': getattr(record, 'progress_notes', ''),
+            'status': record.status,
+            'priority': record.priority,
+            'subtasks': [
+                {
+                    'content': subtask.content,
+                    'status': subtask.status,
+                    'priority': subtask.priority
+                } for subtask in subtasks
+            ]
+        }
+        
+        # 调用增强任务拆解服务
+        decomposition_result = ai_intelligence_service.enhanced_task_decomposition(
+            task_data,
+            extra_context=user_extra_context
+        )
+        
+        return jsonify({
+            'message': '增强任务拆解分析完成',
+            'task_id': record_id,
+            'decomposition': decomposition_result
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'增强任务拆解失败: {str(e)}'}), 500
+
 @records_bp.route('/api/records/<int:record_id>/create-subtasks-from-ai', methods=['POST'])
 @token_required
 def create_subtasks_from_ai_suggestions(current_user, record_id):

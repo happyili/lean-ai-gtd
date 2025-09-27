@@ -11,6 +11,9 @@ from app.routes.auth import auth_bp
 from app.routes.pomodoro import pomodoro_bp
 from app.routes.info_resources import info_resources_bp
 from app.routes.reminders import reminders_bp
+from app.routes.fragmented_time import fragmented_time_bp
+from app.routes.progress_monitoring import progress_monitoring_bp
+from app.routes.thinking import thinking_bp
 from app.utils.app_logger import debug_log
 from app.utils.response_helpers import create_error_response, ErrorCodes
 
@@ -229,6 +232,9 @@ def create_base_app():
     app.register_blueprint(pomodoro_bp)
     app.register_blueprint(info_resources_bp)
     app.register_blueprint(reminders_bp)
+    app.register_blueprint(fragmented_time_bp)
+    app.register_blueprint(progress_monitoring_bp)
+    app.register_blueprint(thinking_bp)
     debug_log.info("✅ 路由注册完成")
     
     # 设置基本路由
