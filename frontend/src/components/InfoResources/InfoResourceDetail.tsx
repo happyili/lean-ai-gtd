@@ -150,7 +150,7 @@ export default function InfoResourceDetail({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+      <div className="rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden" style={{ backgroundColor: 'var(--card-background)' }}>
         {/* 头部 */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-xl font-semibold">信息资源详情</h2>
@@ -335,7 +335,7 @@ export default function InfoResourceDetail({
         {/* 删除确认对话框 */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="rounded-lg p-6 max-w-md w-full mx-4" style={{ backgroundColor: 'var(--card-background)' }}>
               <h3 className="text-lg font-medium mb-4">确认删除</h3>
               <p className="text-gray-600 mb-6">确定要删除这个信息资源吗？此操作不可撤销。</p>
               <div className="flex justify-end space-x-3">

@@ -259,10 +259,16 @@ export const DeleteButton = ({
 
 // 统一的下拉菜单样式
 export const getDropdownStyle = () => ({
-  className: "absolute top-full right-0 mt-1 py-1 card shadow-lg z-50 min-w-24",
+  className: "absolute top-full right-0 mt-1 py-1 rounded-lg shadow-lg min-w-24 dropdown-menu-solid",
   style: { 
-    backgroundColor: 'var(--card-background)',
-    border: '1px solid var(--border-light)'
+    backgroundColor: 'var(--card-background, #ffffff) !important',
+    border: '1px solid var(--border-light) !important',
+    zIndex: 9999,
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important',
+    background: 'var(--card-background, #ffffff) !important', // 确保背景色正确应用，带回退值
+    opacity: '1 !important', // 强制不透明
+    backdropFilter: 'none !important', // 确保没有背景模糊效果
+    position: 'absolute !important'
   }
 });
 

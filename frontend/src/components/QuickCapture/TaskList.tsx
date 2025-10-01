@@ -4,6 +4,7 @@ import AISuggestions from './AISuggestions';
 import AIChatSidebar from './AIChatSidebar';
 import FragmentedTimeManager from '../FragmentedTimeManager';
 import ProgressDashboard from '../ProgressDashboard';
+import WeeklyReport from '../WeeklyReport';
 import { buildUrl, handleApiError, apiPost } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -93,6 +94,7 @@ export default function TaskList({
   const [showAIChatSidebar, setShowAIChatSidebar] = useState(false);
   const [showFragmentedTimeManager, setShowFragmentedTimeManager] = useState(false);
   const [showProgressDashboard, setShowProgressDashboard] = useState(false);
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false);
   // 控制在折叠视图下是否展示全部子任务（仅影响内联子任务区域，不展开详情）
   const [showAllInlineSubtasks, setShowAllInlineSubtasks] = useState<Set<number>>(new Set());
   
@@ -1271,6 +1273,21 @@ export default function TaskList({
             </button>
             
             <button
+              onClick={() => setShowWeeklyReport(true)}
+              className="px-3 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
+              style={{ 
+                backgroundColor: 'var(--accent-purple)',
+                color: 'white',
+                border: 'none',
+                opacity: 0.9
+              }}
+              title="周报总结"
+            >
+              <span style={{ fontSize: '10px', marginRight: '4px' }}>📋</span>
+              周报
+            </button>
+            
+            <button
               onClick={() => setShowProgressDashboard(true)}
               className="px-3 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
               style={{ 
@@ -1675,7 +1692,7 @@ export default function TaskList({
                             borderLeft: '2px solid var(--border-light)', 
                             marginLeft: '2px',
                             color: 'var(--text-tertiary)',
-                            opacity: subtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
+                            opacity: 1
                           }}
                         >
                           {/* 子任务主行 */}
@@ -1894,7 +1911,7 @@ export default function TaskList({
                                     paddingLeft: '12px',
                                     marginLeft: '4px',
                                     color: 'var(--text-tertiary)',
-                                    opacity: subSubtask.status === 'completed' ? 0.7 : 1 // 已完成任务稍微半透明以示区别
+                                    opacity: 1
                                   }}
                                 >
                                   <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -2332,6 +2349,13 @@ export default function TaskList({
         isOpen={showProgressDashboard}
         onClose={() => setShowProgressDashboard(false)}
         accessToken={accessToken || undefined}
+      />
+      
+      {/* 周报组件 */}
+      <WeeklyReport
+        isOpen={showWeeklyReport}
+        onClose={() => setShowWeeklyReport(false)}
+        accessToken={accessToken}
       />
     </div>
   );

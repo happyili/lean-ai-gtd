@@ -445,16 +445,37 @@ export default function App() {
                   
                   {/* 下拉菜单 */}
                   {isTaskManagementDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 min-w-[140px] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <div 
+                      className="absolute top-full left-0 mt-1 min-w-[140px] rounded-lg shadow-lg"
+                      style={{
+                        backgroundColor: 'var(--card-background)',
+                        border: '1px solid var(--border-light)',
+                        zIndex: 9999,
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}
+                    >
                       <div className="py-1">
                         <button
                           onClick={() => {
                             setSelectedTaskManagementMode('tasks');
                             setIsTaskManagementDropdownOpen(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
-                            selectedTaskManagementMode === 'tasks' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
-                          }`}
+                          className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: selectedTaskManagementMode === 'tasks' ? 'var(--primary)' : 'var(--text-primary)',
+                            backgroundColor: selectedTaskManagementMode === 'tasks' ? 'var(--primary-light)' : 'transparent',
+                            fontWeight: selectedTaskManagementMode === 'tasks' ? 'bold' : 'normal'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedTaskManagementMode !== 'tasks') {
+                              e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedTaskManagementMode !== 'tasks') {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
                         >
                           任务管理
                         </button>
@@ -463,9 +484,22 @@ export default function App() {
                             setSelectedTaskManagementMode('resources');
                             setIsTaskManagementDropdownOpen(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
-                            selectedTaskManagementMode === 'resources' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
-                          }`}
+                          className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: selectedTaskManagementMode === 'resources' ? 'var(--primary)' : 'var(--text-primary)',
+                            backgroundColor: selectedTaskManagementMode === 'resources' ? 'var(--primary-light)' : 'transparent',
+                            fontWeight: selectedTaskManagementMode === 'resources' ? 'bold' : 'normal'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedTaskManagementMode !== 'resources') {
+                              e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedTaskManagementMode !== 'resources') {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
                         >
                           信息资源
                         </button>
@@ -474,9 +508,22 @@ export default function App() {
                             setSelectedTaskManagementMode('reminders');
                             setIsTaskManagementDropdownOpen(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
-                            selectedTaskManagementMode === 'reminders' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
-                          }`}
+                          className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: selectedTaskManagementMode === 'reminders' ? 'var(--primary)' : 'var(--text-primary)',
+                            backgroundColor: selectedTaskManagementMode === 'reminders' ? 'var(--primary-light)' : 'transparent',
+                            fontWeight: selectedTaskManagementMode === 'reminders' ? 'bold' : 'normal'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedTaskManagementMode !== 'reminders') {
+                              e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedTaskManagementMode !== 'reminders') {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
                         >
                           定时提醒
                         </button>
@@ -485,9 +532,22 @@ export default function App() {
                             setSelectedTaskManagementMode('ai-pomodoro');
                             setIsTaskManagementDropdownOpen(false);
                           }}
-                          className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${
-                            selectedTaskManagementMode === 'ai-pomodoro' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'
-                          }`}
+                          className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
+                          style={{
+                            color: selectedTaskManagementMode === 'ai-pomodoro' ? 'var(--primary)' : 'var(--text-primary)',
+                            backgroundColor: selectedTaskManagementMode === 'ai-pomodoro' ? 'var(--primary-light)' : 'transparent',
+                            fontWeight: selectedTaskManagementMode === 'ai-pomodoro' ? 'bold' : 'normal'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (selectedTaskManagementMode !== 'ai-pomodoro') {
+                              e.currentTarget.style.backgroundColor = 'var(--background-secondary)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedTaskManagementMode !== 'ai-pomodoro') {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
                         >
                           AI番茄钟
                         </button>
