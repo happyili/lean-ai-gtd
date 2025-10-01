@@ -49,6 +49,11 @@ interface TaskListProps {
   isPomodoroPanelExpanded?: boolean;
   onTogglePomodoroPanel?: () => void;
   onPomodoroTaskAdded?: () => void;
+  // 筛选状态props - 从父组件传递
+  initialSearchQuery?: string;
+  initialStatusFilter?: string;
+  initialPriorityFilter?: string;
+  initialTaskTypeFilter?: string;
 }
 
 
@@ -63,15 +68,19 @@ export default function TaskList({
   onToggleCollapse,
   isPomodoroPanelExpanded = false,
   onTogglePomodoroPanel,
-  onPomodoroTaskAdded
+  onPomodoroTaskAdded,
+  initialSearchQuery = '',
+  initialStatusFilter = 'all',
+  initialPriorityFilter = 'all',
+  initialTaskTypeFilter = 'all'
 }: TaskListProps) {
   const { isAuthenticated, accessToken } = useAuth();
   const [tasks, setTasks] = useState<Record[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [taskTypeFilter, setTaskTypeFilter] = useState('all'); // 任务类型筛选
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
+  const [priorityFilter, setPriorityFilter] = useState(initialPriorityFilter);
+  const [taskTypeFilter, setTaskTypeFilter] = useState(initialTaskTypeFilter); // 任务类型筛选
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [deleteSubtaskConfirm, setDeleteSubtaskConfirm] = useState<number | null>(null);
   const [expandedTask, setExpandedTask] = useState<number | null>(null);
@@ -781,6 +790,23 @@ export default function TaskList({
       setExpandedTask(task.id);
     }
   };
+
+  // 同步父组件的筛选状态到本地状态
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
+
+  useEffect(() => {
+    setPriorityFilter(initialPriorityFilter);
+  }, [initialPriorityFilter]);
+
+  useEffect(() => {
+    setTaskTypeFilter(initialTaskTypeFilter);
+  }, [initialTaskTypeFilter]);
 
   // 监听来自头部导航的搜索和筛选事件
   useEffect(() => {

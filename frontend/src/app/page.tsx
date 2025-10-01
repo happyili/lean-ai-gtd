@@ -1222,6 +1222,10 @@ export default function App() {
                 onToggleCollapse={() => setIsSubtaskCollapsed(!isSubtaskCollapsed)}
                 isPomodoroPanelExpanded={isPomodoroPanelExpanded}
                 onTogglePomodoroPanel={() => setIsPomodoroPanelExpanded(!isPomodoroPanelExpanded)}
+                initialSearchQuery={searchQuery}
+                initialStatusFilter={statusFilter}
+                initialPriorityFilter={priorityFilter}
+                initialTaskTypeFilter={selectedTaskType}
                 onPomodoroTaskAdded={() => setPomodoroRefreshTrigger(prev => prev + 1)}
               />
             )}
