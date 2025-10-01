@@ -107,7 +107,7 @@ localStorage.removeItem('aigtd_filter_options');
 localStorage.setItem('aigtd_filter_options', JSON.stringify({
   searchQuery: 'test',
   selectedTaskType: 'work',
-  statusFilter: 'completed'
+  statusFilter: 'pending'
 }));
 ```
 

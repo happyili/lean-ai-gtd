@@ -229,7 +229,7 @@ export default function App() {
     const statusMap: { [key: string]: string } = {
       'all': '状态',
       'active': '进行中',
-      'completed': '已完成',
+      'pending': '待办',
       'paused': '暂停',
       'cancelled': '已取消'
     };
@@ -774,19 +774,19 @@ export default function App() {
                         全部
                       </button>
                       <button
-                        onClick={() => handleFilter('status', 'completed')}
+                        onClick={() => handleFilter('status', 'pending')}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                          statusFilter === 'completed' 
+                          statusFilter === 'pending' 
                             ? '' 
                             : 'hover:btn-secondary'
                         }`}
                         style={{ 
-                          backgroundColor: statusFilter === 'completed' ? 'var(--success-bg)' : 'transparent',
-                          color: statusFilter === 'completed' ? 'var(--success)' : 'var(--text-primary)',
-                          border: `1px solid ${statusFilter === 'completed' ? 'var(--success)' : 'var(--border-default)'}`
+                          backgroundColor: statusFilter === 'pending' ? 'var(--warning-bg)' : 'transparent',
+                          color: statusFilter === 'pending' ? 'var(--warning)' : 'var(--text-primary)',
+                          border: `1px solid ${statusFilter === 'pending' ? 'var(--warning)' : 'var(--border-default)'}`
                         }}
                       >
-                        完成
+                        待办
                       </button>
                     </>
                   )}

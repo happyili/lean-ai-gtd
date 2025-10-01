@@ -45,7 +45,7 @@ export function demonstrateBasicCaching() {
   console.log('\n4. 批量保存新的筛选选项:');
   const newOptions: FilterOptions = {
     searchQuery: '生活琐事',
-    statusFilter: 'completed',
+    statusFilter: 'pending',
     priorityFilter: 'low',
     selectedTaskType: 'life',
     showAllLevels: false,

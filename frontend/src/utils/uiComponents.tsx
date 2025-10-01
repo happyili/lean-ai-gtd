@@ -21,6 +21,7 @@ export const priorityMap = {
 // 状态映射
 export const statusMap = {
   active: { label: '进行中', color: 'info' },
+  pending: { label: '待办', color: 'warning' },
   completed: { label: '已完成', color: 'success' },
   paused: { label: '暂停', color: 'warning' },
   cancelled: { label: '已取消', color: 'error' }

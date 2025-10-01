@@ -48,7 +48,7 @@ describe('FilterCache', () => {
   it('should save and load filter options correctly', () => {
     const testOptions: FilterOptions = {
       searchQuery: 'test search',
-      statusFilter: 'completed',
+      statusFilter: 'pending',
       priorityFilter: 'high',
       selectedTaskType: 'work',
       showAllLevels: true,
@@ -87,7 +87,7 @@ describe('FilterCache', () => {
     const testOptions: FilterOptions = {
       ...defaultFilterOptions,
       selectedTaskType: 'work',
-      statusFilter: 'completed'
+      statusFilter: 'pending'
     };
 
     saveFilterOptions(testOptions);
@@ -109,7 +109,7 @@ describe('FilterCache', () => {
     // 模拟旧版本的缓存数据（缺少新字段）
     const oldCacheData = {
       searchQuery: 'old search',
-      statusFilter: 'completed',
+      statusFilter: 'pending',
       selectedTaskType: 'work'
       // 缺少新增的字段
     };
@@ -120,7 +120,7 @@ describe('FilterCache', () => {
     
     // 应该包含旧的数据
     expect(loadedOptions.searchQuery).toBe('old search');
-    expect(loadedOptions.statusFilter).toBe('completed');
+    expect(loadedOptions.statusFilter).toBe('pending');
     expect(loadedOptions.selectedTaskType).toBe('work');
     
     // 应该包含新字段的默认值
