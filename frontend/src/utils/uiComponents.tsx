@@ -1,6 +1,8 @@
 // 统一的UI组件样式工具函数
 // 用于保持任务和子任务条目的类型、优先级、状态、时间、删除按钮等UI组件风格一致
 
+import React from 'react';
+
 // 任务类型映射
 export const taskTypeMap = {
   work: { label: '工作', color: 'info', icon: '💼' },
@@ -259,17 +261,15 @@ export const DeleteButton = ({
 
 // 统一的下拉菜单样式
 export const getDropdownStyle = () => ({
-  className: "absolute top-full right-0 mt-1 py-1 rounded-lg shadow-lg min-w-24 dropdown-menu-solid",
+  className: "absolute top-full right-0 mt-1 py-1 rounded-lg shadow-lg min-w-24",
   style: { 
-    backgroundColor: 'var(--card-background, #ffffff) !important',
-    border: '1px solid var(--border-light) !important',
+    backgroundColor: 'var(--card-background, #ffffff)',
+    border: '1px solid var(--border-light)',
     zIndex: 9999,
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important',
-    background: 'var(--card-background, #ffffff) !important', // 确保背景色正确应用，带回退值
-    opacity: '1 !important', // 强制不透明
-    backdropFilter: 'none !important', // 确保没有背景模糊效果
-    position: 'absolute !important'
-  }
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1)',
+    background: 'var(--card-background, #ffffff)', // 确保背景色正确应用，带回退值
+    opacity: 1 // 强制不透明
+  } as React.CSSProperties
 });
 
 // 统一的下拉菜单项样式

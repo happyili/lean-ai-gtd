@@ -11,6 +11,12 @@ import PomodoroBannerPanel from '@/components/Pomodoro/PomodoroBannerPanel';
 import InfoResourceList from '@/components/InfoResources/InfoResourceList';
 import InfoResourceDetail from '@/components/InfoResources/InfoResourceDetail';
 import { apiPost, apiDelete } from '@/utils/api';
+import { loadFilterOptions, saveFilterOptions, updateFilterOption } from '@/utils/filterCache';
+
+// 在开发环境中加载演示功能
+if (process.env.NODE_ENV === 'development') {
+  import('@/utils/filterCacheDemo');
+}
 
 interface TaskCreateData {
   content: string;
@@ -35,28 +41,32 @@ interface InfoResource {
 
 export default function App() {
   const { isAuthenticated, isLoading: authLoading, accessToken } = useAuth();
+  
+  // 从缓存加载筛选选项
+  const cachedOptions = loadFilterOptions();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [showAllLevels, setShowAllLevels] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(cachedOptions.searchQuery);
+  const [statusFilter, setStatusFilter] = useState(cachedOptions.statusFilter);
+  const [priorityFilter, setPriorityFilter] = useState(cachedOptions.priorityFilter);
+  const [showAllLevels, setShowAllLevels] = useState(cachedOptions.showAllLevels);
   const [isTaskTypeFilterExpanded, setIsTaskTypeFilterExpanded] = useState(false);
   const [isStatusFilterExpanded, setIsStatusFilterExpanded] = useState(false);
   const [isPriorityFilterExpanded, setIsPriorityFilterExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [selectedTaskType, setSelectedTaskType] = useState('all');
+  const [selectedTaskType, setSelectedTaskType] = useState(cachedOptions.selectedTaskType);
   const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
   const [currentView, setCurrentView] = useState<'tasks' | 'pomodoro'>('tasks'); // 新增：控制当前视图
   const [isTaskManagementDropdownOpen, setIsTaskManagementDropdownOpen] = useState(false); // 任务管理下拉菜单状态
-  const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders' | 'ai-pomodoro'>('tasks'); // 选中的任务管理模式
+  const [selectedTaskManagementMode, setSelectedTaskManagementMode] = useState<'tasks' | 'resources' | 'reminders' | 'ai-pomodoro'>(cachedOptions.selectedTaskManagementMode); // 选中的任务管理模式
   const [selectedInfoResource, setSelectedInfoResource] = useState<InfoResource | null>(null); // 选中的信息资源
   
   // 信息资源筛选状态
-  const [infoResourceSearchQuery, setInfoResourceSearchQuery] = useState('');
-  const [infoResourceStatusFilter, setInfoResourceStatusFilter] = useState('all');
-  const [infoResourceTypeFilter, setInfoResourceTypeFilter] = useState('all');
+  const [infoResourceSearchQuery, setInfoResourceSearchQuery] = useState(cachedOptions.infoResourceSearchQuery);
+  const [infoResourceStatusFilter, setInfoResourceStatusFilter] = useState(cachedOptions.infoResourceStatusFilter);
+  const [infoResourceTypeFilter, setInfoResourceTypeFilter] = useState(cachedOptions.infoResourceTypeFilter);
   const [isInfoResourceSearchExpanded, setIsInfoResourceSearchExpanded] = useState(false);
   const [isInfoResourceStatusFilterExpanded, setIsInfoResourceStatusFilterExpanded] = useState(false);
   const [isInfoResourceTypeFilterExpanded, setIsInfoResourceTypeFilterExpanded] = useState(false);
@@ -196,6 +206,7 @@ export default function App() {
   // 搜索记录
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    updateFilterOption('searchQuery', query);
     const searchEvent = new CustomEvent('taskSearch', { 
       detail: { query } 
     });
@@ -283,18 +294,23 @@ export default function App() {
   const handleFilter = (type: string, value: string) => {
     if (type === 'status') {
       setStatusFilter(value);
+      updateFilterOption('statusFilter', value);
       // 选择状态后自动折叠
       setIsStatusFilterExpanded(false);
     } else if (type === 'priority') {
       setPriorityFilter(value);
+      updateFilterOption('priorityFilter', value);
       // 选择优先级后自动折叠
       setIsPriorityFilterExpanded(false);
     } else if (type === 'taskType') {
       setSelectedTaskType(value);
+      updateFilterOption('selectedTaskType', value);
       // 选择任务类型后自动折叠
       setIsTaskTypeFilterExpanded(false);
     } else if (type === 'showAllLevels') {
-      setShowAllLevels(value === 'true');
+      const boolValue = value === 'true';
+      setShowAllLevels(boolValue);
+      updateFilterOption('showAllLevels', boolValue);
     }
     
     const filterEvent = new CustomEvent('taskFilter', { 
@@ -307,9 +323,11 @@ export default function App() {
   const handleInfoResourceFilter = (type: string, value: string) => {
     if (type === 'status') {
       setInfoResourceStatusFilter(value);
+      updateFilterOption('infoResourceStatusFilter', value);
       setIsInfoResourceStatusFilterExpanded(false);
     } else if (type === 'resourceType') {
       setInfoResourceTypeFilter(value);
+      updateFilterOption('infoResourceTypeFilter', value);
       setIsInfoResourceTypeFilterExpanded(false);
     }
     
@@ -322,6 +340,7 @@ export default function App() {
   // 处理信息资源搜索
   const handleInfoResourceSearch = (query: string) => {
     setInfoResourceSearchQuery(query);
+    updateFilterOption('infoResourceSearchQuery', query);
     
     const searchEvent = new CustomEvent('infoResourceSearch', { 
       detail: { query } 
@@ -458,6 +477,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setSelectedTaskManagementMode('tasks');
+                            updateFilterOption('selectedTaskManagementMode', 'tasks');
                             setIsTaskManagementDropdownOpen(false);
                           }}
                           className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
@@ -482,6 +502,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setSelectedTaskManagementMode('resources');
+                            updateFilterOption('selectedTaskManagementMode', 'resources');
                             setIsTaskManagementDropdownOpen(false);
                           }}
                           className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
@@ -506,6 +527,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setSelectedTaskManagementMode('reminders');
+                            updateFilterOption('selectedTaskManagementMode', 'reminders');
                             setIsTaskManagementDropdownOpen(false);
                           }}
                           className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
@@ -530,6 +552,7 @@ export default function App() {
                         <button
                           onClick={() => {
                             setSelectedTaskManagementMode('ai-pomodoro');
+                            updateFilterOption('selectedTaskManagementMode', 'ai-pomodoro');
                             setIsTaskManagementDropdownOpen(false);
                           }}
                           className="w-full px-4 py-2 text-left text-sm transition-colors hover:opacity-80"
