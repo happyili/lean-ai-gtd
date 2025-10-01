@@ -55,7 +55,6 @@ export default function App() {
   const [isStatusFilterExpanded, setIsStatusFilterExpanded] = useState(false);
   const [isPriorityFilterExpanded, setIsPriorityFilterExpanded] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState(cachedOptions.selectedTaskType);
   const [isSubtaskCollapsed, setIsSubtaskCollapsed] = useState(false); // 新增：控制subtask折叠状态
   const [currentView, setCurrentView] = useState<'tasks' | 'pomodoro'>('tasks'); // 新增：控制当前视图
@@ -140,47 +139,10 @@ export default function App() {
       );
 
       showNotification('记录保存成功！', 'success');
-      setShowAddDialog(false); // 关闭对话框
       
     } catch (error) {
       console.error('保存记录失败:', error);
       showNotification(error instanceof Error ? error.message : '保存记录失败', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 保存详细任务数据
-  const handleSaveTaskData = async (taskData: TaskCreateData) => {
-    setIsLoading(true);
-    try {
-      const payload: any = {
-        content: taskData.content,
-        category: taskData.category,
-        priority: taskData.priority,
-        task_type: taskData.taskType,
-        estimated_time: taskData.estimatedTime,
-        tags: taskData.tags?.join(',') || ''
-      };
-      
-      // 如果是guest用户，不指定user_id，让后端自动设置为NULL
-      if (!isAuthenticated) {
-        // 不需要添加user_id参数，后端会自动处理为NULL
-      }
-
-      await apiPost(
-        '/api/records',
-        payload,
-        '保存任务',
-        accessToken || undefined
-      );
-
-      showNotification('任务创建成功！', 'success');
-      setShowAddDialog(false); // 关闭对话框
-      
-    } catch (error) {
-      console.error('保存任务失败:', error);
-      showNotification(error instanceof Error ? error.message : '保存任务失败', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -1259,21 +1221,6 @@ export default function App() {
         )}
       </div>
 
-      {/* 展开添加面板的浮动按钮 - 只在任务管理视图的任务模式显示 */}
-      {currentView === 'tasks' && selectedTaskManagementMode === 'tasks' && (
-        <button
-          onClick={() => setShowAddDialog(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--accent-blue))',
-            boxShadow: '0 4px 16px rgba(37, 99, 235, 0.3)'
-          }}
-          title="打开添加面板"
-        >
-          <span className="text-xl font-semibold">+</span>
-        </button>
-      )}
-
       {/* 信息资源详情弹窗 */}
       {selectedInfoResource && (
         <InfoResourceDetail
@@ -1284,14 +1231,6 @@ export default function App() {
         />
       )}
 
-      {/* 简化的添加任务对话框 */}
-      {showAddDialog && (
-        <SimpleTaskCreator
-          onSave={handleSaveTaskData}
-          onClose={() => setShowAddDialog(false)}
-          isLoading={isLoading}
-        />
-      )}
     </div>
   );
 }
