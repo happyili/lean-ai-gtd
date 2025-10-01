@@ -11,7 +11,7 @@ import PomodoroBannerPanel from '@/components/Pomodoro/PomodoroBannerPanel';
 import InfoResourceList from '@/components/InfoResources/InfoResourceList';
 import InfoResourceDetail from '@/components/InfoResources/InfoResourceDetail';
 import { apiPost, apiDelete } from '@/utils/api';
-import { loadFilterOptions, saveFilterOptions, updateFilterOption } from '@/utils/filterCache';
+import { loadFilterOptions, updateFilterOption } from '@/utils/filterCache';
 
 // 在开发环境中加载演示功能
 if (process.env.NODE_ENV === 'development') {
